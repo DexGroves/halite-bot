@@ -9,6 +9,7 @@ class DexBot(object):
         self.id = myID
         self.sg = Spyglass(myID)
         self.requisite_str = 125
+        self.edges = None, None, None, None
 
     def move(self, location, gameMap):
         # site = gameMap.getSite(location)
@@ -19,12 +20,12 @@ class DexBot(object):
         # Need to move away from any existing 255's
         # Else, calculate the nearest front, and move towards it if
         # strength at edge > self.requisite_str
-        nearest_brdr = self.sg.get_nearest_brdr(location, gameMap)
+        nearest_edge = self.sg.get_nearest_edge(location, self.edges)
         # str_to_brdr = self.sg.strength_to_brdr(location, gameMap, nearest_brdr)
         if gameMap.getSite(location).strength > self.requisite_str:
-            new_site = gameMap.getSite(location, nearest_brdr)
+            new_site = gameMap.getSite(location, nearest_edge)
             if new_site.owner == self.id:
-                return Move(location, nearest_brdr)
+                return Move(location, nearest_edge)
 
         # Else chill
         return Move(location, STILL)
@@ -34,6 +35,16 @@ class DexBot(object):
         new_site = gameMap.getSite(location, d)
         return new_site.owner != self.id and site.strength > new_site.strength
 
+    def set_edges(self, gameMap):
+        owned_locs = []
+        for y in range(gameMap.height):
+            for x in range(gameMap.width):
+                location = Location(x, y)
+                if gameMap.getSite(location).owner == self.id:
+                    owned_locs.append(location)
+        xs = [loc.x for loc in owned_locs]
+        ys = [loc.y for loc in owned_locs]
+        self.edges = min(xs), max(xs), min(ys), max(ys)
 
 class Spyglass(object):
     """Scours the map for information."""
@@ -70,6 +81,15 @@ class Spyglass(object):
             if strength > 255:
                 break
         return strength
+
+    @staticmethod
+    def get_nearest_edge(location, edges):
+        ld = location.x - edges[0]
+        rd = edges[1] - location.x
+        ud = location.y - edges[2]
+        dd = edges[3] - location.y
+        edge_d = [ud, rd, dd, ld]
+        return edge_d.index(min(edge_d)) + 1
 
     @staticmethod
     def move_cursor(location, direction, gameMap):

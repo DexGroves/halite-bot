@@ -11,6 +11,9 @@ db = DexBot(myID)
 while True:
     moves = []
     gameMap = getFrame()
+
+    db.set_edges(gameMap)
+
     for y in range(gameMap.height):
         for x in range(gameMap.width):
             location = Location(x, y)
