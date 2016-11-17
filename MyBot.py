@@ -1,22 +1,25 @@
 from hlt import *
 from networking import *
 from dexbot.dexbot import DexBot
+from dexbot.map_evaluator import MapEvaluator
 
 
-myID, gameMap = getInit()
+my_id, game_map = getInit()
 sendInit("DexBot")
-db = DexBot(myID)
+db = DexBot(my_id)
 
 
 while True:
     moves = []
-    gameMap = getFrame()
+    game_map = getFrame()
+    mapeval = MapEvaluator(my_id)
+    mapeval.set_evaluation(game_map)
+    db.set_evaluator(mapeval)
 
-    db.set_edges(gameMap)
-
-    for y in range(gameMap.height):
-        for x in range(gameMap.width):
+    for y in range(game_map.height):
+        for x in range(game_map.width):
             location = Location(x, y)
-            if gameMap.getSite(location).owner == myID:
-                moves.append(db.move(location, gameMap))
+            owner = game_map.getSite(location).owner
+            if owner == my_id:
+                moves.append(db.move(location, game_map))
     sendFrame(moves)
