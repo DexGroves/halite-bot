@@ -11,8 +11,8 @@ class DexBot(object):
     def __init__(self, myID):
         self.id = myID
         self.mapeval = None
-        self.req_value = 8
-        self.max_strength = 120
+        self.req_value_multi = 0.2
+        self.max_strength = 128
         self.min_strength_multiplier = 2.5
 
     def move(self, location, game_map):
@@ -31,19 +31,21 @@ class DexBot(object):
         #        return Move(location, d)
 
         # Else eval value of each point
-        target, value = self.map_eval.get_best_pt(location, site.strength)
-        if value > self.req_value or site.strength > self.max_strength:
+        target, value = self.map_eval.get_best_pt(location, site.strength, game_map)
+        stay_value = site.production * self.req_value_multi / max(site.strength, 0.01)
+        if value > stay_value or site.strength > self.max_strength:
             # Move towards!
             targ_x, targ_y = target
-            dists = [
-                (targ_y - location.y) % self.map_eval.mapheight,
-                (targ_x - location.x) % self.map_eval.mapwidth,
+            dists = np.array([
                 (location.y - targ_y) % self.map_eval.mapheight,
+                (targ_x - location.x) % self.map_eval.mapwidth,
+                (targ_y - location.y) % self.map_eval.mapheight,
                 (location.x - targ_x) % self.map_eval.mapwidth
-            ]
+            ])
+            dists[dists == 0] = 999
             d = np.argmin(dists) + 1
             # with open('debug.txt', 'a') as f:
-            #     f.write('\t'.join([repr(d), repr(site.strength), repr(dists), '\n']))
+            #     f.write('\t'.join([repr(d), repr((targ_x, targ_y)), repr(site.strength), repr(dists), '\n']))
 
             if self.can_move_safely(game_map, location, d, site):
                 return Move(location, d)

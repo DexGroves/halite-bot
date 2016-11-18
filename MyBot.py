@@ -9,6 +9,8 @@ sendInit("DexBot")
 db = DexBot(my_id)
 mapeval = MapEvaluator(my_id, game_map)
 
+with open("debug.txt", "w") as f:
+    f.write("Debug\n\n")
 
 while True:
     moves = []
