@@ -7,12 +7,12 @@ from dexbot.map_evaluator import MapEvaluator
 my_id, game_map = getInit()
 sendInit("DexBot")
 db = DexBot(my_id)
+mapeval = MapEvaluator(my_id, game_map)
 
 
 while True:
     moves = []
     game_map = getFrame()
-    mapeval = MapEvaluator(my_id)
     mapeval.set_evaluation(game_map)
     db.set_evaluator(mapeval)
 

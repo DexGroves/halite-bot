@@ -10,76 +10,60 @@ from networking import *
 
 class MapEvaluator(object):
 
-    def __init__(self, myID):
+    def __init__(self, myID, map):
         self.myID = myID
-        self.mapwidth = 0
-        self.mapheight = 0
-        self.nsquares = 0
+        self.mapheight = map.height
+        self.mapwidth = map.width
+        self.nsquares = map.height * map.width
+        self.D = self.get_distance_matrix()
+
+        self.values = np.empty((self.mapwidth, self.mapheight), dtype=int)
+        self.strengths = np.empty((self.mapwidth, self.mapheight), dtype=int)
+        self.mine = np.zeros((self.mapwidth, self.mapheight), dtype=int)
 
     def set_evaluation(self, map):
         """Assess the absolute, reference-independent value of
         capturing a spot."""
-        self.mapheight = map.height
-        self.mapwidth = map.width
-        self.nsquares = map.height * map.width
-
-        # Filter locs to only enemy points?
-        self.values = np.empty(self.nsquares, dtype=int)
-        self.strengths = np.empty(self.nsquares, dtype=int)
-        self.locs = np.empty(self.nsquares, dtype=tuple)
-        self.mine = np.zeros(self.nsquares, dtype=int)
-
-        i = 0
         for y in range(self.mapheight):
             for x in range(self.mapwidth):
                 site = map.getSite(Location(x, y))
 
-                self.locs[i] = (x, y)
                 if site.owner == self.myID:
-                    self.strengths[i] = 0
-                    self.values[i] = 0
-                    self.mine[i] = 1
+                    self.strengths[x, y] = 0
+                    self.values[x, y] = 0 # min(site.production - site.strength, 30)
+                    self.mine[x, y] = 1
                 elif site.owner == 0:
-                    self.strengths[i] = site.strength
-                    self.values[i] = site.strength
+                    self.strengths[x, y] = site.strength
+                    self.values[x, y] = site.production
                 else:
-                    self.strengths[i] = site.strength
-                    self.values[i] = site.strength * 2
-                i = i + 1
+                    self.strengths[x, y] = site.strength
+                    self.values[x, y] = min((255 - site.strength), 100) + site.production
 
-    def value_from_point(self, location, pt_strength):
-        """Assess the reference-dependent value of capturing a spot."""
-        ref_x, ref_y = location
-        relative_values = np.zeros(self.nsquares, dtype=float)
+    def get_best_pt(self, location, pt_strength):
+        if pt_strength == 255:
+            pt_strength = 256
+        Dl = self.offset(self.D, location.x, location.y)
+        val = np.divide(self.values, Dl)
 
-        searchspace = np.array(range(self.nsquares))
-        searchspace = searchspace[(self.mine == 0) &
-                                  (self.strengths <= pt_strength)]
-        # print (type(searchspace), len(searchspace), searchspace.shape)
-        if len(searchspace) == 0:
-            return (0, 0), -99999
+        val = np.multiply(val, (self.strengths < pt_strength))
+        targ_x, targ_y = np.unravel_index(val.argmax(), val.shape)
 
-        searchspace = self.sample_up_to(searchspace, 50)
-        for i in searchspace:
-            pt_x, pt_y = self.locs[i]
-            min_x = min((pt_x - ref_x) % self.mapwidth,
-                        (ref_x - pt_x) % self.mapwidth)
-            min_y = min((pt_y - ref_y) % self.mapheight,
-                        (ref_y - pt_y) % self.mapheight)
-            distance = min_x + min_y
+        return (targ_x, targ_y), val[targ_x, targ_y]
 
-            # with open('err.txt', 'a') as f:
-            #     f.write(repr((pt_x, pt_y)) + '\t' + repr((ref_x, ref_y)) + '\t' + repr((min_x, min_y)) + '\n')
-            #     f.write(repr(self.values[i]) + '\t' + repr(distance) + '\t\t')
-            #     f.write(repr(relative_values[i]) + '\t')
-            #     f.write(repr(self.values[i] / distance) + '\n')
+    def get_distance_matrix(self):
+        D = np.zeros((self.mapwidth, self.mapheight), dtype=int)
 
-            relative_values[i] = self.values[i] / distance
+        for x in range(self.mapwidth):
+            for y in range(self.mapheight):
+                min_x = min((x - 0) % self.mapwidth, (0 - x) % self.mapheight) - 1
+                min_y = min((y - 0) % self.mapwidth, (0 - y) % self.mapheight) - 1
+                D[x, y] = max(min_x + min_y, 1)
 
+        return D
 
-        best_move = np.argmax(relative_values)
-
-        return self.locs[i], max(relative_values)
+    @staticmethod
+    def offset(M, x, y):
+        return np.roll(np.roll(M, y, 0), x, 1)
 
     @staticmethod
     def sample_up_to(vec, max):

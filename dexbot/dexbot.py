@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from hlt import *
 from networking import *
 from dexbot.map_evaluator import MapEvaluator
@@ -10,45 +11,56 @@ class DexBot(object):
     def __init__(self, myID):
         self.id = myID
         self.mapeval = None
-        self.req_value = 10
+        self.req_value = 8
+        self.max_strength = 120
+        self.min_strength_multiplier = 2.5
 
     def move(self, location, game_map):
         # site = game_map.getSite(location)
+        site = game_map.getSite(location)
+
         # Capture any enemy neighbours if possible
-        for d in CARDINALS:
-            if self.can_capture(game_map, location, d) and \
-                    self.is_enemy(game_map, location, d):
+        for d in random.sample(CARDINALS, 4):
+            if self.can_capture(game_map, location, d, site) and \
+                    self.is_enemy(game_map, location, d, site):
                 return Move(location, d)
 
         # Capture any neighbours if possible
-        for d in CARDINALS:
-            if self.can_capture(game_map, location, d):
-                return Move(location, d)
+        # for d in random.sample(CARDINALS, 4):
+        #    if self.can_capture(game_map, location, d, site):
+        #        return Move(location, d)
 
         # Else eval value of each point
-        site = game_map.getSite(location)
-        target, value = self.map_eval.value_from_point((location.x, location.y),
-                                                       site.strength)
-        if value > self.req_value:
+        target, value = self.map_eval.get_best_pt(location, site.strength)
+        if value > self.req_value or site.strength > self.max_strength:
             # Move towards!
             targ_x, targ_y = target
-            dists = [(targ_y - location.y) % self.map_eval.nsquares,
-                     (targ_x - location.x) % self.map_eval.nsquares,
-                     (location.y - targ_y) % self.map_eval.nsquares,
-                     (location.x - targ_x) % self.map_eval.nsquares]
+            dists = [
+                (targ_y - location.y) % self.map_eval.mapheight,
+                (targ_x - location.x) % self.map_eval.mapwidth,
+                (location.y - targ_y) % self.map_eval.mapheight,
+                (location.x - targ_x) % self.map_eval.mapwidth
+            ]
             d = np.argmin(dists) + 1
-            return Move(location, d)
+            # with open('debug.txt', 'a') as f:
+            #     f.write('\t'.join([repr(d), repr(site.strength), repr(dists), '\n']))
+
+            if self.can_move_safely(game_map, location, d, site):
+                return Move(location, d)
 
         # Else chill
         return Move(location, STILL)
 
-    def can_capture(self, game_map, location, d):
-        site = game_map.getSite(location)
+    def can_move_safely(self, game_map, location, d, site):
+        # Might be worth having avoid-255 logic here
+        new_site = game_map.getSite(location, d)
+        return (site.strength > new_site.strength) | (site.strength == 255)
+
+    def can_capture(self, game_map, location, d, site):
         new_site = game_map.getSite(location, d)
         return new_site.owner != self.id and site.strength > new_site.strength
 
-    def is_enemy(self, game_map, location, d):
-        site = game_map.getSite(location)
+    def is_enemy(self, game_map, location, d, site):
         new_site = game_map.getSite(location, d)
         return new_site.owner != self.id and new_site.owner != 0 and site.strength > new_site.strength
 
