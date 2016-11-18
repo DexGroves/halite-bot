@@ -1,3 +1,4 @@
 *.hlt
 *.pyc
 *.log
+archives/*.zip
