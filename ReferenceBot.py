@@ -1,5 +1,5 @@
-from hlt import *
-from networking import *
+from halitesrc.hlt import *
+from halitesrc.networking import *
 from ref.dexbot import DexBot
 from ref.map_evaluator import MapEvaluator
 

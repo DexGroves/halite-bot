@@ -1,6 +1,6 @@
 import random
 import numpy as np
-from hlt import Move, CARDINALS, STILL
+from halitesrc.hlt import Move, CARDINALS, STILL
 
 
 class DexBot(object):

@@ -4,7 +4,7 @@ Really this should prioritise weaker (?) opponents. Maybe.
 
 
 import numpy as np
-from hlt import Location
+from halitesrc.hlt import Location
 
 
 class MapEvaluator(object):

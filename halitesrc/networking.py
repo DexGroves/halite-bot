@@ -1,4 +1,4 @@
-from hlt import *
+from halitesrc.hlt import *
 import socket
 import traceback
 import struct
