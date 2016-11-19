@@ -1,4 +1,5 @@
 clean:
+	rm nohup.out
 	rm *.hlt
 	rm *.log
 
