@@ -4,3 +4,4 @@
 archives/*.zip
 nohup.out
 debug.txt
+__pycache__

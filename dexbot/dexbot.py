@@ -10,7 +10,7 @@ class DexBot(object):
         self.my_id = my_id
         self.map_eval = None
 
-        self.req_value_multi = 0.2
+        self.req_value_multi = 0.3
         self.max_strength = 128
 
     def move(self, location, game_map):

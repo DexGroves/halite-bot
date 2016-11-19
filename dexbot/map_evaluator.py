@@ -19,6 +19,7 @@ class MapEvaluator(object):
 
         self.values = np.zeros((self.mapwidth, self.mapheight), dtype=int)
         self.strengths = np.zeros((self.mapwidth, self.mapheight), dtype=int)
+        self.owner = np.zeros((self.mapwidth, self.mapheight), dtype=int)
 
     def set_evaluation(self, game_map):
         """Assess the absolute, reference-independent value of
@@ -29,14 +30,16 @@ class MapEvaluator(object):
 
                 if site.owner == self.my_id:
                     self.strengths[x, y] = 0
-                    self.values[x, y] = 0 # min(site.production - site.strength, 30)
+                    self.values[x, y] = 0
+                    self.owner[x, y] = 1
                 elif site.owner == 0:
                     self.strengths[x, y] = site.strength
-                    self.values[x, y] = 255 - site.production
+                    self.values[x, y] = site.production # 255 - site.production
+                    self.owner[x, y] = 0
                 else:
                     self.strengths[x, y] = site.strength
-                    self.values[x, y] = (255 - site.production) * 2.5
-                    # min((255 - site.strength), 100) + site.production
+                    self.values[x, y] = site.production * 2
+                    self.owner[x, y] = -1
 
     def get_best_pt(self, location, pt_strength):
         """Trade board value assessment with a given location's
@@ -79,6 +82,9 @@ class MapEvaluator(object):
                 dists[x, y] = max(min_x + min_y, 1)
         dists[dists == 2] = 1.5
         return dists
+
+    def get_self_pts(self):
+        return np.transpose(np.where(self.owner == 1))
 
     @staticmethod
     def offset(M, x, y):
