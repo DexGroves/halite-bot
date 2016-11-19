@@ -8,10 +8,10 @@ class DexBot(object):
 
     def __init__(self, my_id):
         self.my_id = my_id
-        self.mapeval = None
+        self.map_eval = None
+
         self.req_value_multi = 0.2
         self.max_strength = 128
-        self.map_eval = None
 
     def move(self, location, game_map):
         site = game_map.getSite(location)
@@ -58,7 +58,7 @@ class DexBot(object):
 
     def is_enemy(self, game_map, location, cardinal, site):
         new_site = game_map.getSite(location, cardinal)
-        return new_site.owner != self.my_id and new_site.owner != 0 and site.strength > new_site.strength
+        return new_site.owner != self.my_id and new_site.owner != 0
 
     def set_evaluator(self, map_eval):
         self.map_eval = map_eval

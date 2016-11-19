@@ -8,7 +8,9 @@ from hlt import Location
 
 
 class MapEvaluator(object):
-
+    """Evaluate the value of capturing each point on the game_map.
+    Really this should prioritise weaker (?) opponents. Maybe.
+    """
     def __init__(self, my_id, game_map):
         self.my_id = my_id
         self.mapheight = game_map.height
@@ -37,6 +39,10 @@ class MapEvaluator(object):
                     # min((255 - site.strength), 100) + site.production
 
     def get_best_pt(self, location, pt_strength):
+        """Trade board value assessment with a given location's
+        distance and strength to come up with the 'optimal' spot
+        to move towards.
+        """
         if pt_strength == 256:
             pt_strength = 257
 
@@ -60,6 +66,10 @@ class MapEvaluator(object):
         return (targ_x, targ_y), val[targ_x, targ_y]
 
     def get_distance_matrix(self):
+        """Populate initial distance matrix centred at 0, 0.
+        This matrix informs the number of moves to get to a square
+        with awareness of wraparound.
+        """
         dists = np.zeros((self.mapwidth, self.mapheight), dtype=float)
 
         for x in range(self.mapwidth):
@@ -72,4 +82,7 @@ class MapEvaluator(object):
 
     @staticmethod
     def offset(M, x, y):
+        """Offset a matrix by x and y with wraparound.
+        Used to position self.dists for other points.
+        """
         return np.roll(np.roll(M, x, 0), y, 1)
