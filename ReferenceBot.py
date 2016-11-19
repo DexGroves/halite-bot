@@ -1,31 +1,25 @@
 from hlt import *
 from networking import *
-
-myID, gameMap = getInit()
-sendInit("MyPythonBot")
-
-
-PRODUCTION_MULTI = 5
+from ref.dexbot import DexBot
+from ref.map_evaluator import MapEvaluator
 
 
-def move(location):
-    site = gameMap.getSite(location)
-    for d in CARDINALS:
-        neighbour_site = gameMap.getSite(location, d)
-        if neighbour_site.owner != myID and \
-                neighbour_site.strength < site.strength:
-            return Move(location, d)
-    if site.strength < site.production * PRODUCTION_MULTI:
-        return Move(location, STILL)
-    return Move(location, NORTH if random.random() > 0.5 else WEST)
+my_id, game_map = getInit()
+sendInit("RefBot")
+db = DexBot(my_id)
+mapeval = MapEvaluator(my_id, game_map)
 
 
 while True:
     moves = []
-    gameMap = getFrame()
-    for y in range(gameMap.height):
-        for x in range(gameMap.width):
+    game_map = getFrame()
+    mapeval.set_evaluation(game_map)
+    db.set_evaluator(mapeval)
+
+    for y in range(game_map.height):
+        for x in range(game_map.width):
             location = Location(x, y)
-            if gameMap.getSite(location).owner == myID:
-                moves.append(move(location))
+            owner = game_map.getSite(location).owner
+            if owner == my_id:
+                moves.append(db.move(location, game_map))
     sendFrame(moves)
