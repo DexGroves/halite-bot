@@ -12,3 +12,6 @@ playoff:
 
 run:
 	./scripts/runGame.sh
+
+time:
+	./scripts/timeit.sh
