@@ -29,6 +29,8 @@ while True:
 
     elapsed = 0
     i = 0
+    np.random.shuffle(self_pts)
+
     for x, y in self_pts:
         location = Location(x, y)
         moves[i] = db.move(location, game_map)
