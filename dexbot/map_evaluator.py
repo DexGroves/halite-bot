@@ -39,11 +39,11 @@ class MapEvaluator(object):
                     self.owner[x, y] = 1
                 elif site.owner == 0:
                     self.strengths[x, y] = site.strength
-                    self.values[x, y] = site.production # 255 - site.production
+                    self.values[x, y] = site.production
                     self.owner[x, y] = 0
                 else:
-                    self.strengths[x, y] = site.strength
-                    self.values[x, y] = site.production * self.enemy_prod_multi
+                    self.strengths[x, y] = site.strength + site.production
+                    self.values[x, y] = site.production * self.enemy_prod_multi - (site.strength * 0.01)
                     self.owner[x, y] = -1
 
         # Account for splash damage
