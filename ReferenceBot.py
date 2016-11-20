@@ -3,17 +3,27 @@ import timeit
 import numpy as np
 from halitesrc.hlt import *
 from halitesrc.networking import *
-from ref.dexbot import DexBot
-from ref.map_evaluator import MapEvaluator
+from dexbot.dexbot import DexBot
+from dexbot.map_evaluator import MapEvaluator
 
 
-MAX_TIME = 0.94
-TIME_CHK_FREQ = 10
+config = json.loads("""
+{
+    "max_time": 0.94,
+    "time_check_frequency": 10,
+    "stay_value_multiplier": 2.38,
+    "max_stay_strength": 120,
+    "enemy_production_multiplier": 1.2,
+    "splash_value_multiplier": 1.0
+}
+"""
+)
+
 
 my_id, game_map = getInit()
-sendInit("refbot")
-db = DexBot(my_id)
-mapeval = MapEvaluator(my_id, game_map)
+sendInit("RefBot")
+db = DexBot(my_id, config)
+mapeval = MapEvaluator(my_id, game_map, config)
 
 
 while True:
@@ -34,10 +44,10 @@ while True:
         location = Location(x, y)
         moves[i] = db.move(location, game_map)
 
-        check_time = (x + y) % TIME_CHK_FREQ == 0
+        check_time = (x + y) % config['time_check_frequency'] == 0
         if check_time:
             elapsed = timeit.default_timer() - start_time
-        if check_time and elapsed > MAX_TIME:
+        if check_time and elapsed > config['max_time']:
             # Panic mode, everything stays!
             moves[i:] = [Move(Location(x, y), STILL) for x, y in self_pts[i:]]
             break
