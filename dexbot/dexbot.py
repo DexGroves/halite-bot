@@ -32,6 +32,8 @@ class DexBot(object):
             cardinal = np.argmin(dists) + 1
 
             if self.can_move_safely(game_map, location, cardinal, site):
+                new_x, new_y = self.shift_coordinates(location, cardinal, game_map)
+                self.map_eval.set_move(new_x, new_y)
                 return Move(location, cardinal)
 
         # Else chill
@@ -74,3 +76,18 @@ class DexBot(object):
         if cardinal == 4:
             new_x = (location.x - 1) % game_map.width
             return game_map.contents[location.y][new_x]
+
+    @staticmethod
+    def shift_coordinates(location, cardinal, game_map):
+        if cardinal == 1:
+            new_y = (location.y - 1) % game_map.height
+            return location.x, new_y
+        if cardinal == 2:
+            new_x = (location.x + 1) % game_map.width
+            return new_x, location.y
+        if cardinal == 3:
+            new_y = (location.y + 1) % game_map.height
+            return location.x, new_y
+        if cardinal == 4:
+            new_x = (location.x - 1) % game_map.width
+            return new_x, location.y

@@ -89,6 +89,9 @@ class MapEvaluator(object):
     def get_self_pts(self):
         return np.transpose(np.where(self.owner == 1))
 
+    def set_move(self, x, y):
+        self.values[x, y] = 0
+
     @staticmethod
     def offset(M, x, y):
         """Offset a matrix by x and y with wraparound.
