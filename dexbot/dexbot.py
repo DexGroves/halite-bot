@@ -1,6 +1,5 @@
-import random
 import numpy as np
-from halitesrc.hlt import Move, CARDINALS, STILL
+from halitesrc.hlt import Move, STILL
 
 
 class DexBot(object):
@@ -15,11 +14,6 @@ class DexBot(object):
 
     def move(self, location, game_map):
         site = game_map.contents[location.y][location.x]
-
-        # Capture any enemy neighbours if possible
-        # for cardinal in random.sample(CARDINALS, 4):
-        #     if self.can_capture_enemy(game_map, location, cardinal, site):
-        #         return Move(location, cardinal)
 
         # Else eval value of each point
         target, value = self.map_eval.get_best_pt(location, site.strength)
@@ -36,10 +30,6 @@ class DexBot(object):
             dists[dists == 0] = 999
             cardinal = np.argmin(dists) + 1
 
-            # with open('debug.txt', 'a') as f:
-            #     f.write('\t'.join([repr(cardinal), repr((targ_x, targ_y)),
-            #                        repr(site.strength), repr(dists), '\n']))
-
             if self.can_move_safely(game_map, location, cardinal, site):
                 return Move(location, cardinal)
 
@@ -49,7 +39,7 @@ class DexBot(object):
     def can_move_safely(self, game_map, location, cardinal, site):
         # Might be worth having avoid-255 logic here
         new_site = self.shift_site(location, cardinal, game_map)
-        return (site.strength > new_site.strength) | (site.strength == 255)
+        return (site.strength > new_site.strength) | (site.strength >= 255)
 
     def can_capture_enemy(self, game_map, location, cardinal, site):
         new_site = self.shift_site(location, cardinal, game_map)

@@ -1,3 +1,4 @@
+import json
 import timeit
 import numpy as np
 from halitesrc.hlt import *
@@ -14,8 +15,6 @@ sendInit("DexBot")
 db = DexBot(my_id)
 mapeval = MapEvaluator(my_id, game_map)
 
-# with open("debug.txt", "w") as f:
-#     f.write("Debug\n\n")
 
 while True:
     start_time = timeit.default_timer()

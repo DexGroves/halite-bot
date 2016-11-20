@@ -4,7 +4,6 @@ Really this should prioritise weaker (?) opponents. Maybe.
 
 
 import numpy as np
-from halitesrc.hlt import Location
 
 
 class MapEvaluator(object):
@@ -23,7 +22,8 @@ class MapEvaluator(object):
 
     def set_evaluation(self, game_map):
         """Assess the absolute, reference-independent value of
-        capturing a spot."""
+        capturing a spot.
+        """
         for x in range(self.mapwidth):
             for y in range(self.mapheight):
                 site = game_map.contents[y][x]
@@ -62,16 +62,6 @@ class MapEvaluator(object):
         val = np.multiply(val, (self.strengths < pt_strength))
         targ_x, targ_y = np.unravel_index(val.argmax(), val.shape)
 
-        # debug_str = '\t'.join([
-        #     repr((location.x, location.y)), repr(pt_strength), "\n",
-        #     repr(self.values[location.x, location.y]),
-        #     repr(game_map.getSite(Location(location.x, location.y)).strength),
-        #     repr(dist_from), "\n",
-        #     repr(self.values),  "\n",
-        #     repr(val), "\n"
-        # ])
-        # with open("debug.txt", "a") as f:
-        #     f.write(debug_str)
 
         return (targ_x, targ_y), val[targ_x, targ_y]
 
