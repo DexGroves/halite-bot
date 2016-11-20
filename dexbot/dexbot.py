@@ -5,19 +5,19 @@ from halitesrc.hlt import Move, STILL
 class DexBot(object):
     """The greatest Halite bot ever, in training."""
 
-    def __init__(self, my_id):
+    def __init__(self, my_id, config):
         self.my_id = my_id
         self.map_eval = None
 
-        self.req_value_multi = 0.3
-        self.max_strength = 128
+        self.stay_val_multi = config['stay_value_multiplier']
+        self.max_strength = config['max_stay_strength']
 
     def move(self, location, game_map):
         site = game_map.contents[location.y][location.x]
 
         # Else eval value of each point
         target, value = self.map_eval.get_best_pt(location, site.strength)
-        stay_value = site.production * self.req_value_multi / max(site.strength, 0.01)
+        stay_value = site.production * self.stay_val_multi / max(site.strength, 0.01)
         if value > stay_value or site.strength > self.max_strength:
             # Move towards!
             targ_x, targ_y = target

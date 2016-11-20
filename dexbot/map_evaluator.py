@@ -10,10 +10,14 @@ class MapEvaluator(object):
     """Evaluate the value of capturing each point on the game_map.
     Really this should prioritise weaker (?) opponents. Maybe.
     """
-    def __init__(self, my_id, game_map):
+    def __init__(self, my_id, game_map, config):
         self.my_id = my_id
         self.mapheight = game_map.height
         self.mapwidth = game_map.width
+
+        self.enemy_prod_multi = config['enemy_production_multiplier']
+        self.splash_value_multi = config['splash_value_multiplier']
+
         self.dists = self.get_distance_matrix()
 
         self.values = np.zeros((self.mapwidth, self.mapheight), dtype=int)
@@ -38,11 +42,13 @@ class MapEvaluator(object):
                     self.owner[x, y] = 0
                 else:
                     self.strengths[x, y] = site.strength
-                    self.values[x, y] = site.production * 2
+                    self.values[x, y] = site.production * self.enemy_prod_multi
                     self.owner[x, y] = -1
 
         # Account for splash damage
-        enemy_value = np.multiply(self.owner == -1, self.values)
+        enemy_value = np.multiply(self.owner == -1, self.values) * \
+                          1 # self.splash_value_multi
+
         self.values += self.offset(enemy_value, 1,  0)
         self.values += self.offset(enemy_value, 0,  1)
         self.values += self.offset(enemy_value, -1, 0)

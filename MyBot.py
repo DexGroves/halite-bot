@@ -7,13 +7,13 @@ from dexbot.dexbot import DexBot
 from dexbot.map_evaluator import MapEvaluator
 
 
-MAX_TIME = 0.94
-TIME_CHK_FREQ = 10
+config = json.load(open("dexbot.config", "r"))
+
 
 my_id, game_map = getInit()
 sendInit("DexBot")
-db = DexBot(my_id)
-mapeval = MapEvaluator(my_id, game_map)
+db = DexBot(my_id, config)
+mapeval = MapEvaluator(my_id, game_map, config)
 
 
 while True:
@@ -34,10 +34,10 @@ while True:
         location = Location(x, y)
         moves[i] = db.move(location, game_map)
 
-        check_time = (x + y) % TIME_CHK_FREQ == 0
+        check_time = (x + y) % config['time_check_frequency'] == 0
         if check_time:
             elapsed = timeit.default_timer() - start_time
-        if check_time and elapsed > MAX_TIME:
+        if check_time and elapsed > config['max_time']:
             # Panic mode, everything stays!
             moves[i:] = [Move(Location(x, y), STILL) for x, y in self_pts[i:]]
             break
