@@ -4,7 +4,6 @@ Really this should prioritise weaker (?) opponents. Maybe.
 
 
 import numpy as np
-from halitesrc.hlt import Location
 
 
 class MapEvaluator(object):
@@ -19,24 +18,35 @@ class MapEvaluator(object):
 
         self.values = np.zeros((self.mapwidth, self.mapheight), dtype=int)
         self.strengths = np.zeros((self.mapwidth, self.mapheight), dtype=int)
+        self.owner = np.zeros((self.mapwidth, self.mapheight), dtype=int)
 
     def set_evaluation(self, game_map):
         """Assess the absolute, reference-independent value of
-        capturing a spot."""
+        capturing a spot.
+        """
         for x in range(self.mapwidth):
             for y in range(self.mapheight):
-                site = game_map.getSite(Location(x, y))
+                site = game_map.contents[y][x]
 
                 if site.owner == self.my_id:
                     self.strengths[x, y] = 0
-                    self.values[x, y] = 0 # min(site.production - site.strength, 30)
+                    self.values[x, y] = 0
+                    self.owner[x, y] = 1
                 elif site.owner == 0:
                     self.strengths[x, y] = site.strength
-                    self.values[x, y] = 255 - site.production
+                    self.values[x, y] = site.production # 255 - site.production
+                    self.owner[x, y] = 0
                 else:
                     self.strengths[x, y] = site.strength
-                    self.values[x, y] = (255 - site.production) * 2.5
-                    # min((255 - site.strength), 100) + site.production
+                    self.values[x, y] = site.production * 2
+                    self.owner[x, y] = -1
+
+        # Account for splash damage
+        enemy_value = np.multiply(self.owner == -1, self.values)
+        self.values += self.offset(enemy_value, 1,  0)
+        self.values += self.offset(enemy_value, 0,  1)
+        self.values += self.offset(enemy_value, -1, 0)
+        self.values += self.offset(enemy_value, 0, -1)
 
     def get_best_pt(self, location, pt_strength):
         """Trade board value assessment with a given location's
@@ -52,16 +62,6 @@ class MapEvaluator(object):
         val = np.multiply(val, (self.strengths < pt_strength))
         targ_x, targ_y = np.unravel_index(val.argmax(), val.shape)
 
-        # debug_str = '\t'.join([
-        #     repr((location.x, location.y)), repr(pt_strength), "\n",
-        #     repr(self.values[location.x, location.y]),
-        #     repr(game_map.getSite(Location(location.x, location.y)).strength),
-        #     repr(dist_from), "\n",
-        #     repr(self.values),  "\n",
-        #     repr(val), "\n"
-        # ])
-        # with open("debug.txt", "a") as f:
-        #     f.write(debug_str)
 
         return (targ_x, targ_y), val[targ_x, targ_y]
 
@@ -79,6 +79,9 @@ class MapEvaluator(object):
                 dists[x, y] = max(min_x + min_y, 1)
         dists[dists == 2] = 1.5
         return dists
+
+    def get_self_pts(self):
+        return np.transpose(np.where(self.owner == 1))
 
     @staticmethod
     def offset(M, x, y):
