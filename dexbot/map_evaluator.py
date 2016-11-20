@@ -26,7 +26,7 @@ class MapEvaluator(object):
         capturing a spot."""
         for x in range(self.mapwidth):
             for y in range(self.mapheight):
-                site = game_map.getSite(Location(x, y))
+                site = game_map.contents[y][x]
 
                 if site.owner == self.my_id:
                     self.strengths[x, y] = 0

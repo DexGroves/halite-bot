@@ -6,7 +6,7 @@ from dexbot.dexbot import DexBot
 from dexbot.map_evaluator import MapEvaluator
 
 
-MAX_TIME = 0.9
+MAX_TIME = 0.94
 TIME_CHK_FREQ = 10
 
 my_id, game_map = getInit()
