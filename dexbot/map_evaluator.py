@@ -41,6 +41,13 @@ class MapEvaluator(object):
                     self.values[x, y] = site.production * 2
                     self.owner[x, y] = -1
 
+        # Account for splash damage
+        enemy_value = np.multiply(self.owner == -1, self.values)
+        self.values += self.offset(enemy_value, 1,  0)
+        self.values += self.offset(enemy_value, 0,  1)
+        self.values += self.offset(enemy_value, -1, 0)
+        self.values += self.offset(enemy_value, 0, -1)
+
     def get_best_pt(self, location, pt_strength):
         """Trade board value assessment with a given location's
         distance and strength to come up with the 'optimal' spot

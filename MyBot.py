@@ -7,6 +7,7 @@ from dexbot.map_evaluator import MapEvaluator
 
 
 MAX_TIME = 0.9
+TIME_CHK_FREQ = 10
 
 my_id, game_map = getInit()
 sendInit("DexBot")
@@ -17,6 +18,8 @@ mapeval = MapEvaluator(my_id, game_map)
 #     f.write("Debug\n\n")
 
 while True:
+    start_time = timeit.default_timer()
+
     game_map = getFrame()
     mapeval.set_evaluation(game_map)
     db.set_evaluator(mapeval)
@@ -24,14 +27,13 @@ while True:
     self_pts = mapeval.get_self_pts()
     moves = np.empty(len(self_pts), dtype=Move)
 
-    start_time = timeit.default_timer()
     elapsed = 0
     i = 0
     for x, y in self_pts:
         location = Location(x, y)
         moves[i] = db.move(location, game_map)
 
-        check_time = (x + y) % 10 == 0
+        check_time = (x + y) % TIME_CHK_FREQ == 0
         if check_time:
             elapsed = timeit.default_timer() - start_time
         if check_time and elapsed > MAX_TIME:
