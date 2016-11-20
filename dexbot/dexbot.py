@@ -11,6 +11,7 @@ class DexBot(object):
 
         self.stay_val_multi = config['stay_value_multiplier']
         self.max_strength = config['max_stay_strength']
+        self.cap_avoidance = config['cap_avoidance']
 
     def move(self, location, game_map):
         site = game_map.contents[location.y][location.x]
@@ -37,9 +38,17 @@ class DexBot(object):
         return Move(location, STILL)
 
     def can_move_safely(self, game_map, location, cardinal, site):
-        # Might be worth having avoid-255 logic here
         new_site = self.shift_site(location, cardinal, game_map)
-        return (site.strength > new_site.strength) | (site.strength >= 255)
+        owned = new_site.owner == self.my_id
+        stronger = site.strength > new_site.strength
+
+        if owned and \
+                (new_site.strength + site.strength - 255) > self.cap_avoidance and \
+                not stronger:
+            return False
+
+        out = stronger | (site.strength >= 255)
+        return out
 
     def can_capture_enemy(self, game_map, location, cardinal, site):
         new_site = self.shift_site(location, cardinal, game_map)

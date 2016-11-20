@@ -17,10 +17,11 @@ class MapEvaluator(object):
 
         self.enemy_prod_multi = config['enemy_production_multiplier']
         self.splash_value_multi = config['splash_value_multiplier']
+        self.falloff_exponent = config['falloff_exponent']
 
         self.dists = self.get_distance_matrix()
 
-        self.values = np.zeros((self.mapwidth, self.mapheight), dtype=int)
+        self.values = np.zeros((self.mapwidth, self.mapheight), dtype=float)
         self.strengths = np.zeros((self.mapwidth, self.mapheight), dtype=int)
         self.owner = np.zeros((self.mapwidth, self.mapheight), dtype=int)
 
@@ -47,7 +48,7 @@ class MapEvaluator(object):
 
         # Account for splash damage
         enemy_value = np.multiply(self.owner == -1, self.values) * \
-                          1 # self.splash_value_multi
+                          self.splash_value_multi
 
         self.values += self.offset(enemy_value, 1,  0)
         self.values += self.offset(enemy_value, 0,  1)
@@ -64,7 +65,6 @@ class MapEvaluator(object):
 
         dist_from = self.offset(self.dists, location.x, location.y)
         val = np.divide(self.values, dist_from)
-        val = np.divide(val, dist_from)
         val = np.multiply(val, (self.strengths < pt_strength))
         targ_x, targ_y = np.unravel_index(val.argmax(), val.shape)
 
@@ -83,8 +83,8 @@ class MapEvaluator(object):
                 min_x = min((x - 0) % self.mapwidth, (0 - x) % self.mapwidth)
                 min_y = min((y - 0) % self.mapheight, (0 - y) % self.mapheight)
                 dists[x, y] = max(min_x + min_y, 1)
-        dists[dists == 2] = 1.5
-        return dists
+        dists[dists == 2] = 2
+        return dists ** self.falloff_exponent
 
     def get_self_pts(self):
         return np.transpose(np.where(self.owner == 1))
