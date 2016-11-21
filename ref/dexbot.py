@@ -11,6 +11,7 @@ class DexBot(object):
 
         self.stay_val_multi = config['stay_value_multiplier']
         self.max_strength = config['max_stay_strength']
+        self.cap_avoidance = config['cap_avoidance']
 
     def move(self, location, game_map):
         site = game_map.contents[location.y][location.x]
@@ -31,15 +32,25 @@ class DexBot(object):
             cardinal = np.argmin(dists) + 1
 
             if self.can_move_safely(game_map, location, cardinal, site):
+                new_x, new_y = self.shift_coordinates(location, cardinal, game_map)
+                self.map_eval.set_move(new_x, new_y)
                 return Move(location, cardinal)
 
         # Else chill
         return Move(location, STILL)
 
     def can_move_safely(self, game_map, location, cardinal, site):
-        # Might be worth having avoid-255 logic here
         new_site = self.shift_site(location, cardinal, game_map)
-        return (site.strength > new_site.strength) | (site.strength >= 255)
+        owned = new_site.owner == self.my_id
+        stronger = site.strength > new_site.strength
+
+        if owned and \
+                (new_site.strength + site.strength - 255) > self.cap_avoidance and \
+                not stronger:
+            return False
+
+        out = stronger | (site.strength >= 255)
+        return out
 
     def can_capture_enemy(self, game_map, location, cardinal, site):
         new_site = self.shift_site(location, cardinal, game_map)
@@ -65,3 +76,18 @@ class DexBot(object):
         if cardinal == 4:
             new_x = (location.x - 1) % game_map.width
             return game_map.contents[location.y][new_x]
+
+    @staticmethod
+    def shift_coordinates(location, cardinal, game_map):
+        if cardinal == 1:
+            new_y = (location.y - 1) % game_map.height
+            return location.x, new_y
+        if cardinal == 2:
+            new_x = (location.x + 1) % game_map.width
+            return new_x, location.y
+        if cardinal == 3:
+            new_y = (location.y + 1) % game_map.height
+            return location.x, new_y
+        if cardinal == 4:
+            new_x = (location.x - 1) % game_map.width
+            return new_x, location.y
