@@ -6,18 +6,7 @@ from halitesrc.networking import *
 from ref.dexbot import DexBot
 from ref.map_evaluator import MapEvaluator
 
-
-config = json.loads("""
-    {
-        "max_time": 0.94,
-        "time_check_frequency": 10,
-        "stay_value_multiplier": 2.38,
-        "max_stay_strength": 120,
-        "enemy_production_multiplier": 1.2,
-        "splash_value_multiplier": 1.0
-    }
-    """
-)
+config = json.load(open("refbot.config", "r"))        
 
 
 my_id, game_map = getInit()

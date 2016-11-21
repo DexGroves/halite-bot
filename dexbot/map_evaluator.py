@@ -18,6 +18,7 @@ class MapEvaluator(object):
         self.enemy_prod_multi = config['enemy_production_multiplier']
         self.splash_value_multi = config['splash_value_multiplier']
         self.falloff_exponent = config['falloff_exponent']
+        self.exclude_str = config['exclude_str']
 
         self.dists = self.get_distance_matrix()
 
@@ -65,9 +66,10 @@ class MapEvaluator(object):
 
         dist_from = self.offset(self.dists, location.x, location.y)
         val = np.divide(self.values, dist_from)
-        val = np.multiply(val, (self.strengths < pt_strength))
+        if self.exclude_str:
+            val = np.multiply(val, (self.strengths < pt_strength))
+        
         targ_x, targ_y = np.unravel_index(val.argmax(), val.shape)
-
 
         return (targ_x, targ_y), val[targ_x, targ_y]
 
