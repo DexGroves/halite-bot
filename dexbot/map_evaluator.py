@@ -19,6 +19,7 @@ class MapEvaluator(object):
         self.splash_value_multi = config['splash_value_multiplier']
         self.falloff_exponent = config['falloff_exponent']
         self.exclude_str = config['exclude_str']
+        self.str_penalty = config['str_penalty']
 
         self.dists = self.get_distance_matrix()
 
@@ -40,11 +41,11 @@ class MapEvaluator(object):
                     self.owner[x, y] = 1
                 elif site.owner == 0:
                     self.strengths[x, y] = site.strength
-                    self.values[x, y] = site.production
+                    self.values[x, y] = site.production - (site.strength * self.str_penalty)
                     self.owner[x, y] = 0
                 else:
                     self.strengths[x, y] = site.strength + site.production
-                    self.values[x, y] = site.production * self.enemy_prod_multi - (site.strength * 0.01)
+                    self.values[x, y] = site.production * self.enemy_prod_multi - (site.strength * self.str_penalty)
                     self.owner[x, y] = -1
 
         # Account for splash damage
@@ -68,7 +69,7 @@ class MapEvaluator(object):
         val = np.divide(self.values, dist_from)
         if self.exclude_str:
             val = np.multiply(val, (self.strengths < pt_strength))
-        
+
         targ_x, targ_y = np.unravel_index(val.argmax(), val.shape)
 
         return (targ_x, targ_y), val[targ_x, targ_y]

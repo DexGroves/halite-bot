@@ -9,12 +9,13 @@ library("gbm")
 MAX_TIME <- 0.94
 TIME_CHECK_FREQUENCY <- 10
 
-SPLASH_VALUE_MULTIPLIER <- seq(0.8, 1.2, by = 0.1)
-STAY_VALUE_RANGE <- seq(2.25, 2.75, by = 0.01)
-MAX_STAY_RANGE <- seq(100, 150, by = 10)
-ENEMY_PROD_RANGE <- seq(0.8, 1.2, by = 0.1)
-CAP_AVOIDANCE_RANGE <- c(-100, 5000)  # seq(-100, 300, by = 10)
-FALLOFF_EXPONENT_RANGE <- seq(1.8, 2.2, by = 0.1)
+SPLASH_VALUE_MULTIPLIER <- seq(0.8, 1.1, by = 0.1)
+STAY_VALUE_RANGE <- seq(2.50, 2.75, by = 0.01)
+MAX_STAY_RANGE <- seq(90, 110, by = 1)
+ENEMY_PROD_RANGE <- seq(1.15, 1.25, by = 0.01)
+CAP_AVOIDANCE_RANGE <- c(4900, 5000)  # seq(-100, 300, by = 10)
+FALLOFF_EXPONENT_RANGE <- seq(1.75, 1.85, by = 0.01)
+STR_PENALTY_RANGE <- seq(0, 0.1, by = 0.01)
 OPPONENT_RANGE <- c(1)
 DIM_RANGE <- c(20, 25, 30, 35)
 EXCLUDE_RANGE <- c(TRUE, TRUE)
@@ -30,6 +31,7 @@ sample_new_config <- function(N = 1) {
     cap_avoidance = sample(CAP_AVOIDANCE_RANGE, N, TRUE),
     falloff_exponent = sample(FALLOFF_EXPONENT_RANGE, N, TRUE),
     exclude_str = sample(EXCLUDE_RANGE, N, TRUE),
+    str_penalty = sample(STR_PENALTY_RANGE, N, TRUE),
     nopp = sample(OPPONENT_RANGE, N, TRUE),
     dim = sample(DIM_RANGE, N, TRUE)
   )
@@ -77,7 +79,7 @@ results <- foreach(i = seq(nrun), .combine = rbind) %dopar% {
 
 # Fit GBM to the results and find optimal ------------------------------------
 results$exclude_str <- as.numeric(results$exclude_str)
-model <- gbm(dexrank ~ stay_value_multiplier + max_stay_strength + enemy_production_multiplier + cap_avoidance + falloff_exponent + exclude_str,
+model <- gbm(dexrank ~ stay_value_multiplier + max_stay_strength + enemy_production_multiplier + cap_avoidance + falloff_exponent + str_penalty,
              distribution = "bernoulli",
              data = results[!is.na(results$dexrank), ],
              n.trees = 5000,
@@ -92,8 +94,8 @@ newdata$exclude_str <- as.numeric(newdata$exclude_str)
 
 newdata$mpred <- predict(model, newdata = newdata, n.trees = gbm.perf(model))
 newdata[order(newdata$mpred), ] %>% tail
-plot(model, 5)
-
+plot(model, 6, return.grid = TRUE)
+summary(model)
 
 
 
