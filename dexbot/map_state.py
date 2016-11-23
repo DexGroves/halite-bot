@@ -46,8 +46,8 @@ class MapState(object):
         if self.strn[x, y] >= 255:
             return True
 
-        if self.blank[nx, ny] and self.prod[nx, ny] == 0:
-            return False
+        # if self.blank[nx, ny] and self.prod[nx, ny] == 0:
+        #     return False
 
         if self.strn[nx, ny] < self.strn[x, y]:
             return True
@@ -101,3 +101,4 @@ class MapState(object):
 
         self.border = np.minimum(self.border, 1)
         self.border -= self.mine
+        self.border -= self.enemy  # Only do border strats for neutral borders

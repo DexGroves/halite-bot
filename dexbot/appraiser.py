@@ -11,13 +11,13 @@ class Appraiser(object):
     def __init__(self, map_state, config):
         # self.config = config
         self.config = {
-            'epm':     1.10,
-            'bsm':    -0.01,
-            'esm':    -0.01,
-            'eprox':    1.1,
-            'splash':   0.1,
-            'stay_val': 1.8,
-            'max_edge_str': 180,
+            'epm':          1.10,
+            'bsm':         -0.05,
+            'esm':         -0.05,
+            'eprox':         0.01,
+            'splash':        0.001,
+            'stay_val':     4,
+            'max_edge_str': 255,
             'max_stay_strn': 140,
             'falloff' : 2.0
         }

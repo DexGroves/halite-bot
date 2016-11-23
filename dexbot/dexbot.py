@@ -53,7 +53,8 @@ class DexBot(object):
             if stay_value > move_value:
                 mq.pend_move(x, y, 0)
                 with open('pending.txt', 'a') as f:
-                   f.write('Staying:\t' + repr((x, y)) + '\t' + repr(0) + '\n')
+                   f.write('StayValue:\t' + repr((x, y)) + '\t' + repr(0) + '\t' +
+                               repr(stay_value) + '\t' + repr(move_value) + '\n')
 
             else:
                 direction = self.pathfinder.find_path(x, y, nx, ny)
@@ -65,7 +66,7 @@ class DexBot(object):
                 else:
                     mq.pend_move(x, y, 0)
                     with open('pending.txt', 'a') as f:
-                        f.write('Staying:\t' + repr((x, y)) + '\t' + repr(0) + '\n')
+                        f.write('StayForced:\t' + repr((x, y)) + '\t' + repr(0) + '\n')
 
         # with open('pending.txt', 'a') as f:
         #     locs = [move.loc for move in mq.moves]
