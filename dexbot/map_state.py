@@ -17,10 +17,11 @@ class MapState(object):
 
     def update(self, game_map):
         self._set_map_parameters(game_map)
+        self._set_aggregate_stats()
         self._set_border_squares()
 
     def register_move(self, x, y, cardinal):
-        self.mine[x, y] = 0
+        self.mine[x, y] = 0  # This is a hack to save some unnecessary searches
         self.strn[x, y] = 0
 
     def get_self_locs(self):
@@ -42,9 +43,15 @@ class MapState(object):
         if self.mine[nx, ny]:
             return True
 
-        stronger = self.strn[nx, ny] < self.strn[x, y]
-        if stronger | (self.strn[x, y] >= 255):
+        if self.strn[x, y] >= 255:
             return True
+
+        if self.blank[nx, ny] and self.prod[nx, ny] == 0:
+            return False
+
+        if self.strn[nx, ny] < self.strn[x, y]:
+            return True
+
 
         return False
 
@@ -76,6 +83,12 @@ class MapState(object):
                 else:
                     self.enemy[x, y] = 1
                     self.mine_strn[x, y] = 0
+
+    def _set_aggregate_stats(self):
+        self.mine_area = np.sum(self.mine)
+        self.mine_sum_strn = np.sum(self.mine_strn)
+        self.ideal_radius = np.sqrt(self.mine_area / np.pi)
+        self.density = self.mine_sum_strn / self.mine_area
 
     def _set_border_squares(self):
         self.border = np.zeros((self.width, self.height), dtype=int)

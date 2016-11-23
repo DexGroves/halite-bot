@@ -109,9 +109,9 @@ class BorderOperator(object):
                                         repr(cardinal) + '\t' +
                                         repr((target_str, total_str)) + '\t' +
                                         repr((x, y)) + '\n' +
-                                        repr(teamup_coords) + '\n' +
-                                        repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
+                                        # repr(teamup_coords) + '\n' +
+                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
+                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
                                         '')
 
             elif map_state.mine[(x-1) % self.width, y]:  # Has self to west
@@ -135,9 +135,9 @@ class BorderOperator(object):
                                         repr(cardinal) + '\t' +
                                         repr((target_str, total_str)) + '\t' +
                                         repr((x, y)) + '\n' +
-                                        repr(teamup_coords) + '\n' +
-                                        repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
+                                        # repr(teamup_coords) + '\n' +
+                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
+                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
                                         '')
 
             elif map_state.mine[x, (y+1) % self.height]:  # Has self to south
@@ -161,9 +161,9 @@ class BorderOperator(object):
                                         repr(cardinal) + '\t' +
                                         repr((target_str, total_str)) + '\t' +
                                         repr((x, y)) + '\n' +
-                                        repr(teamup_coords) + '\n' +
-                                        repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
+                                        # repr(teamup_coords) + '\n' +
+                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
+                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
                                         '')
 
             elif map_state.mine[x, (y-1) % self.height]:  # Has self to north
@@ -187,9 +187,9 @@ class BorderOperator(object):
                                         repr(cardinal) + '\t' +
                                         repr((target_str, total_str)) + '\t' +
                                         repr((x, y)) + '\n' +
-                                        repr(teamup_coords) + '\n' +
-                                        repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
+                                        # repr(teamup_coords) + '\n' +
+                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
+                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
                                         '')
 
         return pm

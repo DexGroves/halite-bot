@@ -16,8 +16,9 @@ class Appraiser(object):
             'esm':    -0.01,
             'eprox':    1.1,
             'splash':   0.1,
-            'stay_val': 1.5,
-            'max_stay_strn': 120,
+            'stay_val': 1.8,
+            'max_edge_str': 180,
+            'max_stay_strn': 140,
             'falloff' : 2.0
         }
         self.dists = dc.get_distance_matrix(map_state.width,
@@ -51,7 +52,11 @@ class Appraiser(object):
             np.maximum(map_state.strn, 0.01)
         )
 
-        self.can_stay = map_state.mine_strn <= self.config['max_stay_strn']
+        # self.can_stay = map_state.mine_strn <= self.config['max_stay_strn']
+        size_excl = ((map_state.mine_strn + \
+                      (map_state.ideal_radius * map_state.density)) > self.config['max_edge_str'])
+        too_strn =  map_state.mine_strn >= self.config['max_stay_strn']
+        self.can_stay = ~(size_excl | too_strn)
 
     def value_at_point(self, x, y):
         static_value = self.value[x, y]

@@ -60,7 +60,8 @@ class DexBot(object):
                 if self.map_state.can_move_safely(x, y, direction):
                     mq.pend_move(x, y, direction)
                     with open('pending.txt', 'a') as f:
-                       f.write('Moving:\t' + repr((x, y)) + '\t' + repr(direction) + '\n')
+                       f.write('Moving:\t' + repr((x, y)) + '\t' + repr(direction) + '\t' +
+                               repr(stay_value) + '\t' + repr(move_value) + '\n')
                 else:
                     mq.pend_move(x, y, 0)
                     with open('pending.txt', 'a') as f:
