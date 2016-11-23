@@ -90,106 +90,41 @@ class BorderOperator(object):
 
             if map_state.mine[(x+1) % self.width, y]:  # Has self to east
                 nx, ny = (x+1) % self.width, y
-                teamup_coords = (loupes.east + (x, y)) % (self.width, self.height)
-                with open('tcoords.txt', 'a') as f: f.write(repr(teamup_coords) + '\n')
-                total_str = 0
-                for tx, ty in teamup_coords:
-                    with open('tadd_value.txt', 'a') as f: f.write(repr(map_state.mine_strn[tx, ty]) + '\t')
-                    total_str += map_state.mine_strn[tx, ty]
-                with open('tadd_value.txt', 'a') as f: f.write("\n----\n")
-
-                if total_str > (target_str + map_state.prod[nx, ny]):
-                    for (lx, ly), cardinal in loupes.east_outer.items():
-                        xlx, yly = (x+lx) % self.width, (y+ly) % self.height
-                        if map_state.mine[xlx, yly]:
-                            pm.pend_move(xlx, yly, cardinal)
-                            map_state.register_move(xlx, yly, cardinal)
-                            with open('pending.txt', 'a') as f:
-                                f.write('CapConglom:\t' + repr((xlx, yly)) + '\t' +
-                                        repr(cardinal) + '\t' +
-                                        repr((target_str, total_str)) + '\t' +
-                                        repr((x, y)) + '\n' +
-                                        # repr(teamup_coords) + '\n' +
-                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
-                                        '')
+                self._move_by_loupe(x, y, nx, ny,
+                                    loupes.east, loupes.east_outer,
+                                    pm, map_state, target_str)
 
             elif map_state.mine[(x-1) % self.width, y]:  # Has self to west
                 nx, ny = (x-1) % self.width, y
-                teamup_coords = (loupes.west + (x, y)) % (self.width, self.height)
-                with open('tcoords.txt', 'a') as f: f.write(repr(teamup_coords) + '\n')
-                total_str = 0
-                for tx, ty in teamup_coords:
-                    with open('tadd_value.txt', 'a') as f: f.write(repr(map_state.mine_strn[tx, ty]) + '\t')
-                    total_str += map_state.mine_strn[tx, ty]
-                with open('tadd_value.txt', 'a') as f: f.write("\n----\n")
-
-                if total_str > (target_str + map_state.prod[nx, ny]):
-                    for (lx, ly), cardinal in loupes.west_outer.items():
-                        xlx, yly = (x+lx) % self.width, (y+ly) % self.height
-                        if map_state.mine[xlx, yly]:
-                            pm.pend_move(xlx, yly, cardinal)
-                            map_state.register_move(xlx, yly, cardinal)
-                            with open('pending.txt', 'a') as f:
-                                f.write('CapConglom:\t' + repr((xlx, yly)) + '\t' +
-                                        repr(cardinal) + '\t' +
-                                        repr((target_str, total_str)) + '\t' +
-                                        repr((x, y)) + '\n' +
-                                        # repr(teamup_coords) + '\n' +
-                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
-                                        '')
+                self._move_by_loupe(x, y, nx, ny,
+                                    loupes.west, loupes.west_outer,
+                                    pm, map_state, target_str)
 
             elif map_state.mine[x, (y+1) % self.height]:  # Has self to south
                 nx, ny = x, (y+1) % self.height
-                teamup_coords = (loupes.south + (x, y)) % (self.width, self.height)
-                with open('tcoords.txt', 'a') as f: f.write(repr(teamup_coords) + '\n')
-                total_str = 0
-                for tx, ty in teamup_coords:
-                    with open('tadd_value.txt', 'a') as f: f.write(repr(map_state.mine_strn[tx, ty]) + '\t')
-                    total_str += map_state.mine_strn[tx, ty]
-                with open('tadd_value.txt', 'a') as f: f.write("\n----\n")
-
-                if total_str > (target_str + map_state.prod[nx, ny]):
-                    for (lx, ly), cardinal in loupes.south_outer.items():
-                        xlx, yly = (x+lx) % self.width, (y+ly) % self.height
-                        if map_state.mine[xlx, yly]:
-                            pm.pend_move(xlx, yly, cardinal)
-                            map_state.register_move(xlx, yly, cardinal)
-                            with open('pending.txt', 'a') as f:
-                                f.write('CapConglom:\t' + repr((xlx, yly)) + '\t' +
-                                        repr(cardinal) + '\t' +
-                                        repr((target_str, total_str)) + '\t' +
-                                        repr((x, y)) + '\n' +
-                                        # repr(teamup_coords) + '\n' +
-                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
-                                        '')
+                self._move_by_loupe(x, y, nx, ny,
+                                    loupes.south, loupes.south_outer,
+                                    pm, map_state, target_str)
 
             elif map_state.mine[x, (y-1) % self.height]:  # Has self to north
                 nx, ny = x, (y-1) % self.height
-                teamup_coords = (loupes.north + (x, y)) % (self.width, self.height)
-                with open('tcoords.txt', 'a') as f: f.write(repr(teamup_coords) + '\n')
-                total_str = 0
-                for tx, ty in teamup_coords:
-                    with open('tadd_value.txt', 'a') as f: f.write(repr(map_state.mine_strn[tx, ty]) + '\t')
-                    total_str += map_state.mine_strn[tx, ty]
-                with open('tadd_value.txt', 'a') as f: f.write("\n----\n")
-
-                if total_str > (target_str + map_state.prod[nx, ny]):
-                    for (lx, ly), cardinal in loupes.north_outer.items():
-                        xlx, yly = (x+lx) % self.width, (y+ly) % self.height
-                        if map_state.mine[xlx, yly]:
-                            pm.pend_move(xlx, yly, cardinal)
-                            map_state.register_move(xlx, yly, cardinal)
-                            with open('pending.txt', 'a') as f:
-                                f.write('CapConglom:\t' + repr((xlx, yly)) + '\t' +
-                                        repr(cardinal) + '\t' +
-                                        repr((target_str, total_str)) + '\t' +
-                                        repr((x, y)) + '\n' +
-                                        # repr(teamup_coords) + '\n' +
-                                        # repr(map_state.mine_strn[teamup_coords]) + '\n' +
-                                        # repr(np.sum(map_state.mine_strn[teamup_coords])) + '\n'
-                                        '')
+                self._move_by_loupe(x, y, nx, ny,
+                                    loupes.north, loupes.north_outer,
+                                    pm, map_state, target_str)
 
         return pm
+
+    def _move_by_loupe(self, x, y, nx, ny, loupe, loupe_outer,
+                       pm, map_state, target_str):
+        teamup_coords = (loupe + (x, y)) % (self.width, self.height)
+
+        total_str = 0
+        for tx, ty in teamup_coords:
+            total_str += map_state.mine_strn[tx, ty]
+
+        if total_str > (target_str + map_state.prod[nx, ny]):
+            for (lx, ly), cardinal in loupe_outer.items():
+                xlx, yly = (x+lx) % self.width, (y+ly) % self.height
+                if map_state.mine[xlx, yly]:
+                    pm.pend_move(xlx, yly, cardinal)
+                    map_state.register_move(xlx, yly, cardinal)
