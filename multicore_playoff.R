@@ -9,8 +9,8 @@ build_call <- function(dim, nopp, seed) {
     "halite -s ",
     seed, " -d ",
     "\"", dim, " ", dim, "\" ",
-    "\"python3 MyBot.py\" ",
-    paste(rep("\"python3 ReferenceBot.py\"", nopp), collapse = " ")
+    "\"python3 ReferenceBot.py\" ",
+    paste(rep("\"python3 MyBot.py\"", nopp), collapse = " ")
   )
   call
 }
@@ -20,7 +20,7 @@ build_call <- function(dim, nopp, seed) {
 #                          sep = ":"))
 
 # Run nrun randomly sampled configs against RefBot
-nrun <- 200
+nrun <- 20
 ncore <- 20
 seeds <- seq(2000, 2000 + nrun)
 

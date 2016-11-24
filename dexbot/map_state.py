@@ -8,9 +8,10 @@ from dexbot.distance_calculator import DistanceCalculator as dc
 
 class MapState(object):
 
-    def __init__(self, game_map):
+    def __init__(self, my_id, game_map):
         self.width = game_map.width
         self.height = game_map.height
+        self.my_id = my_id
 
         self._set_production(game_map)
         self.update(game_map)
@@ -74,7 +75,7 @@ class MapState(object):
                 if owner == 0:
                     self.blank[x, y] = 1
                     self.mine_strn[x, y] = 0
-                elif owner == 1:
+                elif owner == self.my_id:
                     self.mine[x, y] = 1
                     self.mine_strn[x, y] = game_map.contents[y][x].strength
                 else:

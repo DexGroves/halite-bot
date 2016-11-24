@@ -14,12 +14,6 @@ sendInit("RefBot")
 db = DexBot(my_id, config)
 mapeval = MapEvaluator(my_id, game_map, config)
 
-import random
-seed = random.random()
-
-# with open('reftimes%f.txt' % seed, 'w') as f:
-#     f.write("Times!\n")
-
 while True:
     start_time = timeit.default_timer()
 
@@ -48,7 +42,3 @@ while True:
         i += 1
 
     sendFrame(moves)
-
-    end_time = timeit.default_timer()
-    # with open('reftimes%f.txt' % seed, 'a') as f:
-    #     f.write(repr(end_time - start_time) + '\n')

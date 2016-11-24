@@ -12,8 +12,8 @@ from dexbot.pathfinder import Pathfinder
 
 class DexBot(object):
 
-    def __init__(self, game_map, config):
-        self.map_state = MapState(game_map)
+    def __init__(self, my_id, game_map, config):
+        self.map_state = MapState(my_id, game_map)
         self.appraiser = Appraiser(self.map_state, config)
         self.pathfinder = Pathfinder(self.map_state)
         self.border_operator = BorderOperator(self.map_state, config)
@@ -41,7 +41,7 @@ class DexBot(object):
 
         for i, (x, y) in enumerate(mq.rem_locs):
             # Handle timeout
-            check_time = i % self.time_chk_freq == 0
+            check_time = i % self.time_chk_freq == 1
 
             if check_time:
                 elapsed = timeit.default_timer() - start_time
@@ -59,7 +59,6 @@ class DexBot(object):
             else:
                 direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
                 mq.pend_move(x, y, direction)
-
 
         return mq.moves
 
