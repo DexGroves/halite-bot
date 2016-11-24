@@ -6,14 +6,13 @@ from halitesrc.networking import *
 from ref.dexbot import DexBot
 from ref.map_evaluator import MapEvaluator
 
-config = json.load(open("refbot.config", "r"))        
+config = json.load(open("refbot.config", "r"))
 
 
 my_id, game_map = getInit()
 sendInit("RefBot")
 db = DexBot(my_id, config)
 mapeval = MapEvaluator(my_id, game_map, config)
-
 
 while True:
     start_time = timeit.default_timer()

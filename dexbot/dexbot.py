@@ -1,93 +1,64 @@
-import numpy as np
-from halitesrc.hlt import Move, STILL
+"""Handle the control flow of DexBot."""
+
+
+import timeit
+from halitesrc.hlt import Move, Location
+from dexbot.map_state import MapState
+from dexbot.appraiser import Appraiser
+from dexbot.border_operator import BorderOperator
+from dexbot.move_queue import MoveQueue
+from dexbot.pathfinder import Pathfinder
 
 
 class DexBot(object):
-    """The greatest Halite bot ever, in training."""
 
-    def __init__(self, my_id, config):
-        self.my_id = my_id
-        self.map_eval = None
+    def __init__(self, my_id, game_map, config):
+        self.map_state = MapState(my_id, game_map)
+        self.appraiser = Appraiser(self.map_state, config)
+        self.pathfinder = Pathfinder(self.map_state)
+        self.border_operator = BorderOperator(self.map_state, config)
+        self.time_chk_freq = 20
+        self.max_time = 0.95
+        self.turn = 0
 
-        self.stay_val_multi = config['stay_value_multiplier']
-        self.max_strength = config['max_stay_strength']
-        self.cap_avoidance = config['cap_avoidance']
+    def update(self, game_map):
+        self.map_state.update(game_map)
+        self.appraiser.set_value(self.map_state)
+        self.border_operator.set_border_value(self.map_state, self.appraiser)
 
-    def move(self, location, game_map):
-        site = game_map.contents[location.y][location.x]
+    def move(self, start_time):
+        self.turn += 1
 
-        # Else eval value of each point
-        target, value = self.map_eval.get_best_pt(location, site.strength)
-        stay_value = site.production * self.stay_val_multi / max(site.strength, 0.01)
-        if value > stay_value or site.strength > self.max_strength:
-            # Move towards!
-            targ_x, targ_y = target
-            dists = np.array([
-                (location.y - targ_y) % self.map_eval.mapheight,
-                (targ_x - location.x) % self.map_eval.mapwidth,
-                (targ_y - location.y) % self.map_eval.mapheight,
-                (location.x - targ_x) % self.map_eval.mapwidth
-            ])
-            dists[dists == 0] = 999
-            cardinal = np.argmin(dists) + 1
+        owned_locs = self.map_state.get_self_locs()
+        mq = MoveQueue(owned_locs)
 
-            if self.can_move_safely(game_map, location, cardinal, site):
-                new_x, new_y = self.shift_coordinates(location, cardinal, game_map)
-                self.map_eval.set_move(new_x, new_y)
-                return Move(location, cardinal)
+        ic_queue, bm_queue = self.border_operator.get_moves(self.map_state)
 
-        # Else chill
-        return Move(location, STILL)
+        mq.process_pending(ic_queue)
+        mq.process_pending(bm_queue)
 
-    def can_move_safely(self, game_map, location, cardinal, site):
-        new_site = self.shift_site(location, cardinal, game_map)
-        owned = new_site.owner == self.my_id
-        stronger = site.strength > new_site.strength
+        mq.shuffle_remaining_locs()
 
-        if owned and \
-                (new_site.strength + site.strength - 255) > self.cap_avoidance and \
-                not stronger:
-            return False
+        for i, (x, y) in enumerate(mq.rem_locs):
+            # Handle timeout
+            check_time = i % self.time_chk_freq == 1
 
-        out = stronger | (site.strength >= 255)
-        return out
+            if check_time:
+                elapsed = timeit.default_timer() - start_time
+            if check_time and elapsed > self.max_time:
+                # Panic mode, everything stays!
+                mq.moves[mq.nmoved:] = [Move(Location(x, y), 0) for (x, y) in mq.rem_locs[i:]]
+                break
 
-    def can_capture_enemy(self, game_map, location, cardinal, site):
-        new_site = self.shift_site(location, cardinal, game_map)
-        out = new_site.owner != self.my_id and \
-                site.strength > new_site.strength and \
-                new_site.owner != 0
-        return out
+            (nx, ny), move_value = self.appraiser.get_best_target(self.map_state, x, y)
+            stay_value = self.appraiser.get_stay_value(x, y)
 
-    def set_evaluator(self, map_eval):
-        self.map_eval = map_eval
+            if stay_value > move_value:
+                mq.pend_move(x, y, 0)
 
-    @staticmethod
-    def shift_site(location, cardinal, game_map):
-        if cardinal == 1:
-            new_y = (location.y - 1) % game_map.height
-            return game_map.contents[new_y][location.x]
-        if cardinal == 2:
-            new_x = (location.x + 1) % game_map.width
-            return game_map.contents[location.y][new_x]
-        if cardinal == 3:
-            new_y = (location.y + 1) % game_map.height
-            return game_map.contents[new_y][location.x]
-        if cardinal == 4:
-            new_x = (location.x - 1) % game_map.width
-            return game_map.contents[location.y][new_x]
+            else:
+                direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
+                mq.pend_move(x, y, direction)
 
-    @staticmethod
-    def shift_coordinates(location, cardinal, game_map):
-        if cardinal == 1:
-            new_y = (location.y - 1) % game_map.height
-            return location.x, new_y
-        if cardinal == 2:
-            new_x = (location.x + 1) % game_map.width
-            return new_x, location.y
-        if cardinal == 3:
-            new_y = (location.y + 1) % game_map.height
-            return location.x, new_y
-        if cardinal == 4:
-            new_x = (location.x - 1) % game_map.width
-            return new_x, location.y
+        return mq.moves
+
