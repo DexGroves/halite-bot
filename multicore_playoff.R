@@ -4,9 +4,10 @@ library("stringr")
 library("foreach")
 library("doMC")
 
-build_call <- function(dim, nopp) {
+build_call <- function(dim, nopp, seed) {
   call <- paste0(
-    "halite -d ",
+    "halite -s ",
+    seed, " -d ",
     "\"", dim, " ", dim, "\" ",
     "\"python3 MyBot.py\" ",
     paste(rep("\"python3 ReferenceBot.py\"", nopp), collapse = " ")
@@ -15,13 +16,14 @@ build_call <- function(dim, nopp) {
 }
 
 # Run nrun randomly sampled configs against RefBot ---------------------------
-nrun <- 1000
-ncore <- 20
+nrun <- 100
+ncore <- 3
+seeds <- seq(2000, 2000 + nrun)
 
 registerDoMC(ncore)
-results <- foreach(i = seq(nrun), .combine = c) %dopar% {
+results <- foreach(seed = seeds, .combine = c) %dopar% {
   cat(".")
-  build_call(30, 1) %>%
+  build_call(30, 1, seed) %>%
     system(intern = TRUE) %>%
     paste(collapse = "\n") %>%
     str_extract("(?<=DexBot, came in rank #)[0-9]")

@@ -12,23 +12,14 @@ class BorderOperator(object):
         self.height = map_state.height
 
     def set_border_value(self, map_state, appraiser):
-        # self.capture_value = self.appraiser.get_value() # call in dexbot
-        self.brdr_locs = map_state.get_border_locs()
-        self.brdr_value = np.empty(len(self.brdr_locs), dtype=float)
+        sort_value = np.argsort(-1 * appraiser.brdr_value)
 
-        for i, (x, y) in enumerate(self.brdr_locs):
-            if map_state.prod[x, y] == 0:
-                self.brdr_value[i] = 0
-            else:
-                self.brdr_value[i] = appraiser.value_at_point(x, y)
-
-        sort_value = np.argsort(-1 * self.brdr_value)
-        self.impt_locs = [(r[0], r[1]) for r in self.brdr_locs[sort_value]]
-        self.brdr_value = self.brdr_value[sort_value]
+        self.impt_locs = [(r[0], r[1]) for r in appraiser.brdr_locs[sort_value]]
+        self.brdr_value = appraiser.brdr_value[sort_value]
 
         self.impt_locs = [self.impt_locs[i] for i in range(len(self.impt_locs))
-                          # if self.brdr_value[i] > self.brdr_value.mean()]
-                          if self.brdr_value[i] > np.percentile(self.brdr_value, 75)]
+                          # if self.brdr_value[i] > np.percentile(self.brdr_value, 65)]
+                          if self.brdr_value[i] >= self.brdr_value.mean()]
 
     def get_moves(self, map_state):
         ic_queue = self.get_immediate_captures(self.impt_locs, map_state)
@@ -45,47 +36,49 @@ class BorderOperator(object):
         for x, y in rem_locs:
             target_str = map_state.strn[x, y]
 
-            with open('pending.txt', 'a') as f:
-                f.write('Searching for:\t' + repr((x, y)) + '\t' + repr(target_str) + '\t')
-                f.write('..south..:\t' + repr(map_state.mine[x, (y+1) % self.height]) +
-                        '\t' + repr(map_state.mine_strn[x, (y+1)]) + '\n')
+            nx, ny = (x+1) % self.width, y
+            if map_state.mine[nx, ny] and \
+                    (map_state.mine_strn[nx, ny] > target_str or
+                     map_state.mine_strn[nx, ny] >= 255):
+                pm.pend_move(nx, ny, 4)
+                map_state.register_move(nx, ny, 4)
+                # with open('pending.txt', 'a') as f:
+                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(4) + '\n')
 
-            if map_state.mine[(x+1) % self.width, y]:  # Has self to east
-                nx, ny = (x+1) % self.width, y
-                if map_state.mine_strn[nx, ny] > target_str or \
-                        map_state.mine_strn[nx, ny] >= 255:
-                    pm.pend_move(nx, ny, 4)
-                    map_state.register_move(nx, ny, 4)
-                    with open('pending.txt', 'a') as f:
-                        f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(4) + '\n')
+                continue
 
-            elif map_state.mine[(x-1) % self.width, y]:  # Has self to west
-                nx, ny = (x-1) % self.width, y
-                if map_state.mine_strn[nx, ny] > target_str or \
-                        map_state.mine_strn[nx, ny] >= 255:
-                    pm.pend_move(nx, ny, 2)
-                    map_state.register_move(nx, ny, 2)
-                    with open('pending.txt', 'a') as f:
-                        f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(2) + '\n')
+            nx, ny = (x-1) % self.width, y
+            if map_state.mine[nx, ny] and \
+                    (map_state.mine_strn[nx, ny] > target_str or
+                     map_state.mine_strn[nx, ny] >= 255):
+                pm.pend_move(nx, ny, 2)
+                map_state.register_move(nx, ny, 2)
+                # with open('pending.txt', 'a') as f:
+                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(2) + '\n')
 
-            elif map_state.mine[x, (y+1) % self.height]:  # Has self to south
-                nx, ny = x, (y+1) % self.height
+                continue
 
-                if map_state.mine_strn[nx, ny] > target_str or \
-                        map_state.mine_strn[nx, ny] >= 255:
-                    pm.pend_move(nx, ny, 1)
-                    map_state.register_move(nx, ny, 1)
-                    with open('pending.txt', 'a') as f:
-                        f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(1) + '\n')
+            nx, ny = x, (y+1) % self.height
+            if map_state.mine[nx, ny] and \
+                    (map_state.mine_strn[nx, ny] > target_str or
+                     map_state.mine_strn[nx, ny] >= 255):
+                pm.pend_move(nx, ny, 1)
+                map_state.register_move(nx, ny, 1)
+                # with open('pending.txt', 'a') as f:
+                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(1) + '\n')
 
-            elif map_state.mine[x, (y-1) % self.height]:  # Has self to north
-                nx, ny = x, (y-1) % self.height
-                if map_state.mine_strn[nx, ny] > target_str or \
-                        map_state.mine_strn[nx, ny] >= 255:
-                    pm.pend_move(nx, ny, 3)
-                    map_state.register_move(nx, ny, 3)
-                    with open('pending.txt', 'a') as f:
-                        f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(3) + '\n')
+                continue
+
+            nx, ny = x, (y-1) % self.height
+            if map_state.mine[nx, ny] and \
+                    (map_state.mine_strn[nx, ny] > target_str or
+                     map_state.mine_strn[nx, ny] >= 255):
+                pm.pend_move(nx, ny, 3)
+                map_state.register_move(nx, ny, 3)
+                # with open('pending.txt', 'a') as f:
+                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(3) + '\n')
+
+                continue
 
         return pm
 
@@ -132,8 +125,8 @@ class BorderOperator(object):
         if map_state.prod[nx, ny] + map_state.strn[nx, ny] > target_str:
             pm.pend_move(nx, ny, 0)
             map_state.register_move(nx, ny, 0)
-            with open('pending.txt', 'a') as f:
-                f.write('CCGNext:\t' + repr((nx, ny)) + '\t' + repr(0) + '\n')
+            # with open('pending.txt', 'a') as f:
+            #     f.write('CCGNext:\t' + repr((nx, ny)) + '\t' + repr(0) + '\n')
 
         elif strs.sum() > target_str + map_state.prod[nx, ny]:
             str_order = np.argsort(strs)
@@ -145,8 +138,8 @@ class BorderOperator(object):
                     pm.pend_move(xlx, yly, cardinal)
                     map_state.register_move(xlx, yly, cardinal)
                     assigned_strength += map_state.mine_strn[xlx, yly]
-                with open('pending.txt', 'a') as f:
-                    f.write('CCGNow:\t' + repr((xlx, yly)) + '\t' + repr(cardinal) + '\n')
+                # with open('pending.txt', 'a') as f:
+                #     f.write('CCGNow:\t' + repr((xlx, yly)) + '\t' + repr(cardinal) + '\n')
                 if assigned_strength > (target_str - map_state.prod[nx, ny]):
                     break
             # for (lx, ly), cardinal in loupe.items():

@@ -46,9 +46,6 @@ class MapState(object):
         if self.strn[x, y] >= 255:
             return True
 
-        # if self.blank[nx, ny] and self.prod[nx, ny] == 0:
-        #     return False
-
         if self.strn[nx, ny] < self.strn[x, y]:
             return True
 
@@ -91,6 +88,16 @@ class MapState(object):
         self.density = self.mine_sum_strn / self.mine_area
 
     def _set_border_squares(self):
+        # enemy_border = np.zeros((self.width, self.height), dtype=int)
+        # enemy_border += mr.roll_x(self.enemy, 1)
+        # enemy_border += mr.roll_x(self.enemy, -1)
+        # enemy_border += mr.roll_y(self.enemy, 1)
+        # enemy_border += mr.roll_y(self.enemy, -1)
+        # enemy_border += self.enemy
+
+        # enemy_border = np.minimum(enemy_border, 1)
+        # enemy_border -= self.enemy
+
         self.border = np.zeros((self.width, self.height), dtype=int)
 
         self.border += mr.roll_x(self.mine, 1)
@@ -101,4 +108,5 @@ class MapState(object):
 
         self.border = np.minimum(self.border, 1)
         self.border -= self.mine
-        self.border -= self.enemy  # Only do border strats for neutral borders
+        self.all_border = self.border
+        self.border = self.border - self.enemy

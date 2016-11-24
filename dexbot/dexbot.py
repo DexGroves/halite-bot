@@ -16,10 +16,10 @@ class DexBot(object):
         self.pathfinder = Pathfinder(self.map_state)
         self.border_operator = BorderOperator(self.map_state)
         self.turn = 0
-        with open('pending.txt', 'w') as f:
-            f.write('Start! ------- ' + '\n')
-        with open('map.txt', 'w') as f:
-            f.write('Start! ------- ' + '\n')
+        # with open('pending.txt', 'w') as f:
+        #     f.write('Start! ------- ' + '\n')
+        # with open('map.txt', 'w') as f:
+        #     f.write('Start! ------- ' + '\n')
 
     def update(self, game_map):
         self.map_state.update(game_map)
@@ -27,14 +27,14 @@ class DexBot(object):
         self.border_operator.set_border_value(self.map_state, self.appraiser)
 
     def move(self):
-        with open('pending.txt', 'a') as f:
-            f.write('Turn! %i ------- ' % self.turn + '\n')
+        # with open('pending.txt', 'a') as f:
+        #     f.write('Turn! %i ------- ' % self.turn + '\n')
             # f.write(repr(self.map_state.get_self_locs()) + '\n')
             # f.write(repr(self.map_state.get_border_locs()) + '\n')
-            self.turn += 1
-        with open('map.txt', 'a') as f:
-            f.write('Turn %i' % self.turn + '\n')
-            f.write(repr(self.map_state.mine_strn)+ '\n')
+        self.turn += 1
+        # with open('map.txt', 'a') as f:
+        #     f.write('Turn %i' % self.turn + '\n')
+        #     f.write(repr(self.map_state.mine_strn)+ '\n')
 
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
@@ -52,21 +52,16 @@ class DexBot(object):
 
             if stay_value > move_value:
                 mq.pend_move(x, y, 0)
-                with open('pending.txt', 'a') as f:
-                   f.write('StayValue:\t' + repr((x, y)) + '\t' + repr(0) + '\t' +
-                               repr(stay_value) + '\t' + repr(move_value) + '\n')
+                # with open('pending.txt', 'a') as f:
+                #    f.write('StayValue:\t' + repr((x, y)) + '\t' + repr(0) + '\t' +
+                #                repr(stay_value) + '\t' + repr(move_value) + '\n')
 
             else:
-                direction = self.pathfinder.find_path(x, y, nx, ny)
-                if self.map_state.can_move_safely(x, y, direction):
-                    mq.pend_move(x, y, direction)
-                    with open('pending.txt', 'a') as f:
-                       f.write('Moving:\t' + repr((x, y)) + '\t' + repr(direction) + '\t' +
-                               repr(stay_value) + '\t' + repr(move_value) + '\n')
-                else:
-                    mq.pend_move(x, y, 0)
-                    with open('pending.txt', 'a') as f:
-                        f.write('StayForced:\t' + repr((x, y)) + '\t' + repr(0) + '\n')
+                direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
+                mq.pend_move(x, y, direction)
+                # with open('pending.txt', 'a') as f:
+                #    f.write('Moving:\t' + repr((x, y)) + '\t' + repr(direction) + '\t' +
+                #            repr(stay_value) + '\t' + repr(move_value) + '\n')
 
         # with open('pending.txt', 'a') as f:
         #     locs = [move.loc for move in mq.moves]
