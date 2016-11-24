@@ -15,7 +15,7 @@ build_call <- function(dim, nopp, seed) {
   call
 }
 
-# Run nrun randomly sampled configs against RefBot ---------------------------
+# Run nrun randomly sampled configs against RefBot
 nrun <- 100
 ncore <- 3
 seeds <- seq(2000, 2000 + nrun)
