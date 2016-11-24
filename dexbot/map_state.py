@@ -20,6 +20,7 @@ class MapState(object):
         self._set_map_parameters(game_map)
         self._set_aggregate_stats()
         self._set_border_squares()
+        self._set_danger_close()
 
     def register_move(self, x, y, cardinal):
         self.mine[x, y] = 0  # This is a hack to save some unnecessary searches
@@ -43,6 +44,9 @@ class MapState(object):
 
         if self.mine[nx, ny]:
             return True
+
+        if self.danger_close[nx, ny]:
+            return False
 
         if self.strn[x, y] >= 255:
             return True
@@ -74,13 +78,11 @@ class MapState(object):
                 owner = game_map.contents[y][x].owner
                 if owner == 0:
                     self.blank[x, y] = 1
-                    self.mine_strn[x, y] = 0
                 elif owner == self.my_id:
                     self.mine[x, y] = 1
                     self.mine_strn[x, y] = game_map.contents[y][x].strength
                 else:
                     self.enemy[x, y] = 1
-                    self.mine_strn[x, y] = 0
 
     def _set_aggregate_stats(self):
         self.mine_area = np.sum(self.mine)
@@ -89,16 +91,6 @@ class MapState(object):
         self.density = self.mine_sum_strn / self.mine_area
 
     def _set_border_squares(self):
-        # enemy_border = np.zeros((self.width, self.height), dtype=int)
-        # enemy_border += mr.roll_x(self.enemy, 1)
-        # enemy_border += mr.roll_x(self.enemy, -1)
-        # enemy_border += mr.roll_y(self.enemy, 1)
-        # enemy_border += mr.roll_y(self.enemy, -1)
-        # enemy_border += self.enemy
-
-        # enemy_border = np.minimum(enemy_border, 1)
-        # enemy_border -= self.enemy
-
         self.border = np.zeros((self.width, self.height), dtype=int)
 
         self.border += mr.roll_x(self.mine, 1)
@@ -111,3 +103,20 @@ class MapState(object):
         self.border -= self.mine
         self.all_border = self.border
         self.border = self.border - self.enemy
+
+    def _set_danger_close(self):
+        self.danger_close = np.zeros((self.width, self.height), dtype=int)
+        self.danger_close += mr.roll_x(self.enemy, 1)
+        self.danger_close += mr.roll_x(self.enemy, -1)
+        self.danger_close += mr.roll_y(self.enemy, 1)
+        self.danger_close += mr.roll_y(self.enemy, -1)
+        self.danger_close += mr.roll_x(self.enemy, 2)
+        self.danger_close += mr.roll_x(self.enemy, -2)
+        self.danger_close += mr.roll_y(self.enemy, 2)
+        self.danger_close += mr.roll_y(self.enemy, -2)
+        self.danger_close += self.enemy
+
+        self.danger_close = np.minimum(self.danger_close, 1)
+        self.danger_close -= self.enemy
+        self.danger_close -= self.mine
+        self.danger_close = np.multiply(self.danger_close, self.strn > 10)

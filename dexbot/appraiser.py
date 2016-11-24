@@ -80,7 +80,7 @@ class Appraiser(object):
                                       dtype=float)
 
         for i, (x, y) in enumerate(self.brdr_locs):
-            if map_state.prod[x, y] == 0:
+            if map_state.prod[x, y] == 0 | map_state.danger_close[x, y]:
                 self.brdr_value[i] = 0
             else:
                 val = self.value_at_point(x, y)
