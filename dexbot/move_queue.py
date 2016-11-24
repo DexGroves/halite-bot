@@ -14,19 +14,7 @@ class MoveQueue(object):
         self.moves = np.empty(len(locs), dtype=Move)
         self.nmoved = 0
 
-        # with open('mq.txt', 'w') as f:
-        #     f.write(
-        #         repr(self.rem_locs) + '\n' + repr(self.moves) + '\n'
-        #     )
-
     def pend_move(self, x, y, cardinal):
-
-        # with open('mq.txt', 'a') as f:
-        #     f.write('pppending! ----\n' +
-        #         repr((x, y)) + '\t' +
-        #         repr(self.nmoved) + '\n'
-        #     )
-
         self.moves[self.nmoved] = Move(Location(x, y), cardinal)
         self.nmoved += 1
 
@@ -40,19 +28,6 @@ class MoveQueue(object):
         insert_moves = [Move(Location(pending.locs[i][0], pending.locs[i][1]),
                              pending.cardinals[i])
                         for i in range(len(pending))]
-
-        # with open('debug.txt', 'a') as f:
-        #     f.write(repr(insert_moves) + '\n' +
-        #             repr(self.moves[start:end]) + '\n' +
-        #             repr((start, end)) + '\n' +
-        #             repr(self.moves))
-
-        # with open('mq.txt', 'a') as f:
-        #     f.write('Processing! ----\n' +
-        #         repr(pending.locs) + '\n' +
-        #         repr(insert_moves) + '\n' +
-        #         repr((start, end)) + '\n'
-        #     )
 
         self.moves[start:end] = insert_moves
 

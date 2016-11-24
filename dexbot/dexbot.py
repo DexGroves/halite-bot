@@ -1,6 +1,8 @@
 """Handle the control flow of DexBot."""
 
 
+import timeit
+from halitesrc.hlt import Move, Location
 from dexbot.map_state import MapState
 from dexbot.appraiser import Appraiser
 from dexbot.border_operator import BorderOperator
@@ -15,26 +17,17 @@ class DexBot(object):
         self.appraiser = Appraiser(self.map_state, config)
         self.pathfinder = Pathfinder(self.map_state)
         self.border_operator = BorderOperator(self.map_state, config)
+        self.time_chk_freq = 20
+        self.max_time = 0.95
         self.turn = 0
-        # with open('pending.txt', 'w') as f:
-        #     f.write('Start! ------- ' + '\n')
-        # with open('map.txt', 'w') as f:
-        #     f.write('Start! ------- ' + '\n')
 
     def update(self, game_map):
         self.map_state.update(game_map)
         self.appraiser.set_value(self.map_state)
         self.border_operator.set_border_value(self.map_state, self.appraiser)
 
-    def move(self):
-        # with open('pending.txt', 'a') as f:
-        #     f.write('Turn! %i ------- ' % self.turn + '\n')
-            # f.write(repr(self.map_state.get_self_locs()) + '\n')
-            # f.write(repr(self.map_state.get_border_locs()) + '\n')
+    def move(self, start_time):
         self.turn += 1
-        # with open('map.txt', 'a') as f:
-        #     f.write('Turn %i' % self.turn + '\n')
-        #     f.write(repr(self.map_state.mine_strn)+ '\n')
 
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
@@ -46,30 +39,27 @@ class DexBot(object):
 
         mq.shuffle_remaining_locs()
 
-        for x, y in mq.rem_locs:
+        for i, (x, y) in enumerate(mq.rem_locs):
+            # Handle timeout
+            check_time = i % self.time_chk_freq == 0
+
+            if check_time:
+                elapsed = timeit.default_timer() - start_time
+            if check_time and elapsed > self.max_time:
+                # Panic mode, everything stays!
+                mq.moves[mq.nmoved:] = [Move(Location(x, y), 0) for (x, y) in mq.rem_locs[i:]]
+                break
+
             (nx, ny), move_value = self.appraiser.get_best_target(self.map_state, x, y)
             stay_value = self.appraiser.get_stay_value(x, y)
 
             if stay_value > move_value:
                 mq.pend_move(x, y, 0)
-                # with open('pending.txt', 'a') as f:
-                #    f.write('StayValue:\t' + repr((x, y)) + '\t' + repr(0) + '\t' +
-                #                repr(stay_value) + '\t' + repr(move_value) + '\n')
 
             else:
                 direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
                 mq.pend_move(x, y, direction)
-                # with open('pending.txt', 'a') as f:
-                #    f.write('Moving:\t' + repr((x, y)) + '\t' + repr(direction) + '\t' +
-                #            repr(stay_value) + '\t' + repr(move_value) + '\n')
 
-        # with open('pending.txt', 'a') as f:
-        #     locs = [move.loc for move in mq.moves]
-        #     dirs = [move.direction for move in mq.moves]
 
-        #     moves_list = [repr((locs[i].x, ' ', locs[i].y, ' ', dirs[i]))
-        #                   for i in range(len(locs))]
-
-        #     f.write('Moves ---- :\n' + '\n'.join(moves_list) + '\n')
         return mq.moves
 
