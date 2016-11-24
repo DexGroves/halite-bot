@@ -17,13 +17,19 @@ db = DexBot(game_map, config)
 with open('times.txt', 'w') as f:
     f.write("Times!\n")
 
+end_time = timeit.default_timer()
+
 while True:
-    start_time = timeit.default_timer()
     game_map = getFrame()
+    start_time = timeit.default_timer()
     db.update(game_map)
     moves = db.move()
-    sendFrame(moves)
+
+    with open('times.txt', 'a') as f:
+        f.write(repr(start_time - end_time) + '\t')
+
     end_time = timeit.default_timer()
+    sendFrame(moves)
 
     with open('times.txt', 'a') as f:
         f.write(repr(end_time - start_time) + '\n')

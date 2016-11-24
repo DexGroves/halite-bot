@@ -34,7 +34,8 @@ class Appraiser(object):
 
         self.prox_base = np.multiply(
             self.value,
-            map_state.blank + (map_state.enemy * self.config['eprox'])
+            ((map_state.blank * self.config['bprox']) +
+             (map_state.enemy * self.config['eprox']))
         )
 
         self.stay_value = np.divide(
