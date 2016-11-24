@@ -14,7 +14,7 @@ class DexBot(object):
         self.map_state = MapState(game_map)
         self.appraiser = Appraiser(self.map_state, config)
         self.pathfinder = Pathfinder(self.map_state)
-        self.border_operator = BorderOperator(self.map_state)
+        self.border_operator = BorderOperator(self.map_state, config)
         self.turn = 0
         # with open('pending.txt', 'w') as f:
         #     f.write('Start! ------- ' + '\n')

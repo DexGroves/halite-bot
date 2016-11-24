@@ -10,17 +10,7 @@ class Appraiser(object):
 
     def __init__(self, map_state, config):
         # self.config = config
-        self.config = {
-            'epm':           1.50,
-            'bsm':           -0.05,
-            'esm':           -0.05,
-            'eprox':         0.01,
-            'splash':        0.01,
-            'stay_val':      0.8,
-            'max_edge_str':  200,
-            'max_stay_strn': 100,
-            'falloff' :      2.0
-        }
+        self.config = config
         self.dists = dc.get_distance_matrix(map_state.width,
                                             map_state.height,
                                             self.config['falloff'])

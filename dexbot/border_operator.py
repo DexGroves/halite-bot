@@ -7,9 +7,10 @@ from dexbot.move_queue import PendingMoves
 
 class BorderOperator(object):
 
-    def __init__(self, map_state):
+    def __init__(self, map_state, config):
         self.width = map_state.width
         self.height = map_state.height
+        self.border_cutoff = config['border_cutoff']
 
     def set_border_value(self, map_state, appraiser):
         sort_value = np.argsort(-1 * appraiser.brdr_value)
@@ -18,8 +19,9 @@ class BorderOperator(object):
         self.brdr_value = appraiser.brdr_value[sort_value]
 
         self.impt_locs = [self.impt_locs[i] for i in range(len(self.impt_locs))
-                          # if self.brdr_value[i] > np.percentile(self.brdr_value, 65)]
-                          if self.brdr_value[i] >= self.brdr_value.mean()]
+                          if self.brdr_value[i] > np.percentile(self.brdr_value,
+                                                                self.border_cutoff)]
+                          # if self.brdr_value[i] >= self.brdr_value.mean()]
 
     def get_moves(self, map_state):
         ic_queue = self.get_immediate_captures(self.impt_locs, map_state)
