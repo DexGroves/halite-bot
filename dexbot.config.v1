@@ -1,1 +1,13 @@
-{"epm":1.0636,"bsm":-0.04,"esm":-0.1664,"eprox":0.7909,"bprox":0.2,"splash":0.0489,"stay_val":2.0364,"max_edge_str":348.9899,"max_stay_strn":88.8384,"falloff":2.001,"border_cutoff":57.5758}
+{
+  "epm": 1.012121,
+   "bsm": -0.05808081,
+   "esm": -0.05474747,
+   "eprox": 0.1344444,
+   "bprox": 0.8737374,
+   "splash": 0.03747475,
+   "stay_val": 1.216667,
+   "max_edge_str": 338.3838,
+   "max_stay_strn": 25.90909,
+   "falloff": 2.043434,
+   "border_cutoff": 60.85859
+}
