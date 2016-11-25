@@ -73,6 +73,7 @@ class MapState(object):
         """Update all the internal numpy matrices."""
         self.mine = np.zeros((self.width, self.height), dtype=int)
         self.enemy = np.zeros((self.width, self.height), dtype=int)
+        self.eid = np.zeros((self.width, self.height), dtype=int)
         self.blank = np.zeros((self.width, self.height), dtype=int)
         self.strn = np.zeros((self.width, self.height), dtype=int)
         self.mine_strn = np.zeros((self.width, self.height), dtype=int)
@@ -89,6 +90,8 @@ class MapState(object):
                     self.mine_strn[x, y] = game_map.contents[y][x].strength
                 else:
                     self.enemy[x, y] = 1
+                    self.eid[x, y] = owner
+        self.num_enemy = len(np.unique(self.eid)) - 1
 
     def _set_aggregate_stats(self):
         self.mine_area = np.sum(self.mine)

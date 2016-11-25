@@ -35,7 +35,8 @@ class DexBot(object):
         mq.process_pending(ic_queue)
         mq.process_pending(bm_queue)
 
-        mq.shuffle_remaining_locs()
+        # mq.shuffle_remaining_locs()
+        mq.order_locs_by_strength(self.appraiser)
 
         for i, (x, y) in enumerate(mq.rem_locs):
             # Handle timeout

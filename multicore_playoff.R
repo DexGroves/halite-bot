@@ -18,7 +18,7 @@ build_call <- function(dim, nopp, seed) {
 # Run nrun randomly sampled configs against RefBot
 nrun <- 2000
 ncore <- 36
-start_seed <- 30000
+start_seed <- 44000
 seeds <- seq(start_seed, start_seed + nrun)
 
 registerDoMC(ncore)
@@ -45,3 +45,11 @@ table(results)
 
 #   1   2
 # 756 245  config v6, no don't-walk
+# results
+#    1    2
+# 1155  846
+#
+# results
+#    1    2
+# 1190  811  Move by vlaue
+
