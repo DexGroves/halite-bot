@@ -85,7 +85,7 @@ class MapState(object):
         self.strn = np.zeros((self.width, self.height), dtype=int)
         self.mine_strn = np.zeros((self.width, self.height), dtype=int)
 
-        self.originally_mine = copy(self.mine)
+        # self.originally_mine = copy(self.mine)
 
         for x in range(game_map.width):
             for y in range(game_map.height):
