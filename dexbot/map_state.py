@@ -33,15 +33,11 @@ class MapState(object):
         return np.transpose(np.where(self.border == 1))
 
     def can_move_safely(self, x, y, cardinal):
-        if cardinal == 1:
-            nx, ny = x, (y-1) % self.height
-        elif cardinal == 2:
-            nx, ny = (x+1) % self.width , y
-        elif cardinal == 3:
-            nx, ny = x, (y+1) % self.height
-        elif cardinal == 4:
-            nx, ny = (x-1) % self.width, y
+        nx, ny = self.cardinal_to_nxny(cardinal, x, y)
 
+        return self.can_occupy_safely(x, y, nx, ny)
+
+    def can_occupy_safely(self, x, y, nx, ny):
         if self.mine[nx, ny]:
             return True
 
@@ -54,8 +50,18 @@ class MapState(object):
         if self.strn[nx, ny] < self.strn[x, y]:
             return True
 
-
         return False
+
+    def cardinal_to_nxny(self, x, y, cardinal):
+        if cardinal == 1:
+            return x, (y-1) % self.height
+        elif cardinal == 2:
+            return (x+1) % self.width , y
+        elif cardinal == 3:
+            return x, (y+1) % self.height
+        elif cardinal == 4:
+            return (x-1) % self.width, y
+        return x, y
 
     def _set_production(self, game_map):
         self.prod = np.zeros((self.width, self.height), dtype=int)
@@ -106,16 +112,16 @@ class MapState(object):
 
     def _set_danger_close(self):
         self.danger_close = np.zeros((self.width, self.height), dtype=int)
-        self.danger_close += mr.roll_x(self.enemy, 1)
-        self.danger_close += mr.roll_x(self.enemy, -1)
-        self.danger_close += mr.roll_y(self.enemy, 1)
-        self.danger_close += mr.roll_y(self.enemy, -1)
-        self.danger_close += mr.roll_x(self.enemy, 2)
-        self.danger_close += mr.roll_x(self.enemy, -2)
-        self.danger_close += mr.roll_y(self.enemy, 2)
-        self.danger_close += mr.roll_y(self.enemy, -2)
-        self.danger_close += self.enemy
+        # self.danger_close += mr.roll_x(self.enemy, 1)
+        # self.danger_close += mr.roll_x(self.enemy, -1)
+        # self.danger_close += mr.roll_y(self.enemy, 1)
+        # self.danger_close += mr.roll_y(self.enemy, -1)
+        # self.danger_close += mr.roll_x(self.enemy, 2)
+        # self.danger_close += mr.roll_x(self.enemy, -2)
+        # self.danger_close += mr.roll_y(self.enemy, 2)
+        # self.danger_close += mr.roll_y(self.enemy, -2)
+        # self.danger_close += self.enemy
 
-        self.danger_close = np.minimum(self.danger_close, 1)
-        self.danger_close = np.multiply(self.danger_close, self.blank)
-        self.danger_close = np.multiply(self.danger_close, self.strn > 10)
+        # self.danger_close = np.minimum(self.danger_close, 1)
+        # self.danger_close = np.multiply(self.danger_close, self.blank)
+        # self.danger_close = np.multiply(self.danger_close, self.strn > 10)
