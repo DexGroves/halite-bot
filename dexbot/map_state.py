@@ -124,4 +124,4 @@ class MapState(object):
 
         # self.danger_close = np.minimum(self.danger_close, 1)
         # self.danger_close = np.multiply(self.danger_close, self.blank)
-        # self.danger_close = np.multiply(self.danger_close, self.strn > 10)
+        # self.danger_close = np.multiply(self.danger_close, self.strn > 80)
