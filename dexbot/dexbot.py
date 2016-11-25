@@ -27,8 +27,6 @@ class DexBot(object):
         self.border_operator.set_border_value(self.map_state, self.appraiser)
 
     def move(self, start_time):
-        self.turn += 1
-
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
 
@@ -60,5 +58,6 @@ class DexBot(object):
                 direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
                 mq.pend_move(x, y, direction)
 
+        self.turn += 1
         return mq.moves
 

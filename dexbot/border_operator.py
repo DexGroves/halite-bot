@@ -44,9 +44,6 @@ class BorderOperator(object):
                      map_state.mine_strn[nx, ny] >= 255):
                 pm.pend_move(nx, ny, 4)
                 map_state.register_move(nx, ny, 4)
-                # with open('pending.txt', 'a') as f:
-                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(4) + '\n')
-
                 continue
 
             nx, ny = (x-1) % self.width, y
@@ -55,9 +52,6 @@ class BorderOperator(object):
                      map_state.mine_strn[nx, ny] >= 255):
                 pm.pend_move(nx, ny, 2)
                 map_state.register_move(nx, ny, 2)
-                # with open('pending.txt', 'a') as f:
-                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(2) + '\n')
-
                 continue
 
             nx, ny = x, (y+1) % self.height
@@ -66,9 +60,6 @@ class BorderOperator(object):
                      map_state.mine_strn[nx, ny] >= 255):
                 pm.pend_move(nx, ny, 1)
                 map_state.register_move(nx, ny, 1)
-                # with open('pending.txt', 'a') as f:
-                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(1) + '\n')
-
                 continue
 
             nx, ny = x, (y-1) % self.height
@@ -77,9 +68,6 @@ class BorderOperator(object):
                      map_state.mine_strn[nx, ny] >= 255):
                 pm.pend_move(nx, ny, 3)
                 map_state.register_move(nx, ny, 3)
-                # with open('pending.txt', 'a') as f:
-                #     f.write('CapImmediate:\t' + repr((nx, ny)) + '\t' + repr(3) + '\n')
-
                 continue
 
         return pm
