@@ -77,7 +77,7 @@ class EarlyTactician(object):
         if cur_order == self.order:  # Reached the last step!
             vals = np.zeros(len(hons), dtype=float)
             for i, (nx, ny) in enumerate(hons):
-                ttc = self._time_to_cap(x, y, nx, ny, map_state)
+                ttc = self._time_to_cap(x, y, nx, ny, map_state, extra_strn)
                 if ttc <= rem_time:
                     vals[i] = map_state.prod[nx, ny]
 
