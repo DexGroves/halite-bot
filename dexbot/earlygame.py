@@ -19,14 +19,17 @@ class EarlyTactician(object):
         self.base[0, 0] = 0
         self.dists = dc.offset(self.base, self.centre[0], self.centre[1])
 
-        with open('vd.txt', 'w') as f:
-            f.write('\n')
+        self.handover = False
 
     def update(self, map_state):
+        self.max_t -= 1
         locs = map_state.get_self_locs()
         for loc in locs:
             new_dist = dc.offset(self.base, loc[0], loc[1])
             self.dists = np.minimum(self.dists, new_dist)
+
+        if self.max_t <= 1:
+            self.handover = True
 
     def find_optimal_move(self, x, y, map_state):
         """Loop over all indices up to order in order to determine
@@ -36,9 +39,6 @@ class EarlyTactician(object):
         """
         moves, value = self._find_best_move_value(x, y, 0,
                                                   self.max_t, map_state)
-
-        with open('vd.txt', 'a') as f:
-            f.write(repr(moves) + '\t' + repr(value) + '\n')
 
         return moves[0]
 
@@ -86,3 +86,13 @@ class EarlyTactician(object):
             own_prod  # In case zero
 
         return turns
+
+
+class TeamerUpper(object):
+    """Handle teaming up to capture border areas in the earlygame."""
+
+    def __init__(self):
+        pass
+
+    def cost_to_move(self):
+        pass
