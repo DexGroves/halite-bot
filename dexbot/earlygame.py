@@ -15,14 +15,21 @@ class EarlyTactician(object):
 
         self.centre = map_state.get_self_locs()[0]
 
-        self.dists = dc.get_base_matrix(map_state.width, map_state.height, 1)
-        self.dists = dc.offset(self.dists, self.centre[0], self.centre[1])
-        self.dists[self.centre[0], self.centre[1]] = 0
+        self.base = dc.get_base_matrix(map_state.width, map_state.height, 1)
+        self.base[0, 0] = 0
+        self.dists = dc.offset(self.base, self.centre[0], self.centre[1])
+        # self.dists[self.centre[0], self.centre[1]] = 0
 
         with open('hon.txt', 'w') as f:
             f.write('\n')
         with open('vd.txt', 'w') as f:
             f.write('\n')
+
+    def update(self, map_state):
+        locs = map_state.get_self_locs()
+        for loc in locs:
+            new_dist = dc.offset(self.base, loc[0], loc[1])
+            self.dists = np.minimum(self.dists, new_dist)
 
     def find_optimal_move(self, x, y, map_state):
         """Loop over all indices up to order in order to determine
@@ -30,7 +37,7 @@ class EarlyTactician(object):
         with recursion starting at the outside, but for now f it.
         x, y unused but required for future multi piece logic.
         """
-        moves, value = self._find_best_move_value(self.centre[0], self.centre[1], 0,
+        moves, value = self._find_best_move_value(x, y, 0,
                                                   self.max_t, map_state)
 
         with open('vd.txt', 'a') as f:

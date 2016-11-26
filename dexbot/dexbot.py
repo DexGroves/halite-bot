@@ -26,6 +26,9 @@ class DexBot(object):
         self.max_time = 0.95
         self.turn = 0
 
+        with open('egmoves.txt', 'w') as f:
+            f.write('\n')
+
     def update(self, game_map):
         self.map_state.update(game_map)
         self.appraiser.set_value(self.map_state)
@@ -35,10 +38,13 @@ class DexBot(object):
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
 
-        if self.map_state.mine_area <= 1:  # It can only make one move so far!
+        if self.map_state.mine_area <= 4:
+            self.et.update(self.map_state)
             for x, y in mq.rem_locs:
                 nx, ny = self.et.find_optimal_move(x, y, self.map_state)
                 direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
+                with open('egmoves.txt', 'a') as f:
+                    f.write(repr((x, y, direction)) + '\n')
                 mq.pend_move(x, y, direction)
 
             return mq.moves
