@@ -18,10 +18,7 @@ class EarlyTactician(object):
         self.base = dc.get_base_matrix(map_state.width, map_state.height, 1)
         self.base[0, 0] = 0
         self.dists = dc.offset(self.base, self.centre[0], self.centre[1])
-        # self.dists[self.centre[0], self.centre[1]] = 0
 
-        with open('hon.txt', 'w') as f:
-            f.write('\n')
         with open('vd.txt', 'w') as f:
             f.write('\n')
 
@@ -76,10 +73,6 @@ class EarlyTactician(object):
         order = self.dists[x, y]
         neighbours = map_state.get_neighbours(x, y)
 
-        with open('hon.txt', 'a') as f:
-            f.write(repr(order) + '\n' + repr(neighbours) + '\n'
-                    )
-
         return [n for n in neighbours if self.dists[n[0], n[1]] == (order + 1)]
 
     def _time_to_cap(self, ox, oy, ux, uy, map_state):
@@ -93,31 +86,3 @@ class EarlyTactician(object):
             own_prod  # In case zero
 
         return turns
-
-    # def _build_val_dict(self, x, y, cur_order, map_state):
-    #     if cur_order == self.order:
-    #         # Need to trade this off against time to cap somehow
-    #         return map_state.prod[x, y]
-
-    #     next_locs = self._find_higher_order_neigbours(x, y, map_state)
-    #     val_dict = {loc: None for loc in next_locs}
-    #     for nx, ny in val_dict.keys():
-    #         val = map_state.prod[x, y]
-    #         dvdt_dict = self._build_val_dict(nx, ny, cur_order + 1, map_state)
-    #         ttc = self.max_t - self._time_to_cap(x, y, nx, ny, map_state)
-
-    #         # val_dict[(nx, ny)] = [(nx, ny)], val + dvdt
-    #         val_dict[(nx, ny)] = {k: v}
-
-    #     return val_dict
-
-    # def _find_move_from_vals(self, cur_dict):
-    #     for k, v in cur_dict.items():
-    #         if isinstance(v, dict):
-    #             cur_dict[k] = self._find_move_from_vals(v)
-
-    #     max_val = np.max([vals for k, (locs, vals) in cur_dict.items()])
-    #     max_locs = [locs + [k] for k, (locs, vals) in cur_dict.items()
-    #                 if vals == max_val]
-
-    #     return max_locs
