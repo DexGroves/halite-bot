@@ -71,6 +71,10 @@ class MapState(object):
     def get_neighbours(self, x, y):
         return [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
 
+    def get_allied_neighbours(self, x, y):
+        nbrs = [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
+        return [n for n in nbrs if self.mine[n[0], n[1]]]
+
     def _set_production(self, game_map):
         self.prod = np.zeros((self.width, self.height), dtype=int)
         for x in range(game_map.width):
