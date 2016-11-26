@@ -3,8 +3,6 @@
 
 import numpy as np
 import dexbot.matrix_roller as mr
-from dexbot.distance_calculator import DistanceCalculator as dc
-from copy import copy
 
 
 class MapState(object):
@@ -61,13 +59,13 @@ class MapState(object):
 
     def cardinal_to_nxny(self, x, y, cardinal):
         if cardinal == 1:
-            return x, (y-1) % self.height
+            return x, (y - 1) % self.height
         elif cardinal == 2:
-            return (x+1) % self.width , y
+            return (x + 1) % self.width, y
         elif cardinal == 3:
-            return x, (y+1) % self.height
+            return x, (y + 1) % self.height
         elif cardinal == 4:
-            return (x-1) % self.width, y
+            return (x - 1) % self.width, y
         return x, y
 
     def _set_production(self, game_map):
@@ -130,17 +128,17 @@ class MapState(object):
 
     def _set_danger_close(self):
         self.danger_close = np.zeros((self.width, self.height), dtype=int)
-       # if self.enemy_mean_strn > self.mine_sum_strn:
-            # self.danger_close += mr.roll_x(self.enemy, 1)
-            # self.danger_close += mr.roll_x(self.enemy, -1)
-            # self.danger_close += mr.roll_y(self.enemy, 1)
-            # self.danger_close += mr.roll_y(self.enemy, -1)
-            # self.danger_close += mr.roll_x(self.enemy, 2)
-            # self.danger_close += mr.roll_x(self.enemy, -2)
-            # self.danger_close += mr.roll_y(self.enemy, 2)
-            # self.danger_close += mr.roll_y(self.enemy, -2)
-            # self.danger_close += self.enemy
-#
-            # self.danger_close = np.minimum(self.danger_close, 1)
-            # self.danger_close = np.multiply(self.danger_close, self.blank)
-            # self.danger_close = np.multiply(self.danger_close, self.strn > 80)
+        # if self.enemy_mean_strn > self.mine_sum_strn:
+        #     self.danger_close += mr.roll_x(self.enemy, 1)
+        #     self.danger_close += mr.roll_x(self.enemy, -1)
+        #     self.danger_close += mr.roll_y(self.enemy, 1)
+        #     self.danger_close += mr.roll_y(self.enemy, -1)
+        #     self.danger_close += mr.roll_x(self.enemy, 2)
+        #     self.danger_close += mr.roll_x(self.enemy, -2)
+        #     self.danger_close += mr.roll_y(self.enemy, 2)
+        #     self.danger_close += mr.roll_y(self.enemy, -2)
+        #     self.danger_close += self.enemy
+
+        #     self.danger_close = np.minimum(self.danger_close, 1)
+        #     self.danger_close = np.multiply(self.danger_close, self.blank)
+        #     self.danger_close = np.multiply(self.danger_close, self.strn > 80)

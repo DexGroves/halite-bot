@@ -47,7 +47,8 @@ class DexBot(object):
                 elapsed = timeit.default_timer() - start_time
             if check_time and elapsed > self.max_time:
                 # Panic mode, everything stays!
-                mq.moves[mq.nmoved:] = [Move(Location(x, y), 0) for (x, y) in mq.rem_locs[i:]]
+                mq.moves[mq.nmoved:] = [Move(Location(x, y), 0)
+                                        for (x, y) in mq.rem_locs[i:]]
                 break
 
             (nx, ny), move_value = self.appraiser.get_best_target(self.map_state, x, y)
@@ -62,4 +63,3 @@ class DexBot(object):
 
         self.turn += 1
         return mq.moves
-

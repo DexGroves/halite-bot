@@ -1,7 +1,6 @@
 """Handle the routing from x, y to nx, ny."""
 
 
-import numpy as np
 import random
 
 
@@ -11,16 +10,16 @@ class Pathfinder(object):
         self.width = map_state.width
         self.height = map_state.height
 
-    def find_path(self, x, y, nx, ny):
-        dists = np.array([
-            (y - ny) % self.height,
-            (nx - x) % self.width,
-            (ny - y) % self.height,
-            (x - nx) % self.width
-        ])
-        dists[dists == 0] = 999
-        dist_sort = np.argsort(dists)
-        return np.argmin(dists) + 1
+    # def find_path(self, x, y, nx, ny):
+    #     dists = np.array([
+    #         (y - ny) % self.height,
+    #         (nx - x) % self.width,
+    #         (ny - y) % self.height,
+    #         (x - nx) % self.width
+    #     ])
+    #     dists[dists == 0] = 999
+    #     dist_sort = np.argsort(dists)
+    #     return np.argmin(dists) + 1
 
     def find_path(self, x, y, nx, ny, map_state):
         dist_north = (y - ny) % self.height

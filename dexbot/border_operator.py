@@ -5,6 +5,7 @@ import numpy as np
 import dexbot.loupes as loupes
 from dexbot.move_queue import PendingMoves
 
+
 class BorderOperator(object):
 
     def __init__(self, map_state, config):
@@ -21,13 +22,12 @@ class BorderOperator(object):
         self.impt_locs = [self.impt_locs[i] for i in range(len(self.impt_locs))
                           if self.brdr_value[i] > np.percentile(self.brdr_value,
                                                                 self.border_cutoff)]
-                          # if self.brdr_value[i] >= self.brdr_value.mean()]
 
     def get_moves(self, map_state):
         ic_queue = self.get_immediate_captures(self.impt_locs, map_state)
 
         rem_locs = [loc for loc in self.impt_locs
-                    if not loc in ic_queue.locs]
+                    if loc not in ic_queue.locs]
         # t1_queue = self.get_border_moves(rem_locs, map_state, loupes.t1)
 
         # rem_locs = [loc for loc in self.impt_locs
@@ -42,7 +42,7 @@ class BorderOperator(object):
         for x, y in rem_locs:
             target_str = map_state.strn[x, y]
 
-            nx, ny = (x+1) % self.width, y
+            nx, ny = (x + 1) % self.width, y
             if map_state.mine[nx, ny] and \
                     (map_state.mine_strn[nx, ny] > target_str or
                      map_state.mine_strn[nx, ny] >= 255):
@@ -50,7 +50,7 @@ class BorderOperator(object):
                 map_state.register_move(nx, ny, 4)
                 continue
 
-            nx, ny = (x-1) % self.width, y
+            nx, ny = (x - 1) % self.width, y
             if map_state.mine[nx, ny] and \
                     (map_state.mine_strn[nx, ny] > target_str or
                      map_state.mine_strn[nx, ny] >= 255):
@@ -58,7 +58,7 @@ class BorderOperator(object):
                 map_state.register_move(nx, ny, 2)
                 continue
 
-            nx, ny = x, (y+1) % self.height
+            nx, ny = x, (y + 1) % self.height
             if map_state.mine[nx, ny] and \
                     (map_state.mine_strn[nx, ny] > target_str or
                      map_state.mine_strn[nx, ny] >= 255):
@@ -66,7 +66,7 @@ class BorderOperator(object):
                 map_state.register_move(nx, ny, 1)
                 continue
 
-            nx, ny = x, (y-1) % self.height
+            nx, ny = x, (y - 1) % self.height
             if map_state.mine[nx, ny] and \
                     (map_state.mine_strn[nx, ny] > target_str or
                      map_state.mine_strn[nx, ny] >= 255):
@@ -82,26 +82,26 @@ class BorderOperator(object):
         for x, y in rem_locs:
             target_str = map_state.strn[x, y]
 
-            if map_state.mine[(x+1) % self.width, y]:  # Has self to east
-                nx, ny = (x+1) % self.width, y
+            if map_state.mine[(x + 1) % self.width, y]:  # Has self to east
+                nx, ny = (x + 1) % self.width, y
                 self._move_by_loupe(x, y, nx, ny,
                                     loupe_chain.east,
                                     pm, map_state, target_str)
 
-            elif map_state.mine[(x-1) % self.width, y]:  # Has self to west
-                nx, ny = (x-1) % self.width, y
+            elif map_state.mine[(x - 1) % self.width, y]:  # Has self to west
+                nx, ny = (x - 1) % self.width, y
                 self._move_by_loupe(x, y, nx, ny,
                                     loupe_chain.west,
                                     pm, map_state, target_str)
 
-            elif map_state.mine[x, (y+1) % self.height]:  # Has self to south
-                nx, ny = x, (y+1) % self.height
+            elif map_state.mine[x, (y + 1) % self.height]:  # Has self to south
+                nx, ny = x, (y + 1) % self.height
                 self._move_by_loupe(x, y, nx, ny,
                                     loupe_chain.south,
                                     pm, map_state, target_str)
 
-            elif map_state.mine[x, (y-1) % self.height]:  # Has self to north
-                nx, ny = x, (y-1) % self.height
+            elif map_state.mine[x, (y - 1) % self.height]:  # Has self to north
+                nx, ny = x, (y - 1) % self.height
                 self._move_by_loupe(x, y, nx, ny,
                                     loupe_chain.north,
                                     pm, map_state, target_str)
@@ -125,7 +125,7 @@ class BorderOperator(object):
             assigned_strength = 0
             for i in str_order:
                 (lx, ly), cardinal = loupe.locs[i], loupe.dirs[i]
-                xlx, yly = (x+lx) % self.width, (y+ly) % self.height
+                xlx, yly = (x + lx) % self.width, (y + ly) % self.height
                 if map_state.mine[xlx, yly]:
                     pm.pend_move(xlx, yly, cardinal)
                     map_state.register_move(xlx, yly, cardinal)

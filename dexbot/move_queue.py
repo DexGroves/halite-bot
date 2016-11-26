@@ -31,7 +31,7 @@ class MoveQueue(object):
 
         self.moves[start:end] = insert_moves
 
-        self.rem_locs = [r for r in self.rem_locs if not r in pending.locs]
+        self.rem_locs = [r for r in self.rem_locs if r not in pending.locs]
         self.nmoved = end
 
     def shuffle_remaining_locs(self):
