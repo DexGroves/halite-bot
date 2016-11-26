@@ -68,6 +68,9 @@ class MapState(object):
             return (x - 1) % self.width, y
         return x, y
 
+    def get_neighbours(self, x, y):
+        return [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
+
     def _set_production(self, game_map):
         self.prod = np.zeros((self.width, self.height), dtype=int)
         for x in range(game_map.width):

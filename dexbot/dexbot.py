@@ -8,6 +8,7 @@ from dexbot.appraiser import Appraiser
 from dexbot.border_operator import BorderOperator
 from dexbot.move_queue import MoveQueue
 from dexbot.pathfinder import Pathfinder
+from dexbot.earlygame import EarlyTactician
 
 
 class DexBot(object):
@@ -17,6 +18,10 @@ class DexBot(object):
         self.appraiser = Appraiser(self.map_state, config)
         self.pathfinder = Pathfinder(self.map_state)
         self.border_operator = BorderOperator(self.map_state, config)
+        self.et = EarlyTactician(self.map_state, 3, 12)  # Config this!
+
+        self.et_lim = 1  # Config this too!
+
         self.time_chk_freq = 20
         self.max_time = 0.95
         self.turn = 0
@@ -29,6 +34,14 @@ class DexBot(object):
     def move(self, start_time):
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
+
+        if self.map_state.mine_area <= 1:  # It can only make one move so far!
+            for x, y in mq.rem_locs:
+                nx, ny = self.et.find_optimal_move(x, y, self.map_state)
+                direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
+                mq.pend_move(x, y, direction)
+
+            return mq.moves
 
         ic_q, t1_q, t2_q = self.border_operator.get_moves(self.map_state)
 
