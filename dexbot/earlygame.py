@@ -18,6 +18,8 @@ class EarlybotAPI(object):
         self.active = True
         with open('moves.txt', 'w') as f:
             f.write('\n')
+        with open("teamup.txt", "w") as f:
+            f.write(repr(self.max_t) + '--------------\n')
 
     def update(self, map_state):
         self.max_t -= 1
@@ -26,6 +28,9 @@ class EarlybotAPI(object):
 
         with open('moves.txt', 'a') as f:
             f.write(repr(self.max_t) + '\t' + repr(self.active) + '\n')
+
+        with open("teamup.txt", "a") as f:
+            f.write(repr(self.max_t) + '--------------\n')
 
         self.tactician.update(map_state, self.max_t)
         self.owned_locs = map_state.get_self_locs()
@@ -188,14 +193,21 @@ class TeamUpper(object):
         #    costs[i] = self.get_cost_move(x, y, val[i], map_state)
         pm = PendingMoves()
 
-        costs = {
+        loc_to_cost = {
             (x, y): self.get_cost_move(x, y, vals[i], map_state)
             for i, (x, y) in enumerate(locs)
         }
 
-        # vals_dict = {(x, y): vals[i] for i, (x, y) in enumerate(locs)}
+        targ_to_assignee = {
+            targs[i]: locs[i] for i in range(len(locs))
+        }
+
+        assignee_to_value = {
+            locs[i]: vals[i] for i in range(len(locs))
+        }
 
         # Build possible teamups
+        # brdr_locs = map_state.
         targ_list = []
         ass_list = []
         nbr_list = []
@@ -212,7 +224,7 @@ class TeamUpper(object):
             for nbrx, nbry in map_state.get_allied_neighbours(ax, ay):
                 val_move = self.get_val_move(
                     ax, ay, nbrx, nbry, tx, ty, a_val, map_state)
-                cost_move = costs[(nbrx, nbry)]
+                cost_move = loc_to_cost[(nbrx, nbry)]
 
                 total_str = map_state.strn[nbrx, nbry] + map_state.strn[ax, ay] + \
                     map_state.prod[ax, ay]
@@ -223,6 +235,14 @@ class TeamUpper(object):
                     ass_list.append((ax, ay))
                     nbr_list.append((nbrx, nbry))
                     val_list.append(val_move - cost_move)
+
+                with open("teamup.txt", "a") as f:
+                    f.write("\t".join(
+                        [
+                            repr((tx, ty)), repr((ax, ay)), repr((nbrx, nbry)),
+                            repr(cost_move), repr(val_move), "\n"
+                        ]
+                    ))
 
         # Issue
         while len(val_list) > 0:
@@ -244,7 +264,7 @@ class TeamUpper(object):
                 elif targ_list[i] == (tx, ty):
                     deletions.append(i)
 
-            with open('clearout.txt', 'w') as f:
+            with open('clearout.txt', 'a') as f:
                 f.write('\n'.join([repr(ass_list),
                                    repr(targ_list),
                                    repr(nbr_list),
@@ -278,6 +298,7 @@ class TeamUpper(object):
             return 0
 
         Tred = (map_state.strn[hx, hy] / map_state.prod[ax, ay])
+        Tred = np.minimum(Tcap - 1, Tred)
 
         return val * Tred
 
