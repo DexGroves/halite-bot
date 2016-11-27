@@ -11,13 +11,17 @@ from dexbot.distance_calculator import DistanceCalculator as dc
 class EarlybotAPI(object):
     """Turn a MapState into a MoveQueue based on earlygame logic."""
 
-    def __init__(self, map_state, order, max_t, decay=True):
-        self.max_t = max_t
+    def __init__(self, map_state, config):
+        self.max_t = config['earlygame_max_t']
+        self.decay = config['earlygame_decay']
+        self.max_area = config['earlygame_max_area']
+        all_border = config['earlygame_all_border']
+        order = config['earlygame_order']
+
         self.tactician = EarlyTactician(map_state, order, self.max_t)
         self.pathfinder = Pathfinder(map_state)
-        self.teamupper = TeamUpper(map_state)
+        self.teamupper = TeamUpper(map_state, all_border)
         self.active = True
-        self.decay = decay
 
         with open('moves.txt', 'w') as f:
             f.write('\n')
@@ -31,7 +35,7 @@ class EarlybotAPI(object):
             self.active = False
 
         with open('moves.txt', 'a') as f:
-            f.write('\n' + '\n' +  repr(current_move) + '----------\t\n')
+            f.write('\n' + '\n' + repr(current_move) + '----------\t\n')
 
         with open("teamup.txt", "a") as f:
             f.write(repr(self.max_t) + '--------------\n')
@@ -191,8 +195,9 @@ class EarlyTactician(object):
 class TeamUpper(object):
     """Handle teaming up to capture border areas in the earlygame."""
 
-    def __init__(self, map_state):
+    def __init__(self, map_state, all_border):
         self.pathfinder = Pathfinder(map_state)
+        self.all_border = all_border
 
     def get_teamups(self, locs, targs, vals, map_state):
         # costs = np.empty(len(locs), dtype=float)
@@ -214,13 +219,17 @@ class TeamUpper(object):
         }
 
         # Build possible teamups
-        # brdr_locs = map_state.get_border_locs()
         targ_list = []
         ass_list = []
         nbr_list = []
         val_list = []
+        if self.all_border:
+            targets = map_state.get_border_locs()
+        else:
+            targets = targs
         # for i, (tx, ty) in enumerate(targs):
-        for i, (tx, ty) in enumerate(map_state.get_border_locs()):
+        # for i, (tx, ty) in enumerate(map_state.get_border_locs()):
+        for i, (tx, ty) in enumerate(targets):
             if (tx, ty) in targ_to_assignee.keys():
                 ax, ay = targ_to_assignee[(tx, ty)]  # Block ready to go
             else:
