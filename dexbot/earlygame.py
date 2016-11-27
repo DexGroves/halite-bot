@@ -23,7 +23,7 @@ class EarlybotAPI(object):
         self.teamupper = TeamUpper(map_state, all_border)
         self.active = True
 
-        # with open('moves.txt', 'w') as f:
+        # with open('edges.txt', 'w') as f:
         #     f.write('\n')
         # with open("teamup.txt", "w") as f:
         #     f.write(repr(self.max_t) + '--------------\n')
@@ -34,9 +34,8 @@ class EarlybotAPI(object):
         if self.max_t <= 1:
             self.active = False
 
-        # with open('moves.txt', 'a') as f:
+        # with open('edges.txt', 'a') as f:
         #     f.write('\n' + '\n' + repr(current_move) + '----------\t\n')
-
         # with open("teamup.txt", "a") as f:
         #     f.write(repr(self.max_t) + '--------------\n')
 
@@ -209,6 +208,10 @@ class TeamUpper(object):
             for i, (x, y) in enumerate(locs)
         }
 
+        loc_to_targ = {
+            (locs[i][0], locs[i][1]): targs[i] for i, (x, y) in enumerate(locs)
+        }
+
         targ_to_assignee = {
             (targs[i][0], targs[i][1]): locs[i] for i, (x, y) in enumerate(locs)
         }
@@ -248,6 +251,41 @@ class TeamUpper(object):
             for nbrx, nbry in (a_neighbours + t_neighbours):
                 if nbrx == ax and nbry == ay:
                     continue
+
+                # If the targets are the same, see what we can do!
+                ns_targ_x, ns_targ_y = loc_to_targ[(nbrx, nbry)]
+                if ns_targ_x == tx and ns_targ_y == ty:
+                    a_str = map_state.strn[ax, ay]
+                    n_str = map_state.strn[nbrx, nbry]
+                    t_str = map_state.strn[tx, ty]
+
+                    a_prod = map_state.prod[ax, ay]
+                    n_prod = map_state.prod[nbrx, nbry]
+
+                    a_ttc = max((t_str - a_str) / a_prod, 0)
+                    n_ttc = max((t_str - n_str) / n_prod, 0)
+                    min_ttc = min(a_ttc, n_ttc)
+
+                    # with open("edges.txt", "a") as f:
+                    #     f.write(
+                    #         "\t".join([
+                    #             repr((ax, ay)), repr((nbrx, nbry)), repr((tx, ty)),
+                    #             repr(a_str), repr(n_str), repr(t_str),
+                    #             repr(a_ttc), repr(n_ttc), "\n"])
+                    #     )
+
+                    if (a_str + n_str) > t_str and \
+                            min_ttc > 1:
+
+                        # Lessss go boi
+                        targ_list.append((tx, ty))
+                        ass_list.append((ax, ay))
+                        nbr_list.append((nbrx, nbry))
+                        val_list.append(np.inf)   # DO IT
+
+                        continue
+
+                # Not the same, then weight tradeoffs
                 val_move = self.get_val_move(
                     ax, ay, nbrx, nbry, tx, ty, a_val, map_state)
                 cost_move = loc_to_cost[(nbrx, nbry)]
@@ -278,9 +316,19 @@ class TeamUpper(object):
             tx, ty = targ_list[i]
             nbrx, nbry = nbr_list[i]
 
-            direction = self.pathfinder.find_path(nbrx, nbry, tx, ty, map_state)
-            pm.pend_move(nbrx, nbry, direction)
-            pm.pend_move(ax, ay, 0)
+            if np.isinf(val_list[i]):
+                # If value is inf (i.e., this is a teamup that the rest of the
+                # bot would call imposisble), call force_path instead of find.
+                direction = self.pathfinder.force_path(nbrx, nbry, tx, ty, map_state)
+                pm.pend_move(nbrx, nbry, direction)
+
+                direction = self.pathfinder.force_path(ax, ay, tx, ty, map_state)
+                pm.pend_move(ax, ay, direction)
+            else:
+                # This is normal. A stays and N goes in
+                direction = self.pathfinder.find_path(nbrx, nbry, tx, ty, map_state)
+                pm.pend_move(nbrx, nbry, direction)
+                pm.pend_move(ax, ay, 0)
 
             deletions = []
             for i in range(len(val_list)):
