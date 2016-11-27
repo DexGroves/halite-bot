@@ -18,7 +18,7 @@ class DexBot(object):
         self.appraiser = Appraiser(self.map_state, config)
         self.pathfinder = Pathfinder(self.map_state)
         self.border_operator = BorderOperator(self.map_state, config)
-        self.eb = EarlybotAPI(self.map_state, 7, 75)  # Config this!
+        self.eb = EarlybotAPI(self.map_state, 7, 30, False)  # Config this!
 
         self.time_chk_freq = 20
         self.max_time = 0.95
@@ -35,15 +35,17 @@ class DexBot(object):
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
 
-        if self.is_earlygame and self.map_state.mine_area > 25:
+        if self.is_earlygame and \
+                ((self.map_state.mine_area > 35) or (self.map_state.enemies_close)):
             self.is_earlygame = False
 
         if self.is_earlygame:
-            self.eb.update(self.map_state)
+            self.eb.update(self.map_state, self.turn)
             self.is_earlygame = self.eb.active
 
             mq = self.eb.get_moves(self.map_state)
 
+            self.turn += 1
             return mq.moves
 
         ic_q, t1_q, t2_q = self.border_operator.get_moves(self.map_state)

@@ -17,9 +17,9 @@ class MapState(object):
 
     def update(self, game_map):
         self._set_map_parameters(game_map)
-        self._set_aggregate_stats()
         self._set_border_squares()
         self._set_danger_close()
+        self._set_aggregate_stats()
 
     def register_move(self, x, y, cardinal):
         nx, ny = self.cardinal_to_nxny(x, y, cardinal)
@@ -116,6 +116,8 @@ class MapState(object):
         self.enemy_strn = np.sum(self.strn) - self.mine_sum_strn
         self.enemy_mean_strn = self.enemy_strn / self.num_enemy
 
+        self.enemies_close = np.sum(np.multiply(self.border, self.enemy_border)) > 0
+
     def _set_border_squares(self):
         self.border = np.zeros((self.width, self.height), dtype=int)
 
@@ -132,6 +134,15 @@ class MapState(object):
         self.border -= self.mine
         self.all_border = self.border
         self.border = self.border - self.enemy
+
+        self.enemy_border = np.zeros((self.width, self.height), dtype=int)
+        self.enemy_border += mr.roll_x(self.enemy, 1)
+        self.enemy_border += mr.roll_x(self.enemy, -1)
+        self.enemy_border += mr.roll_y(self.enemy, 1)
+        self.enemy_border += mr.roll_y(self.enemy, -1)
+        self.enemy_border += self.enemy
+        self.enemy_border = np.minimum(self.enemy_border, 1)
+        self.enemy_border -= self.enemy
 
     def _set_danger_close(self):
         self.danger_close = np.zeros((self.width, self.height), dtype=int)

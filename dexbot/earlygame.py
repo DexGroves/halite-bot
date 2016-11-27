@@ -11,27 +11,30 @@ from dexbot.distance_calculator import DistanceCalculator as dc
 class EarlybotAPI(object):
     """Turn a MapState into a MoveQueue based on earlygame logic."""
 
-    def __init__(self, map_state, order, max_t):
+    def __init__(self, map_state, order, max_t, decay=True):
         self.max_t = max_t
         self.tactician = EarlyTactician(map_state, order, self.max_t)
         self.pathfinder = Pathfinder(map_state)
         self.teamupper = TeamUpper(map_state)
         self.active = True
-        # with open('moves.txt', 'w') as f:
-        #     f.write('\n')
-        # with open("teamup.txt", "w") as f:
-        #     f.write(repr(self.max_t) + '--------------\n')
+        self.decay = decay
 
-    def update(self, map_state):
-        self.max_t -= 1
+        with open('moves.txt', 'w') as f:
+            f.write('\n')
+        with open("teamup.txt", "w") as f:
+            f.write(repr(self.max_t) + '--------------\n')
+
+    def update(self, map_state, current_move):
+        if self.decay:
+            self.max_t -= 1
         if self.max_t <= 1:
             self.active = False
 
-        # with open('moves.txt', 'a') as f:
-        #     f.write(repr(self.max_t) + '\t' + repr(self.active) + '\n')
+        with open('moves.txt', 'a') as f:
+            f.write('\n' + '\n' +  repr(current_move) + '----------\t\n')
 
-        # with open("teamup.txt", "a") as f:
-        #     f.write(repr(self.max_t) + '--------------\n')
+        with open("teamup.txt", "a") as f:
+            f.write(repr(self.max_t) + '--------------\n')
 
         self.tactician.update(map_state, self.max_t)
         self.owned_locs = map_state.get_self_locs()
@@ -58,18 +61,18 @@ class EarlybotAPI(object):
 
         mq.process_pending(pm)
 
-        # with open('moves.txt', 'a') as f:
-        #     f.write(repr(pm))
-        #     f.write(repr(mq))
-        #     f.write(repr(static_moves) + '\n')
+        with open('moves.txt', 'a') as f:
+            f.write(repr(pm))
+            f.write(repr(mq))
+            f.write(repr(static_moves) + '\n')
 
         for (x, y), (tx, ty) in static_moves.items():
             if (x, y) in mq.rem_locs and tx is not None:
                 direction = self.pathfinder.find_path(x, y, tx, ty, map_state)
                 mq.pend_move(x, y, direction)
 
-        # with open('moves.txt', 'a') as f:
-        #     f.write(repr(mq))
+        with open('moves.txt', 'a') as f:
+            f.write(repr(mq))
 
         return mq
 
@@ -157,11 +160,11 @@ class EarlyTactician(object):
                 Aij[i] = dvdt * (Ti - Tcap) + Ajk
         maxj = np.argmax(Aij)
 
-        # with open('debug.txt', 'w') as f:
-        #     f.write(
-        #         repr(hons) + '\n' + repr(maxj) + '\n' +
-        #         repr(Aij)
-        #     )
+        with open('debug.txt', 'w') as f:
+            f.write(
+                repr(hons) + '\n' + repr(maxj) + '\n' +
+                repr(Aij)
+            )
 
         return Aij[maxj]
 
@@ -216,7 +219,8 @@ class TeamUpper(object):
         ass_list = []
         nbr_list = []
         val_list = []
-        for i, (tx, ty) in enumerate(targs):
+        # for i, (tx, ty) in enumerate(targs):
+        for i, (tx, ty) in enumerate(map_state.get_border_locs()):
             if (tx, ty) in targ_to_assignee.keys():
                 ax, ay = targ_to_assignee[(tx, ty)]  # Block ready to go
             else:
@@ -250,13 +254,14 @@ class TeamUpper(object):
                     nbr_list.append((nbrx, nbry))
                     val_list.append(val_move - cost_move)
 
-                # with open("teamup.txt", "a") as f:
-                #     f.write("\t".join(
-                #         [
-                #             repr((tx, ty)), repr((ax, ay)), repr((nbrx, nbry)),
-                #             repr(cost_move), repr(val_move), "\n"
-                #         ]
-                #     ))
+                with open("moves.txt", "a") as f:
+                    f.write("\t".join(
+                        [
+                            "Teamups:\n",
+                            repr((tx, ty)), repr((ax, ay)), repr((nbrx, nbry)),
+                            repr(cost_move), repr(val_move), "\n"
+                        ]
+                    ))
 
         # Issue
         while len(val_list) > 0:
