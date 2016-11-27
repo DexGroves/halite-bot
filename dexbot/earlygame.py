@@ -2,6 +2,7 @@
 
 
 import numpy as np
+import random
 from dexbot.move_queue import MoveQueue, PendingMoves
 from dexbot.pathfinder import Pathfinder
 from dexbot.distance_calculator import DistanceCalculator as dc
@@ -16,21 +17,21 @@ class EarlybotAPI(object):
         self.pathfinder = Pathfinder(map_state)
         self.teamupper = TeamUpper(map_state)
         self.active = True
-        with open('moves.txt', 'w') as f:
-            f.write('\n')
-        with open("teamup.txt", "w") as f:
-            f.write(repr(self.max_t) + '--------------\n')
+        # with open('moves.txt', 'w') as f:
+        #     f.write('\n')
+        # with open("teamup.txt", "w") as f:
+        #     f.write(repr(self.max_t) + '--------------\n')
 
     def update(self, map_state):
         self.max_t -= 1
         if self.max_t <= 1:
             self.active = False
 
-        with open('moves.txt', 'a') as f:
-            f.write(repr(self.max_t) + '\t' + repr(self.active) + '\n')
+        # with open('moves.txt', 'a') as f:
+        #     f.write(repr(self.max_t) + '\t' + repr(self.active) + '\n')
 
-        with open("teamup.txt", "a") as f:
-            f.write(repr(self.max_t) + '--------------\n')
+        # with open("teamup.txt", "a") as f:
+        #     f.write(repr(self.max_t) + '--------------\n')
 
         self.tactician.update(map_state, self.max_t)
         self.owned_locs = map_state.get_self_locs()
@@ -43,7 +44,10 @@ class EarlybotAPI(object):
 
         for i, (x, y) in enumerate(self.owned_locs):
             moves, value[i] = self.tactician.find_optimal_move(x, y, map_state)
-            plan_targ[i] = moves[0], moves[1]
+            if value[i] == 0:
+                plan_targ[i] = x, y
+            else:
+                plan_targ[i] = moves[0], moves[1]
 
         static_moves = {
             (self.owned_locs[i][0], self.owned_locs[i][1]): plan_targ[i]
@@ -54,18 +58,18 @@ class EarlybotAPI(object):
 
         mq.process_pending(pm)
 
-        with open('moves.txt', 'a') as f:
-            f.write(repr(pm))
-            f.write(repr(mq))
-            f.write(repr(static_moves) + '\n')
+        # with open('moves.txt', 'a') as f:
+        #     f.write(repr(pm))
+        #     f.write(repr(mq))
+        #     f.write(repr(static_moves) + '\n')
 
         for (x, y), (tx, ty) in static_moves.items():
             if (x, y) in mq.rem_locs and tx is not None:
                 direction = self.pathfinder.find_path(x, y, tx, ty, map_state)
                 mq.pend_move(x, y, direction)
 
-        with open('moves.txt', 'a') as f:
-            f.write(repr(mq))
+        # with open('moves.txt', 'a') as f:
+        #     f.write(repr(mq))
 
         return mq
 
@@ -153,11 +157,11 @@ class EarlyTactician(object):
                 Aij[i] = dvdt * (Ti - Tcap) + Ajk
         maxj = np.argmax(Aij)
 
-        with open('debug.txt', 'w') as f:
-            f.write(
-                repr(hons) + '\n' + repr(maxj) + '\n' +
-                repr(Aij)
-            )
+        # with open('debug.txt', 'w') as f:
+        #     f.write(
+        #         repr(hons) + '\n' + repr(maxj) + '\n' +
+        #         repr(Aij)
+        #     )
 
         return Aij[maxj]
 
@@ -199,29 +203,39 @@ class TeamUpper(object):
         }
 
         targ_to_assignee = {
-            targs[i]: locs[i] for i in range(len(locs))
+            (targs[i][0], targs[i][1]): locs[i] for i, (x, y) in enumerate(locs)
         }
 
         assignee_to_value = {
-            locs[i]: vals[i] for i in range(len(locs))
+            (x, y): vals[i] for i, (x, y) in enumerate(locs)
         }
 
         # Build possible teamups
-        # brdr_locs = map_state.
+        # brdr_locs = map_state.get_border_locs()
         targ_list = []
         ass_list = []
         nbr_list = []
         val_list = []
         for i, (tx, ty) in enumerate(targs):
-            ax, ay = locs[i]
-            a_val = vals[i]
+            if (tx, ty) in targ_to_assignee.keys():
+                ax, ay = targ_to_assignee[(tx, ty)]  # Block ready to go
+            else:
+                neighbours = map_state.get_allied_neighbours(tx, ty)
+
+                ax, ay = random.choice(neighbours)   # Could be better!
+
+            a_val = assignee_to_value[(ax, ay)]
 
             if tx == ax and ty == ay:
                 continue
             if tx is None:
                 continue
 
-            for nbrx, nbry in map_state.get_allied_neighbours(ax, ay):
+            a_neighbours = map_state.get_allied_neighbours(ax, ay)
+            t_neighbours = map_state.get_allied_neighbours(tx, ty)
+            for nbrx, nbry in (a_neighbours + t_neighbours):
+                if nbrx == ax and nbry == ay:
+                    continue
                 val_move = self.get_val_move(
                     ax, ay, nbrx, nbry, tx, ty, a_val, map_state)
                 cost_move = loc_to_cost[(nbrx, nbry)]
@@ -236,13 +250,13 @@ class TeamUpper(object):
                     nbr_list.append((nbrx, nbry))
                     val_list.append(val_move - cost_move)
 
-                with open("teamup.txt", "a") as f:
-                    f.write("\t".join(
-                        [
-                            repr((tx, ty)), repr((ax, ay)), repr((nbrx, nbry)),
-                            repr(cost_move), repr(val_move), "\n"
-                        ]
-                    ))
+                # with open("teamup.txt", "a") as f:
+                #     f.write("\t".join(
+                #         [
+                #             repr((tx, ty)), repr((ax, ay)), repr((nbrx, nbry)),
+                #             repr(cost_move), repr(val_move), "\n"
+                #         ]
+                #     ))
 
         # Issue
         while len(val_list) > 0:
@@ -263,13 +277,6 @@ class TeamUpper(object):
                     deletions.append(i)
                 elif targ_list[i] == (tx, ty):
                     deletions.append(i)
-
-            with open('clearout.txt', 'a') as f:
-                f.write('\n'.join([repr(ass_list),
-                                   repr(targ_list),
-                                   repr(nbr_list),
-                                   repr(val_list),
-                                   repr(deletions)]))
 
             for deletion in reversed(deletions):
                 del ass_list[deletion]
@@ -301,57 +308,3 @@ class TeamUpper(object):
         Tred = np.minimum(Tcap - 1, Tred)
 
         return val * Tred
-
-    # def find_best_move_value(self, x, y, cur_order, t_ord, map_state,
-    #                           extra_strn):
-    #     hons = self._find_higher_order_neigbours(x, y, map_state)
-    #     if len(hons) == 0:
-    #         return [[(None, None)], 0]
-
-    #     # Reached the last step!
-    #     # Value = Pi + \Delta. Delta = 0.
-    #     if cur_order == self.order:
-    #         vals = np.zeros(len(hons), dtype=float)
-    #         for i, (nx, ny) in enumerate(hons):
-    #             ttc = self._time_to_cap(x, y, nx, ny, map_state, extra_strn)
-    #             if ttc <= t_ord:
-    #                 vals[i] = map_state.prod[nx, ny]
-
-    #         best_move = np.argmax(vals)
-    #         return [[hons[best_move]], vals[best_move]]
-
-    #     # Still recursing!
-    #     # Value = Pi + Ti(max_j PiPj/Sj + Tj(max_k PjPk/Sk + max_l Pl w/i Tl))
-    #     else:
-    #         vals = np.zeros(len(hons), dtype=float)
-    #         moves = np.zeros(len(hons), dtype=list)
-    #         for i, (nx, ny) in enumerate(hons):
-    #             if map_state.mine[x, y] == 1:
-    #                 extra_strn = np.max(map_state.strn[x, y] -
-    #                                     map_state.strn[nx, ny], 0)
-    #             elif cur_order > 2:  # Extra strn only travels one turn out
-    #                 extra_strn == 0
-
-    #             ttc = self._time_to_cap(x, y, nx, ny, map_state, extra_strn)
-    #             # if ttc <= t_ord:
-    #             #     nm, nval = self.find_best_move_value(nx, ny, cur_order + 1,
-    #             #                                           t_ord - ttc, map_state,
-    #             #                                           extra_strn)
-    #             #     moves[i] = nm
-    #             #     vals[i] = map_state.prod[nx, ny] + nval
-
-    #             nm, nval = self.find_best_move_value(nx, ny, cur_order + 1,
-    #                                                   t_ord - ttc, map_state,
-    #                                                   extra_strn)
-    #             PiPjSj = map_state.prod[x, y] * map_state.prod[nx, ny] / \
-    #                 map_state.strn[nx, ny]
-    #             TjDelta = (t_ord - ttc) * nval
-
-    #             moves[i] = nm
-    #             vals[i] = PiPjSj * TjDelta
-
-    #         if len(vals) == 0:
-    #             return [[hons[0] + [moves[best_move]], 0]]
-
-    #         best_move = np.argmax(vals)
-    #         return [[hons[best_move]] + [moves[best_move]], vals[best_move]]
