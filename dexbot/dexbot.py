@@ -16,7 +16,7 @@ class DexBot(object):
     def __init__(self, my_id, game_map, config):
         self.map_state = MapState(my_id, game_map)
         self.appraiser = Appraiser(self.map_state, config)
-        self.pathfinder = Pathfinder(self.map_state)
+        self.pathfinder = Pathfinder(self.map_state, config['min_wait_turns'])
         self.border_operator = BorderOperator(self.map_state, config)
         self.eb = EarlybotAPI(self.map_state, config)
 

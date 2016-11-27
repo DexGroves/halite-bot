@@ -68,7 +68,7 @@ class Appraiser(object):
                                   # map_state.all_border)
                                   # self.brdr_value_m
                                   )
-        prox_masked = self.prox_base
+
         prox_value = np.divide(prox_masked, self.dists[x, y, :, :])
 
         targ_x, targ_y = np.unravel_index(prox_value.argmax(), prox_value.shape)

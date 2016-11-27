@@ -6,9 +6,11 @@ import random
 
 class Pathfinder(object):
 
-    def __init__(self, map_state):
+    def __init__(self, map_state, min_wait=0):
         self.width = map_state.width
         self.height = map_state.height
+
+        self.min_wait = min_wait
 
     # def find_path(self, x, y, nx, ny):
     #     dists = np.array([
@@ -46,14 +48,18 @@ class Pathfinder(object):
 
         # if random.random() > 0.5:
         if (x + y) % 2 == 0:
-            if xdist > 0 and map_state.mine[xnx, xny]:
+            if xdist > 0 and map_state.mine[xnx, xny] == 1 and \
+                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
                 return xpref
-            elif ydist > 0 and map_state.mine[ynx, yny]:
+            elif ydist > 0 and map_state.mine[ynx, yny] == 1   and \
+                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
                 return ypref
 
-            if xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny):
+            if xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny) == 1  and \
+                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
                 return xpref
-            elif ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny):
+            elif ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny) == 1and \
+                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
                 return ypref
             else:
                 return 0
@@ -63,9 +69,11 @@ class Pathfinder(object):
             elif xdist > 0 and map_state.mine[xnx, xny]:
                 return xpref
 
-            if ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny):
+            if ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny) == 1  and \
+                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
                 return ypref
-            elif xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny):
+            elif xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny) == 1and \
+                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
                 return xpref
             else:
                 return 0
