@@ -126,7 +126,7 @@ class EarlyTactician(object):
                 Aij = self.get_maxAij(ix, iy, 1,
                                       self.max_t - Tcap,
                                       map_state, extra_strn)
-                Ahi[i] = Pi + Aij
+                Ahi[i] = Pi + (Aij * (self.max_t - Tcap))
         maxj = np.argmax(Ahi)
 
         # with open('moves.txt', 'a') as f:
