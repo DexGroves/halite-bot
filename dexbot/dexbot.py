@@ -60,7 +60,8 @@ class DexBot(object):
 
         for i, (x, y) in enumerate(mq.rem_locs):
             # Handle timeout
-            check_time = i % self.time_chk_freq == 1
+            # check_time = i % self.time_chk_freq == 1
+            check_time = False # I don't give a fuck
 
             if check_time:
                 elapsed = timeit.default_timer() - start_time
