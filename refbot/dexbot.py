@@ -27,17 +27,17 @@ class DexBot(object):
         self.border_operator.set_border_value(self.map_state, self.appraiser)
 
     def move(self, start_time):
-        self.turn += 1
-
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
 
-        ic_queue, bm_queue = self.border_operator.get_moves(self.map_state)
+        ic_q, t1_q, t2_q = self.border_operator.get_moves(self.map_state)
 
-        mq.process_pending(ic_queue)
-        mq.process_pending(bm_queue)
+        mq.process_pending(ic_q)
+        mq.process_pending(t1_q)
+        mq.process_pending(t2_q)
 
-        mq.shuffle_remaining_locs()
+        # mq.shuffle_remaining_locs()
+        mq.order_locs_by_strength(self.appraiser)
 
         for i, (x, y) in enumerate(mq.rem_locs):
             # Handle timeout
@@ -60,5 +60,6 @@ class DexBot(object):
                 direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
                 mq.pend_move(x, y, direction)
 
+        self.turn += 1
         return mq.moves
 

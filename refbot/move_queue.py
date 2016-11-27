@@ -37,6 +37,17 @@ class MoveQueue(object):
     def shuffle_remaining_locs(self):
         random.shuffle(self.rem_locs)
 
+    def order_locs_by_strength(self, appraiser):
+        if len(self.rem_locs) < 2:
+            return None
+
+        strs = np.zeros(len(self.rem_locs), dtype=int)
+        for i, (x, y) in enumerate(self.rem_locs):
+            strs[i] = appraiser.value[x, y]
+
+        sort_value = np.argsort(-1 * strs)
+        self.rem_locs = [self.rem_locs[i] for i in sort_value]
+
 
 class PendingMoves(object):
 

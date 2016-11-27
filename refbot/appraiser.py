@@ -43,6 +43,8 @@ class Appraiser(object):
             np.maximum(map_state.strn, 0.01)
         )
 
+        self.stay_value += (map_state.mine_border * self.config['stay_border_bonus'])
+
         # self.can_stay = map_state.mine_strn <= self.config['max_stay_strn']
         size_excl = ((map_state.mine_strn + \
                       (map_state.ideal_radius * map_state.density)) > self.config['max_edge_str'])
@@ -80,7 +82,7 @@ class Appraiser(object):
                                       dtype=float)
 
         for i, (x, y) in enumerate(self.brdr_locs):
-            if map_state.prod[x, y] == 0:
+            if map_state.prod[x, y] == 0 or map_state.danger_close[x, y]:
                 self.brdr_value[i] = 0
             else:
                 val = self.value_at_point(x, y)
