@@ -23,10 +23,10 @@ class EarlybotAPI(object):
         self.teamupper = TeamUpper(map_state, all_border)
         self.active = True
 
-        with open('moves.txt', 'w') as f:
-            f.write('\n')
-        with open("teamup.txt", "w") as f:
-            f.write(repr(self.max_t) + '--------------\n')
+        # with open('moves.txt', 'w') as f:
+        #     f.write('\n')
+        # with open("teamup.txt", "w") as f:
+        #     f.write(repr(self.max_t) + '--------------\n')
 
     def update(self, map_state, current_move):
         if self.decay:
@@ -34,11 +34,11 @@ class EarlybotAPI(object):
         if self.max_t <= 1:
             self.active = False
 
-        with open('moves.txt', 'a') as f:
-            f.write('\n' + '\n' + repr(current_move) + '----------\t\n')
+        # with open('moves.txt', 'a') as f:
+        #     f.write('\n' + '\n' + repr(current_move) + '----------\t\n')
 
-        with open("teamup.txt", "a") as f:
-            f.write(repr(self.max_t) + '--------------\n')
+        # with open("teamup.txt", "a") as f:
+        #     f.write(repr(self.max_t) + '--------------\n')
 
         self.tactician.update(map_state, self.max_t)
         self.owned_locs = map_state.get_self_locs()
@@ -65,18 +65,18 @@ class EarlybotAPI(object):
 
         mq.process_pending(pm)
 
-        with open('moves.txt', 'a') as f:
-            f.write(repr(pm))
-            f.write(repr(mq))
-            f.write(repr(static_moves) + '\n')
+        # with open('moves.txt', 'a') as f:
+        #     f.write(repr(pm))
+        #     f.write(repr(mq))
+        #     f.write(repr(static_moves) + '\n')
 
         for (x, y), (tx, ty) in static_moves.items():
             if (x, y) in mq.rem_locs and tx is not None:
                 direction = self.pathfinder.find_path(x, y, tx, ty, map_state)
                 mq.pend_move(x, y, direction)
 
-        with open('moves.txt', 'a') as f:
-            f.write(repr(mq))
+        # with open('moves.txt', 'a') as f:
+        #     f.write(repr(mq))
 
         return mq
 
@@ -129,10 +129,10 @@ class EarlyTactician(object):
                 Ahi[i] = Pi + Aij
         maxj = np.argmax(Ahi)
 
-        with open('moves.txt', 'a') as f:
-            f.write(
-                repr(hons) + '\t' + repr(Ahi) + '\t' + repr(maxj) + '\n'
-            )
+        # with open('moves.txt', 'a') as f:
+        #     f.write(
+        #         repr(hons) + '\t' + repr(Ahi) + '\t' + repr(maxj) + '\n'
+        #     )
 
         return (hons[maxj][0], hons[maxj][1]), Ahi[maxj]
 
@@ -262,14 +262,14 @@ class TeamUpper(object):
                     nbr_list.append((nbrx, nbry))
                     val_list.append(val_move - cost_move)
 
-                with open("moves.txt", "a") as f:
-                    f.write("\t".join(
-                        [
-                            "Teamups:\n",
-                            repr((tx, ty)), repr((ax, ay)), repr((nbrx, nbry)),
-                            repr(cost_move), repr(val_move), "\n"
-                        ]
-                    ))
+                # with open("moves.txt", "a") as f:
+                #     f.write("\t".join(
+                #         [
+                #             "Teamups:\n",
+                #             repr((tx, ty)), repr((ax, ay)), repr((nbrx, nbry)),
+                #             repr(cost_move), repr(val_move), "\n"
+                #         ]
+                #     ))
 
         # Issue
         while len(val_list) > 0:
