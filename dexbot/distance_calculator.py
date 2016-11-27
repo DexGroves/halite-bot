@@ -9,15 +9,15 @@ class DistanceCalculator(object):
 
     @classmethod
     def get_distance_matrix(cls, width, height, falloff):
-        D = cls._get_base_matrix(width, height, falloff)
+        D = cls.get_base_matrix(width, height, falloff)
         out = np.zeros((width, height, width, height), dtype=float)
         for x in range(width):
             for y in range(height):
-                out[x, y, :, :] = cls._offset(D, x, y)
+                out[x, y, :, :] = cls.offset(D, x, y)
         return out
 
     @staticmethod
-    def _get_base_matrix(width, height, falloff):
+    def get_base_matrix(width, height, falloff):
         dists = np.zeros((width, height), dtype=float)
 
         for x in range(width):
@@ -29,7 +29,7 @@ class DistanceCalculator(object):
         return dists ** falloff
 
     @staticmethod
-    def _offset(M, x, y):
+    def offset(M, x, y):
         """Offset a matrix by x and y with wraparound.
         Used to position self.dists for other points.
         """

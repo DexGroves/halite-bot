@@ -42,17 +42,30 @@ class Pathfinder(object):
         else:
             xpref, xdist = 4, dist_west
 
+        xnx, xny = map_state.cardinal_to_nxny(x, y, xpref)
+        ynx, yny = map_state.cardinal_to_nxny(x, y, ypref)
+
         if random.random() > 0.5:
-            if xdist > 0 and map_state.can_move_safely(x, y, xpref):
+            if xdist > 0 and map_state.mine[xnx, xny]:
                 return xpref
-            elif ydist > 0 and map_state.can_move_safely(x, y, ypref):
+            elif ydist > 0 and map_state.mine[ynx, yny]:
+                return ypref
+
+            if xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny):
+                return xpref
+            elif ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny):
                 return ypref
             else:
                 return 0
         else:
-            if ydist > 0 and map_state.can_move_safely(x, y, ypref):
+            if ydist > 0 and map_state.mine[ynx, yny]:
                 return ypref
-            elif xdist > 0 and map_state.can_move_safely(x, y, xpref):
+            elif xdist > 0 and map_state.mine[xnx, xny]:
+                return xpref
+
+            if ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny):
+                return ypref
+            elif xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny):
                 return xpref
             else:
                 return 0

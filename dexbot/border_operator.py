@@ -18,10 +18,13 @@ class BorderOperator(object):
 
         self.impt_locs = [(r[0], r[1]) for r in appraiser.brdr_locs[sort_value]]
         self.brdr_value = appraiser.brdr_value[sort_value]
+        good_enough = [self.brdr_value[i] > np.percentile(self.brdr_value,
+                                                          self.border_cutoff) and
+                       self.brdr_value[i] > 0
+                       for i in range(len(self.brdr_value))]
 
         self.impt_locs = [self.impt_locs[i] for i in range(len(self.impt_locs))
-                          if self.brdr_value[i] > np.percentile(self.brdr_value,
-                                                                self.border_cutoff)]
+                          if good_enough[i]]
 
     def get_moves(self, map_state):
         ic_queue = self.get_immediate_captures(self.impt_locs, map_state)

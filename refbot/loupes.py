@@ -20,13 +20,36 @@ class Loupe(object):
         self.locs = np.array(locs)
         self.dirs = np.array(dirs)
 
+class Loupes(object):
+
+    def __init__(self, east, west, south, north):
+        self.east = east
+        self.west = west
+        self.south = south
+        self.north = north
 
 # east  = Loupe([(1, 0), (2, 0), (1, 1), (1, -1)],     [0, 4, 1, 3])
 # west  = Loupe([(-1, 0), (-2, 0), (-1, 1), (-1, -1)], [0, 2, 1, 3])
 # south = Loupe([(0, 1), (0, 2), (-1, 1), (1, 1)],     [0, 1, 2, 4])
 # north = Loupe([(0, -1), (0, -2), (-1, -1), (1, -1)], [0, 3, 2, 4])
 
-east  = Loupe([(1, 0),  (2, 0)],  [0, 4])
-west  = Loupe([(-1, 0), (-2, 0)], [0, 2])
-south = Loupe([(0, 1),  (0, 2)],  [0, 1])
-north = Loupe([(0, -1), (0, -2)], [0, 3])
+# east  = Loupe([(1, 0),  (2, 0)],  [0, 4])
+# west  = Loupe([(-1, 0), (-2, 0)], [0, 2])
+# south = Loupe([(0, 1),  (0, 2)],  [0, 1])
+# north = Loupe([(0, -1), (0, -2)], [0, 3])
+
+
+
+t1 = Loupes(
+    east =  Loupe([(1, 0), (0, 1)],   [4, 1]),
+    south = Loupe([(-1, 0), (0, 1)],  [2, 1]),
+    west =  Loupe([(-1, 0), (0, -1)], [2, 3]),
+    north = Loupe([(1, 0), (0, -1)],  [4, 3])
+)
+
+t2 = Loupes(
+    east  = Loupe([(1, 0),  (2, 0)],  [0, 4]),
+    south = Loupe([(0, 1),  (0, 2)],  [0, 1]),
+    west  = Loupe([(-1, 0), (-2, 0)], [0, 2]),
+    north = Loupe([(0, -1), (0, -2)], [0, 3])
+)

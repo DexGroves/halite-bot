@@ -14,6 +14,16 @@ class MoveQueue(object):
         self.moves = np.empty(len(locs), dtype=Move)
         self.nmoved = 0
 
+    def __repr__(self):
+        rep = 'MoveQueue:\n'
+        for rem in self.rem_locs:
+            rep += "StartUnassigned:\t" + repr(rem) + "\n"
+        for move in self.moves[0:self.nmoved]:
+            rep += "Move:\t" + repr((move.loc.x, move.loc.y)) + "\t" + \
+                repr(move.direction) + "\n"
+
+        return rep
+
     def pend_move(self, x, y, cardinal):
         self.moves[self.nmoved] = Move(Location(x, y), cardinal)
         self.nmoved += 1
@@ -57,6 +67,12 @@ class PendingMoves(object):
 
     def __len__(self):
         return len(self.locs)
+
+    def __repr__(self):
+        rep = 'PendingMoves:\n'
+        for i in range(len(self.locs)):
+            rep += repr(self.locs[i]) + "\t" + repr(self.cardinals[i]) + "\n"
+        return rep
 
     def pend_move(self, x, y, cardinal):
         """Queue a move."""

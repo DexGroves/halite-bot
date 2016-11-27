@@ -17,9 +17,9 @@ class MapState(object):
 
     def update(self, game_map):
         self._set_map_parameters(game_map)
-        self._set_aggregate_stats()
         self._set_border_squares()
         self._set_danger_close()
+        self._set_aggregate_stats()
 
     def register_move(self, x, y, cardinal):
         nx, ny = self.cardinal_to_nxny(x, y, cardinal)
@@ -52,6 +52,9 @@ class MapState(object):
         if self.strn[x, y] >= 255:
             return True
 
+        if self.prod[nx, ny] == 0 and self.strn[x, y] < 200 and self.strn[nx, ny] > 25:
+            return False
+
         if self.strn[nx, ny] < self.strn[x, y]:
             return True
 
@@ -67,6 +70,13 @@ class MapState(object):
         elif cardinal == 4:
             return (x - 1) % self.width, y
         return x, y
+
+    def get_neighbours(self, x, y):
+        return [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
+
+    def get_allied_neighbours(self, x, y):
+        nbrs = [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
+        return [n for n in nbrs if self.mine[n[0], n[1]]]
 
     def _set_production(self, game_map):
         self.prod = np.zeros((self.width, self.height), dtype=int)
@@ -109,6 +119,8 @@ class MapState(object):
         self.enemy_strn = np.sum(self.strn) - self.mine_sum_strn
         self.enemy_mean_strn = self.enemy_strn / self.num_enemy
 
+        self.enemies_close = np.sum(np.multiply(self.border, self.enemy_border)) > 0
+
     def _set_border_squares(self):
         self.border = np.zeros((self.width, self.height), dtype=int)
 
@@ -125,6 +137,15 @@ class MapState(object):
         self.border -= self.mine
         self.all_border = self.border
         self.border = self.border - self.enemy
+
+        self.enemy_border = np.zeros((self.width, self.height), dtype=int)
+        self.enemy_border += mr.roll_x(self.enemy, 1)
+        self.enemy_border += mr.roll_x(self.enemy, -1)
+        self.enemy_border += mr.roll_y(self.enemy, 1)
+        self.enemy_border += mr.roll_y(self.enemy, -1)
+        self.enemy_border += self.enemy
+        self.enemy_border = np.minimum(self.enemy_border, 1)
+        self.enemy_border -= self.enemy
 
     def _set_danger_close(self):
         self.danger_close = np.zeros((self.width, self.height), dtype=int)

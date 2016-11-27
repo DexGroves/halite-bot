@@ -44,7 +44,8 @@ class Pathfinder(object):
         xnx, xny = map_state.cardinal_to_nxny(x, y, xpref)
         ynx, yny = map_state.cardinal_to_nxny(x, y, ypref)
 
-        if random.random() > 0.5:
+        # if random.random() > 0.5:
+        if (x + y) % 2 == 0:
             if xdist > 0 and map_state.mine[xnx, xny]:
                 return xpref
             elif ydist > 0 and map_state.mine[ynx, yny]:
@@ -65,6 +66,44 @@ class Pathfinder(object):
             if ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny):
                 return ypref
             elif xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny):
+                return xpref
+            else:
+                return 0
+
+    def force_path(self, x, y, nx, ny, map_state):
+        """Find a path even if it looks like suicide.
+        Useful for teaming up pieces.
+        """
+        dist_north = (y - ny) % self.height
+        dist_east = (nx - x) % self.width
+        dist_south = (ny - y) % self.height
+        dist_west = (x - nx) % self.width
+
+        if dist_north < dist_south:
+            ypref, ydist = 1, dist_north
+        elif (dist_north == 0):
+            ypref, ydist = None, 0
+        else:
+            ypref, ydist = 3, dist_south
+
+        if dist_east < dist_west:
+            xpref, xdist = 2, dist_east
+        elif (dist_east == 0):
+            xpref, xdist = None, 0
+        else:
+            xpref, xdist = 4, dist_west
+
+        if (x + y) % 2 == 0:
+            if xdist > 0:
+                return xpref
+            elif ydist > 0:
+                return ypref
+            else:
+                return 0
+        else:
+            if ydist > 0:
+                return ypref
+            elif xdist > 0:
                 return xpref
             else:
                 return 0
