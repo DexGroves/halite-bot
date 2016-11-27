@@ -44,7 +44,8 @@ class Pathfinder(object):
         xnx, xny = map_state.cardinal_to_nxny(x, y, xpref)
         ynx, yny = map_state.cardinal_to_nxny(x, y, ypref)
 
-        if random.random() > 0.5:
+        # if random.random() > 0.5:
+        if (x + y) % 2 == 0:
             if xdist > 0 and map_state.mine[xnx, xny]:
                 return xpref
             elif ydist > 0 and map_state.mine[ynx, yny]:
