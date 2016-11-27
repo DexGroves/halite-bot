@@ -128,6 +128,12 @@ class EarlyTactician(object):
                                       map_state, extra_strn)
                 Ahi[i] = Pi + Aij
         maxj = np.argmax(Ahi)
+
+        with open('moves.txt', 'a') as f:
+            f.write(
+                repr(hons) + '\t' + repr(Ahi) + '\t' + repr(maxj) + '\n'
+            )
+
         return (hons[maxj][0], hons[maxj][1]), Ahi[maxj]
 
     def get_maxAij(self, ix, iy, cur_ord, Ti, map_state, extra_strn):
@@ -138,7 +144,7 @@ class EarlyTactician(object):
         if len(hons) == 0:
             return 0
 
-        if cur_ord > 2:
+        if cur_ord > 0:
             extra_strn = 0  # A hack, assume strength can't bleed more than 2
 
         # Last call!
@@ -163,13 +169,6 @@ class EarlyTactician(object):
                     map_state.strn[jx, jy]
                 Aij[i] = dvdt * (Ti - Tcap) + Ajk
         maxj = np.argmax(Aij)
-
-        with open('debug.txt', 'w') as f:
-            f.write(
-                repr(hons) + '\n' + repr(maxj) + '\n' +
-                repr(Aij)
-            )
-
         return Aij[maxj]
 
     def find_higher_order_neigbours(self, x, y, map_state):

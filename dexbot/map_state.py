@@ -52,6 +52,9 @@ class MapState(object):
         if self.strn[x, y] >= 255:
             return True
 
+        if self.prod[nx, ny] == 0 and self.strn[x, y] < 200 and self.strn[nx, ny] > 25:
+            return False
+
         if self.strn[nx, ny] < self.strn[x, y]:
             return True
 
