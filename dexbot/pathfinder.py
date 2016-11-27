@@ -24,6 +24,9 @@ class Pathfinder(object):
     #     return np.argmin(dists) + 1
 
     def find_path(self, x, y, nx, ny, map_state):
+        if map_state.strn[x, y] <= (map_state.prod[x, y] * self.min_wait):
+            return 0
+
         dist_north = (y - ny) % self.height
         dist_east = (nx - x) % self.width
         dist_south = (ny - y) % self.height
@@ -46,20 +49,29 @@ class Pathfinder(object):
         xnx, xny = map_state.cardinal_to_nxny(x, y, xpref)
         ynx, yny = map_state.cardinal_to_nxny(x, y, ypref)
 
-        # if random.random() > 0.5:
-        if (x + y) % 2 == 0:
-            if xdist > 0 and map_state.mine[xnx, xny] == 1 and \
-                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
+        # Don't jitter from faraway activity. Be steadfast.
+        if (ydist > 0) and xdist > (5 * ydist):
+            ydist = 0
+        if (xdist > 0) and ydist > (5 * xdist):
+            xdist = 0
+
+        if map_state.mine[xnx, xny] and map_state.mine[ynx, yny] and \
+                ydist > 0 and xdist > 0:
+            if map_state.prod[xnx, xny] < map_state.prod[ynx, yny]:
                 return xpref
-            elif ydist > 0 and map_state.mine[ynx, yny] == 1   and \
-                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
+            else:
                 return ypref
 
-            if xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny) == 1  and \
-                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
+        # if random.random() > 0.5:
+        if (x + y) % 2 == 0:
+            if xdist > 0 and map_state.mine[xnx, xny] == 1:
                 return xpref
-            elif ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny) == 1and \
-                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
+            elif ydist > 0 and map_state.mine[ynx, yny] == 1:
+                return ypref
+
+            if xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny) == 1:
+                return xpref
+            elif ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny) == 1:
                 return ypref
             else:
                 return 0
@@ -69,11 +81,9 @@ class Pathfinder(object):
             elif xdist > 0 and map_state.mine[xnx, xny]:
                 return xpref
 
-            if ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny) == 1  and \
-                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
+            if ydist > 0 and map_state.can_occupy_safely(x, y, ynx, yny) == 1:
                 return ypref
-            elif xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny) == 1and \
-                    map_state.strn[x, y] > (map_state.prod[x, y] * self.min_wait):
+            elif xdist > 0 and map_state.can_occupy_safely(x, y, xnx, xny) == 1:
                 return xpref
             else:
                 return 0
