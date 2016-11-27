@@ -9,7 +9,6 @@ from dexbot.distance_calculator import DistanceCalculator as dc
 class Appraiser(object):
 
     def __init__(self, map_state, config):
-        # self.config = config
         self.config = config
         self.dists = dc.get_distance_matrix(map_state.width,
                                             map_state.height,
@@ -17,11 +16,12 @@ class Appraiser(object):
 
     def set_value(self, map_state):
         self.value = np.zeros((map_state.width, map_state.height), dtype=float)
+        self.value.fill(-999999)  # Sometimes values can go negative...
 
         self.value = \
             np.multiply(map_state.blank, map_state.prod) + \
-            np.multiply(map_state.enemy, map_state.prod) * self.config['epm'] + \
-            np.multiply(map_state.blank, map_state.strn) * self.config['bsm']
+            (np.multiply(map_state.enemy, map_state.prod) * self.config['epm']) + \
+            (np.multiply(map_state.blank, map_state.strn) * self.config['bsm'])
 
         enemy_strn_value = np.multiply(map_state.enemy, map_state.strn)
         self.value += enemy_strn_value * self.config['esm']
@@ -68,6 +68,7 @@ class Appraiser(object):
                                   # map_state.all_border)
                                   # self.brdr_value_m
                                   )
+        prox_masked = self.prox_base
         prox_value = np.divide(prox_masked, self.dists[x, y, :, :])
 
         targ_x, targ_y = np.unravel_index(prox_value.argmax(), prox_value.shape)

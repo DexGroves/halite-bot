@@ -18,7 +18,7 @@ class DexBot(object):
         self.appraiser = Appraiser(self.map_state, config)
         self.pathfinder = Pathfinder(self.map_state)
         self.border_operator = BorderOperator(self.map_state, config)
-        self.eb = EarlybotAPI(self.map_state, config)  # Config this!
+        self.eb = EarlybotAPI(self.map_state, config)
 
         self.time_chk_freq = 20
         self.max_time = 0.95
