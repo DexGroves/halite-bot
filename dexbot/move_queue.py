@@ -58,6 +58,8 @@ class MoveQueue(object):
         sort_value = np.argsort(-1 * strs)
         self.rem_locs = [self.rem_locs[i] for i in sort_value]
 
+    def queue_all_still(self):
+        self.moves = [Move(Location(x, y), 0) for x, y in self.rem_locs]
 
 class PendingMoves(object):
 

@@ -39,6 +39,7 @@ class DexBot(object):
 
         if self.turn < self.handicap:
             self.turn += 1
+            mq.queue_all_still()
             return mq.moves
 
         if self.is_earlygame and \

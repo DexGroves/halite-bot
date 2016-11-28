@@ -56,9 +56,11 @@ class EarlybotAPI(object):
                 plan_targ[i] = moves[0], moves[1]
 
         static_moves = {
-            (self.owned_locs[i][0], self.owned_locs[i][1]): plan_targ[i]
+            (self.owned_locs[i][0], self.owned_locs[i][1]): (plan_targ[i], value[i])
             for i in range(len(self.owned_locs))
         }
+        best_x, best_y = self.owned_locs[np.argsort(-1 * value)][0]
+        best_val = value.max()
 
         pm = self.teamupper.get_teamups(self.owned_locs, plan_targ, value, map_state)
 
@@ -69,10 +71,14 @@ class EarlybotAPI(object):
         #     f.write(repr(mq))
         #     f.write(repr(static_moves) + '\n')
 
-        for (x, y), (tx, ty) in static_moves.items():
+        for (x, y), ((tx, ty), val) in static_moves.items():
             if (x, y) in mq.rem_locs and tx is not None:
-                direction = self.pathfinder.find_path(x, y, tx, ty, map_state)
-                mq.pend_move(x, y, direction)
+                if val > (best_val*0.4) or map_state.strn[x, y] < (5 * map_state.prod[x, y]):
+                    direction = self.pathfinder.find_path(x, y, tx, ty, map_state)
+                    mq.pend_move(x, y, direction)
+                else:
+                    direction = self.pathfinder.find_path(x, y, best_x, best_y, map_state)
+                    mq.pend_move(x, y, direction)
 
         # with open('moves.txt', 'a') as f:
         #     f.write(repr(mq))
@@ -155,7 +161,7 @@ class EarlyTactician(object):
                         map_state.strn[jx, jy]
                     Aij[i] = dvdt * (Ti - Tcap)
             maxj = np.argmax(Aij)
-            return Aij[maxj]
+            return Aij[maxj] * 1.0
 
         # Else still recursing
         for i, (jx, jy) in enumerate(hons):
@@ -168,7 +174,7 @@ class EarlyTactician(object):
                     map_state.strn[jx, jy]
                 Aij[i] = dvdt * (Ti - Tcap) + Ajk
         maxj = np.argmax(Aij)
-        return Aij[maxj]
+        return Aij[maxj] * 1.0
 
     def find_higher_order_neigbours(self, x, y, map_state):
         order = self.dists[x, y]
