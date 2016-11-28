@@ -19,6 +19,7 @@ class MapState(object):
         self._set_map_parameters(game_map)
         self._set_border_squares()
         self._set_danger_close()
+        self._set_combat_zones()
         self._set_aggregate_stats()
 
     def register_move(self, x, y, cardinal):
@@ -32,7 +33,12 @@ class MapState(object):
         return np.transpose(np.where(self.mine == 1))
 
     def get_border_locs(self):
-        return np.transpose(np.where(self.border == 1))
+        return np.transpose(np.where((self.border - self.combat) == 1))
+
+    def get_combat_locs(self):
+        if np.sum(self.combat) == 0:
+            return []
+        return np.transpose(np.where(np.multiply(self.combat, self.mine == 1)))
 
     def can_move_safely(self, x, y, cardinal):
         nx, ny = self.cardinal_to_nxny(cardinal, x, y)
@@ -146,6 +152,57 @@ class MapState(object):
         self.enemy_border += self.enemy
         self.enemy_border = np.minimum(self.enemy_border, 1)
         self.enemy_border -= self.enemy
+
+    def _set_combat_zones(self):
+        enemies = np.zeros((self.width, self.height), dtype=int)
+
+        enemies += self.enemy
+        enemies += mr.roll_x(self.enemy, 1)
+        enemies += mr.roll_x(self.enemy, 2)
+        enemies += mr.roll_x(self.enemy, 3)
+        enemies += mr.roll_x(self.enemy, -1)
+        enemies += mr.roll_x(self.enemy, -2)
+        enemies += mr.roll_x(self.enemy, -3)
+        enemies += mr.roll_y(self.enemy, 1)
+        enemies += mr.roll_y(self.enemy, 2)
+        enemies += mr.roll_y(self.enemy, 3)
+        enemies += mr.roll_y(self.enemy, -1)
+        enemies += mr.roll_y(self.enemy, -2)
+        enemies += mr.roll_y(self.enemy, -3)
+        enemies = np.minimum(enemies, 1)
+
+        blanks_base = np.multiply(self.blank, self.strn < 5)
+        blanks = np.zeros((self.width, self.height), dtype=int)
+        blanks += mr.roll_x(blanks_base, 1)
+        blanks += mr.roll_x(blanks_base, 2)
+        blanks += mr.roll_x(blanks_base, 3)
+        blanks += mr.roll_x(blanks_base, -1)
+        blanks += mr.roll_x(blanks_base, -2)
+        blanks += mr.roll_x(blanks_base, -3)
+
+        blanks += mr.roll_y(blanks_base, 1)
+        blanks += mr.roll_y(blanks_base, 2)
+        blanks += mr.roll_y(blanks_base, 3)
+        blanks += mr.roll_y(blanks_base, -1)
+        blanks += mr.roll_y(blanks_base, -2)
+        blanks += mr.roll_y(blanks_base, -3)
+        blanks = np.minimum(blanks, 1)
+
+        self.combat = (blanks + enemies) == 2
+
+        enemy_strn = np.multiply(self.enemy, self.strn)
+        self.enemy_1brd = np.zeros((self.width, self.height), dtype=int)
+        self.enemy_2brd = np.zeros((self.width, self.height), dtype=int)
+
+        self.enemy_1brd += mr.roll_x(enemy_strn, 1)
+        self.enemy_1brd += mr.roll_x(enemy_strn, -1)
+        self.enemy_1brd += mr.roll_y(enemy_strn, 1)
+        self.enemy_1brd += mr.roll_y(enemy_strn, -1)
+
+        self.enemy_2brd += mr.roll_x(self.enemy_1brd, 1)
+        self.enemy_2brd += mr.roll_x(self.enemy_1brd, -1)
+        self.enemy_2brd += mr.roll_y(self.enemy_1brd, 1)
+        self.enemy_2brd += mr.roll_y(self.enemy_1brd, -1)
 
     def _set_danger_close(self):
         self.danger_close = np.zeros((self.width, self.height), dtype=int)

@@ -170,8 +170,13 @@ class EarlyTactician(object):
                 Ajk = self.get_maxAij(jx, jy, cur_ord + 1, Ti - Tcap,
                                       map_state, extra_strn)
 
+                # with open('wtf.txt', 'w') as f:
+                #     f.write(repr(map_state.strn))
+                #     f.write('\n')
+                #     f.write(repr((jx, jy)))
+
                 dvdt = map_state.prod[ix, iy] * map_state.prod[jx, jy] / \
-                    map_state.strn[jx, jy]
+                    max(map_state.strn[jx, jy], 1)
                 Aij[i] = dvdt * (Ti - Tcap) + Ajk
         maxj = np.argmax(Aij)
         return Aij[maxj] * 1.0

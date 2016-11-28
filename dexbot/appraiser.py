@@ -13,8 +13,6 @@ class Appraiser(object):
         self.dists = dists
 
     def set_value(self, map_state):
-        self.value = np.zeros((map_state.width, map_state.height), dtype=float)
-        self.value.fill(-999999)  # Sometimes values can go negative...
 
         self.value = \
             np.multiply(map_state.blank, map_state.prod) + \
@@ -67,6 +65,8 @@ class Appraiser(object):
                                   # self.brdr_value_m
                                   )
 
+        prox_masked[prox_masked == 0] = -np.inf  # Stop negative-to-0,0 rush
+        prox_masked[x, y] = -np.inf  # You don't get to just sit there either
         prox_value = np.divide(prox_masked, self.dists[x, y, :, :])
 
         targ_x, targ_y = np.unravel_index(prox_value.argmax(), prox_value.shape)

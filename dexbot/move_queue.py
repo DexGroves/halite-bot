@@ -61,6 +61,7 @@ class MoveQueue(object):
     def queue_all_still(self):
         self.moves = [Move(Location(x, y), 0) for x, y in self.rem_locs]
 
+
 class PendingMoves(object):
 
     def __init__(self):

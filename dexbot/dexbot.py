@@ -6,6 +6,7 @@ from halitesrc.hlt import Move, Location
 from dexbot.map_state import MapState
 from dexbot.appraiser import Appraiser
 from dexbot.border_operator import BorderOperator
+from dexbot.combat_operator import CombatOperator
 from dexbot.move_queue import MoveQueue
 from dexbot.pathfinder import Pathfinder
 from dexbot.earlygame import EarlybotAPI
@@ -18,11 +19,12 @@ class DexBot(object):
         self.map_state = MapState(my_id, game_map)
         self.dists = dc.get_distance_matrix(self.map_state.width,
                                             self.map_state.height,
-                                            self.config['falloff'])
+                                            config['falloff'])
 
-        self.appraiser = Appraiser(self.map_state, config)
+        self.appraiser = Appraiser(self.map_state, config, self.dists)
         self.pathfinder = Pathfinder(self.map_state, config['min_wait_turns'])
-        self.border_operator = BorderOperator(self.map_state, config, self.dists)
+        self.border_operator = BorderOperator(self.map_state, config)
+        self.combat_operator = CombatOperator(self.map_state)
         self.eb = EarlybotAPI(self.map_state, config)
 
         self.time_chk_freq = 20
@@ -61,19 +63,22 @@ class DexBot(object):
             self.turn += 1
             return mq.moves
 
+        comb_q = self.combat_operator.get_moves(self.map_state)
+
+        mq.process_pending(comb_q)
+
         ic_q, t1_q, t2_q = self.border_operator.get_moves(self.map_state)
 
         mq.process_pending(ic_q)
         mq.process_pending(t1_q)
         mq.process_pending(t2_q)
 
-        # mq.shuffle_remaining_locs()
         mq.order_locs_by_strength(self.appraiser)
 
         for i, (x, y) in enumerate(mq.rem_locs):
             # Handle timeout
             # check_time = i % self.time_chk_freq == 1
-            check_time = False # I don't give a fuck
+            check_time = False  # I don't give a fuck
 
             if check_time:
                 elapsed = timeit.default_timer() - start_time

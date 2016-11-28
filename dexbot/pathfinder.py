@@ -125,3 +125,21 @@ class Pathfinder(object):
                 return xpref
             else:
                 return 0
+
+
+# class AStarPathfinder(object):
+
+#     def __init__(self, map_state, dists, min_wait=0):
+#         self.width = map_state.width
+#         self.height = map_state.height
+
+#         self.dists = dists
+#         self.min_wait = min_wait
+
+#         self.solved_targets = {}
+
+#     def find_path(self, map_state, x, y, tx, ty):
+#         if (tx, ty) in self.solved_targets.keys():
+#             return self.solved_targets[x, y]  # Gonna need to do more here but w/e
+
+#         td = np.zeros((map_state.width, map_state.height))
