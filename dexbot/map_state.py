@@ -33,7 +33,8 @@ class MapState(object):
         return np.transpose(np.where(self.mine == 1))
 
     def get_border_locs(self):
-        return np.transpose(np.where((self.border - self.combat) == 1))
+        # return np.transpose(np.where((self.border - self.combat) == 1))
+        return np.transpose(np.where(self.border == 1))
 
     def get_combat_locs(self):
         if np.sum(self.combat) == 0:

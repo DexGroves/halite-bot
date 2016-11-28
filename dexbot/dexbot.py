@@ -63,9 +63,9 @@ class DexBot(object):
             self.turn += 1
             return mq.moves
 
-        comb_q = self.combat_operator.get_moves(self.map_state)
+        # comb_q = self.combat_operator.get_moves(self.map_state)
 
-        mq.process_pending(comb_q)
+        # mq.process_pending(comb_q)
 
         ic_q, t1_q, t2_q = self.border_operator.get_moves(self.map_state)
 
