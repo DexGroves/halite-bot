@@ -26,6 +26,8 @@ class DexBot(object):
 
         self.is_earlygame = True
 
+        self.handicap = -1
+
     def update(self, game_map):
         self.map_state.update(game_map)
         self.appraiser.set_value(self.map_state)
@@ -34,6 +36,10 @@ class DexBot(object):
     def move(self, start_time):
         owned_locs = self.map_state.get_self_locs()
         mq = MoveQueue(owned_locs)
+
+        if self.turn < self.handicap:
+            self.turn += 1
+            return mq.moves
 
         if self.is_earlygame and \
                 ((self.map_state.mine_area > self.eb.max_area) or
