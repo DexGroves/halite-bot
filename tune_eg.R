@@ -7,24 +7,25 @@ library("doMC")
 MAX_TIME <- 0.94
 TIME_CHECK_FREQUENCY <- 10
 
-epm_range =           seq(1.01, 1.011, length.out = 100)
-bsm_range =           seq(-0.058, -0.059, length.out = 100)
-esm_range =           seq(-0.054, -0.055, length.out = 100)
-eprox_range =         seq(0.13, 0.135, length.out = 100)
-bprox_range =         seq(0.87, 0.875, length.out = 100)
-splash_range =        seq(0.037, 0.038, length.out = 100)
-stay_val_range =      seq(1.21, 1.22, length.out = 100)
-max_edge_str_range =  seq(337, 339, length.out = 100)
-max_stay_strn_range = seq(25, 30, length.out = 100)
-falloff_range =       seq(2.04, 2.05, length.out = 100)
-border_cutoff_range = seq(60, 61, length.out = 100)
-stay_border_bonus_range = c(0, 0)
+epm_range =           seq(0.7, 1.3, length.out = 100)
+bsm_range =           seq(-0.02, -0.2, length.out = 100)
+esm_range =           seq(-0.002, -0.2, length.out = 100)
+eprox_range =         seq(0.05, 0.25, length.out = 100)
+bprox_range =         seq(0.5, 1.5, length.out = 100)
+splash_range =        seq(0.001, 0.05, length.out = 100)
+stay_val_range =      seq(0.8, 1.5, length.out = 100)
+max_edge_str_range =  seq(300, 400, length.out = 100)
+max_stay_strn_range = seq(25, 75, length.out = 100)
+falloff_range =       seq(1.8, 2.2, length.out = 100)
+border_cutoff_range = seq(45, 65, length.out = 100)
+stay_border_bonus_range = seq(0, 0.1, length.out = 100)
+min_wait_turns_range = seq(2,7)
 
-earlygame_max_t_range =      seq(5,100)
-earlygame_order_range =      c(2,3,4)
-earlygame_max_area_range =   seq(1,30)
-earlygame_decay_range =      c(TRUE, FALSE)
-earlygame_all_border_range = c(TRUE, FALSE)
+earlygame_max_t_range =      seq(35,36)
+earlygame_order_range =      c(4,5)
+earlygame_max_area_range =   seq(6,7)
+earlygame_decay_range =      c(FALSE, FALSE)
+earlygame_all_border_range = c(FALSE, FALSE)
 
 sample_new_config <- function(N = 1) {
   list(
@@ -44,7 +45,8 @@ sample_new_config <- function(N = 1) {
     earlygame_order = sample(earlygame_order_range, N, TRUE),
     earlygame_max_area = sample(earlygame_max_area_range, N, TRUE),
     earlygame_decay = sample(earlygame_decay_range, N, TRUE),
-    earlygame_all_border = sample(earlygame_all_border_range, N, TRUE)
+    earlygame_all_border = sample(earlygame_all_border_range, N, TRUE),
+    min_wait_turns = sample(min_wait_turns_range, N, TRUE)
   )
 }
 
@@ -54,7 +56,7 @@ build_call <- function(dim, nopp, seed) {
     seed, " -d ",
     "\"", dim, " ", dim, "\" ",
     "\"python3 MyBot.py\" ",
-    paste(rep("\"python3 ReferenceBot.py\"", nopp), collapse = " ")
+    paste(rep("\"python3 MyBot2.py\"", nopp), collapse = " ")
   )
   call
 }
@@ -62,27 +64,32 @@ build_call <- function(dim, nopp, seed) {
 # Run nrun randomly sampled configs against RefBot
 nconf <- 36
 ncore <- 36
-nrun <- 200  # 3 sec a run = 900 secs a config, 3 conf a core = 1hr
-start_seed <- 420420
+nrun <- 1500  # 3 sec a run = 900 secs a config, 3 conf a core = 1hr
+start_seed <- 33333
 seeds <- seq(start_seed, start_seed + nrun- 1)
 
 registerDoMC(ncore)
-RESULTS <- foreach(i = seq(nconf)) %dopar% {
+RESULTS <- as.list(seq(nconf))
+for(i in seq(nconf)) {
+  cat(paste(i, "-------------\n"))
   sample_conf <- sample_new_config()
 
   toJSON(sample_conf, auto_unbox = TRUE, pretty = TRUE) %>%
     cat(file = "dexbot.config")
 
-  results <- foreach(seed = seeds, .combine = c) %do% {
+  results <- foreach(seed = seeds, .combine = c) %dopar% {
     cat(".")
     winner <- build_call(20, 1, seed) %>%
       system(intern = TRUE) %>%
       paste(collapse = "\n") %>%
       str_extract("(?<=DexBot, came in rank #)[0-9]")
   }
-
-  list(sample_conf, results)
+  cat(mean(results == "1"))
+  cat("\n")
+  system("rm *.hlt")
+  RESULTS[[i]] <- list(sample_conf, results)
 }
+
 saveRDS(RESULTS, file = "bigres3.RDS")
 system("make clean")
 sapply(RESULTS, function(i) mean(as.numeric(i[[2]]))) %>%
