@@ -38,3 +38,4 @@ table(results)
 # 1455  # Trust earlygame further than before
 # 1470  # cap at 10
 # 1491  # cap at max_val / 2
+# 1497  # Earlygame look further out
