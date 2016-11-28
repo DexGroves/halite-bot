@@ -8,11 +8,9 @@ from dexbot.distance_calculator import DistanceCalculator as dc
 
 class Appraiser(object):
 
-    def __init__(self, map_state, config):
+    def __init__(self, map_state, config, dists):
         self.config = config
-        self.dists = dc.get_distance_matrix(map_state.width,
-                                            map_state.height,
-                                            self.config['falloff'])
+        self.dists = dists
 
     def set_value(self, map_state):
         self.value = np.zeros((map_state.width, map_state.height), dtype=float)

@@ -9,15 +9,20 @@ from dexbot.border_operator import BorderOperator
 from dexbot.move_queue import MoveQueue
 from dexbot.pathfinder import Pathfinder
 from dexbot.earlygame import EarlybotAPI
+from dexbot.distance_calculator import DistanceCalculator as dc
 
 
 class DexBot(object):
 
     def __init__(self, my_id, game_map, config):
         self.map_state = MapState(my_id, game_map)
+        self.dists = dc.get_distance_matrix(self.map_state.width,
+                                            self.map_state.height,
+                                            self.config['falloff'])
+
         self.appraiser = Appraiser(self.map_state, config)
         self.pathfinder = Pathfinder(self.map_state, config['min_wait_turns'])
-        self.border_operator = BorderOperator(self.map_state, config)
+        self.border_operator = BorderOperator(self.map_state, config, self.dists)
         self.eb = EarlybotAPI(self.map_state, config)
 
         self.time_chk_freq = 20
