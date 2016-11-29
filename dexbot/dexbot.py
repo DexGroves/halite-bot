@@ -7,7 +7,7 @@ from dexbot.map_state import MapState
 from dexbot.appraiser import Appraiser
 from dexbot.border_operator import BorderOperator
 from dexbot.combat_operator import CombatOperator
-from dexbot.move_queue import MoveQueue
+from dexbot.move_queue import MoveResolver
 from dexbot.pathfinder import Pathfinder
 from dexbot.earlygame import EarlybotAPI
 from dexbot.distance_calculator import DistanceCalculator as dc
@@ -22,7 +22,7 @@ class DexBot(object):
                                             config['falloff'])
 
         self.appraiser = Appraiser(self.map_state, config, self.dists)
-        self.pathfinder = Pathfinder(self.map_state, config['min_wait_turns'])
+        self.pathfinder = Pathfinder(self.map_state)
         self.border_operator = BorderOperator(self.map_state, config)
         self.combat_operator = CombatOperator(self.map_state)
         self.eb = EarlybotAPI(self.map_state, config)
@@ -30,6 +30,7 @@ class DexBot(object):
         self.time_chk_freq = 20
         self.max_time = 0.95
         self.turn = 0
+        self.min_wait = config['min_wait_turns']
 
         self.is_earlygame = True
 
@@ -42,7 +43,7 @@ class DexBot(object):
 
     def move(self, start_time):
         owned_locs = self.map_state.get_self_locs()
-        mq = MoveQueue(owned_locs)
+        mq = MoveResolver(owned_locs)
 
         if self.turn < self.handicap:
             self.turn += 1
@@ -69,9 +70,9 @@ class DexBot(object):
 
         ic_q, t1_q, t2_q = self.border_operator.get_moves(self.map_state)
 
-        mq.process_pending(ic_q)
-        mq.process_pending(t1_q)
-        mq.process_pending(t2_q)
+        mq.process_pending(ic_q, self.map_state)
+        mq.process_pending(t1_q, self.map_state)
+        mq.process_pending(t2_q, self.map_state)
 
         mq.order_locs_by_strength(self.appraiser)
 
@@ -91,12 +92,17 @@ class DexBot(object):
             (nx, ny), move_value = self.appraiser.get_best_target(self.map_state, x, y)
             stay_value = self.appraiser.get_stay_value(x, y)
 
-            if stay_value > move_value:
-                mq.pend_move(x, y, 0)
+            if stay_value > move_value or \
+                    self.map_state.strn[x, y] <= (self.map_state.prod[x, y] * self.min_wait):
+                mq.pend_move(x, y, x, y)
 
             else:
-                direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
-                mq.pend_move(x, y, direction)
+                # direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
+                mq.pend_move(x, y, nx, ny)
 
         self.turn += 1
+
+        mq.resolve_dirs(self.pathfinder, self.map_state)
+        mq.write_moves(self.map_state)
+
         return mq.moves
