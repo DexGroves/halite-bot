@@ -22,15 +22,15 @@ class CombatOperator(object):
 
             nbrs = map_state.get_neighbours(cx, cy)
             for i, (nx, ny) in enumerate(nbrs):
-                if map_state.blank[nx, ny] and map_state.strn[nx, ny] > 5:
+                if map_state.blank[nx, ny] and map_state.strn[nx, ny] > 20:
                     val_mv[i] = 0
                     continue
                 # This is technically wrong. Enemies will generally head
                 # towards this piece from one direction only!
                 dmg_out = map_state.enemy_2brd[nx, ny]
 
-                dmg_in = np.minimum(map_state.strn[cx, cy],
-                                    map_state.enemy_2brd[nx, ny])
+                dmg_in = 0# np.minimum(map_state.strn[cx, cy],
+                         #           map_state.enemy_2brd[nx, ny])
                 val_mv[i] = dmg_out - dmg_in
 
             # idk what to do, I'm too powerful for the scrubs.

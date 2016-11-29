@@ -33,7 +33,7 @@ class MapState(object):
         return np.transpose(np.where(self.mine == 1))
 
     def get_border_locs(self):
-        # return np.transpose(np.where((self.border - self.combat) == 1))
+        #  return np.transpose(np.where((self.border - self.combat) == 1))
         return np.transpose(np.where(self.border == 1))
 
     def get_combat_locs(self):
@@ -175,18 +175,18 @@ class MapState(object):
         blanks_base = np.multiply(self.blank, self.strn < 5)
         blanks = np.zeros((self.width, self.height), dtype=int)
         blanks += mr.roll_x(blanks_base, 1)
-        blanks += mr.roll_x(blanks_base, 2)
-        blanks += mr.roll_x(blanks_base, 3)
+        # blanks += mr.roll_x(blanks_base, 2)
+        # blanks += mr.roll_x(blanks_base, 3)
         blanks += mr.roll_x(blanks_base, -1)
-        blanks += mr.roll_x(blanks_base, -2)
-        blanks += mr.roll_x(blanks_base, -3)
+        # blanks += mr.roll_x(blanks_base, -2)
+        # blanks += mr.roll_x(blanks_base, -3)
 
         blanks += mr.roll_y(blanks_base, 1)
-        blanks += mr.roll_y(blanks_base, 2)
-        blanks += mr.roll_y(blanks_base, 3)
+        # blanks += mr.roll_y(blanks_base, 2)
+        # blanks += mr.roll_y(blanks_base, 3)
         blanks += mr.roll_y(blanks_base, -1)
-        blanks += mr.roll_y(blanks_base, -2)
-        blanks += mr.roll_y(blanks_base, -3)
+        # blanks += mr.roll_y(blanks_base, -2)
+        # blanks += mr.roll_y(blanks_base, -3)
         blanks = np.minimum(blanks, 1)
 
         self.combat = (blanks + enemies) == 2
