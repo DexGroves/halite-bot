@@ -23,11 +23,11 @@ class MapState(object):
         self._set_aggregate_stats()
 
     def register_move(self, x, y, cardinal):
-        nx, ny = self.cardinal_to_nxny(x, y, cardinal)
-        self.strn[nx, ny] = min(self.strn[nx, ny] + self.strn[x, y], 255)
+        # nx, ny = self.cardinal_to_nxny(x, y, cardinal)
+        # self.strn[nx, ny] = min(self.strn[nx, ny] + self.strn[x, y], 255)
 
         self.mine[x, y] = 0  # This is a hack to save some unnecessary searches
-        self.strn[x, y] = 0
+        # self.strn[x, y] = 0
 
     def get_self_locs(self):
         return np.transpose(np.where(self.mine == 1))
@@ -53,8 +53,8 @@ class MapState(object):
         if self.mine[nx, ny]:
             return True
 
-        if self.danger_close[nx, ny]:
-            return False
+        # if self.danger_close[nx, ny]:
+        #    return False
 
         if self.strn[x, y] >= 255:
             return True

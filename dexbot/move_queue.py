@@ -100,9 +100,6 @@ class MoveResolver(MoveQueue):
 
         self.iterlim = 5000
 
-        with open('wtf.txt', 'w') as f:
-            f.write("wat\n")
-
     def pend_move(self, x, y, tx, ty):
         """Insert a move that you WANT to make. This object decides."""
 
@@ -124,12 +121,6 @@ class MoveResolver(MoveQueue):
             for i in range(len(pending))
         ]
 
-        with open('wtf.txt', 'a') as f:
-            f.write(repr(self.origins) + '\n\n')
-            f.write(repr(self.targets) + '\n\n')
-            f.write(repr((start, end)) + '\n\n')
-            f.write(repr(pending))
-
         self.rem_locs = [r for r in self.rem_locs if r not in pending.locs]
         self.npend = end
 
@@ -148,19 +139,10 @@ class MoveResolver(MoveQueue):
                               for i in range(self.npend)}
         skiplist = {self.origins[i]: False for i in range(self.npend)}
 
-        with open('wtf.txt', 'a') as f:
-            f.write(repr(self.origins) + '\n\n')
-            f.write(repr(self.targets) + '\n\n')
-            f.write(repr(nxy1) + '\n\n')
-            f.write(repr(nxy2) + '\n\n')
-
         for i in range(self.npend):
             x, y = self.origins[i]
             tx, ty = nxy1[i]
             self.block_to_mover[(tx, ty)].append((x, y))
-
-        with open('wtf.txt', 'a') as f:
-            f.write(repr(self.block_to_mover) + '\n\n')
 
         # Resolve directions and log moves when done!
         for i in range(self.iterlim):
@@ -219,10 +201,6 @@ class MoveResolver(MoveQueue):
 
             if not resolving:
                 break
-
-        with open('wtf.txt', 'a') as f:
-            f.write(repr(self.block_to_mover) + '\n\n')
-            f.write(repr(mover_to_secondary) + '\n\n')
 
     def write_moves(self, map_state):
         """Actually make the move objects and get on with it."""

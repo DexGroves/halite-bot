@@ -90,11 +90,11 @@ class DexBot(object):
                 break
 
             (nx, ny), move_value = self.appraiser.get_best_target(self.map_state, x, y)
-            stay_value = self.appraiser.get_stay_value(x, y)
+            # stay_value = self.appraiser.get_stay_value(x, y)
 
-            if stay_value > move_value or \
-                    self.map_state.strn[x, y] <= (self.map_state.prod[x, y] * self.min_wait):
+            if self.map_state.strn[x, y] <= (self.map_state.prod[x, y] * self.min_wait):
                 mq.pend_move(x, y, x, y)
+            # if # stay_value > move_value or \
 
             else:
                 # direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)

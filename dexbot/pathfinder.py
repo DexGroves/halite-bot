@@ -149,11 +149,6 @@ class Pathfinder(object):
         xnx, xny = map_state.cardinal_to_nxny(x, y, xpref)
         ynx, yny = map_state.cardinal_to_nxny(x, y, ypref)
 
-        if ypref is None:
-            return (xnx, xny), (None, None)
-        if xpref is None:
-            return (ynx, yny), (None, None)
-
         if map_state.mine[xnx, xny] and map_state.mine[ynx, yny] and \
                 ydist > 0 and xdist > 0:
             if map_state.prod[xnx, xny] < map_state.prod[ynx, yny]:
@@ -162,7 +157,12 @@ class Pathfinder(object):
                 return (ynx, yny), (xnx, xny)
 
         can_mv_x = map_state.can_occupy_safely(x, y, xnx, xny) == 1
-        can_mv_y = map_state.can_occupy_safely(x, y, xnx, xny) == 1
+        can_mv_y = map_state.can_occupy_safely(x, y, ynx, yny) == 1
+
+        if ypref is None and can_mv_x:
+            return (xnx, xny), (None, None)
+        if xpref is None and can_mv_y:
+            return (ynx, yny), (None, None)
 
         if not can_mv_x and not can_mv_y:
             return (x, y), (None, None)
@@ -178,7 +178,7 @@ class Pathfinder(object):
         else:
             return (ynx, yny), (xnx, xny)
 
-        return (xnx, xny), (None, None)  # Note... why?
+        return (x, y), (None, None)  # Note... why?
 
 # class AStarPathfinder(object):
 
