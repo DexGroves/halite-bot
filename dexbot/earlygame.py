@@ -158,7 +158,7 @@ class EarlyTactician(object):
                 Tcap = self.time_to_cap(ix, iy, jx, jy, map_state, 0)
                 if Tcap < Ti:
                     dvdt = map_state.prod[ix, iy] * map_state.prod[jx, jy] / \
-                        map_state.strn[jx, jy]
+                        max(map_state.strn[jx, jy], 1)
                     Aij[i] = dvdt * (Ti - Tcap)
             maxj = np.argmax(Aij)
             return Aij[maxj] * 1.0

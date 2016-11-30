@@ -23,11 +23,11 @@ class MapState(object):
         self._set_aggregate_stats()
 
     def register_move(self, x, y, cardinal):
-        nx, ny = self.cardinal_to_nxny(x, y, cardinal)
-        self.strn[nx, ny] = min(self.strn[nx, ny] + self.strn[x, y], 255)
+        # nx, ny = self.cardinal_to_nxny(x, y, cardinal)
+        # self.strn[nx, ny] = min(self.strn[nx, ny] + self.strn[x, y], 255)
 
         self.mine[x, y] = 0  # This is a hack to save some unnecessary searches
-        self.strn[x, y] = 0
+        # self.strn[x, y] = 0
 
     def get_self_locs(self):
         return np.transpose(np.where(self.mine == 1))
@@ -53,8 +53,8 @@ class MapState(object):
         if self.mine[nx, ny]:
             return True
 
-        if self.danger_close[nx, ny]:
-            return False
+        # if self.danger_close[nx, ny]:
+        #    return False
 
         if self.strn[x, y] >= 255:
             return True
@@ -77,6 +77,31 @@ class MapState(object):
         elif cardinal == 4:
             return (x - 1) % self.width, y
         return x, y
+
+    def nxny_to_cardinal(self, x, y, nx, ny):
+        dx, dy = (nx - x), (ny - y)
+        if dx == self.width - 1:
+            dx = -1
+        if dx == -1 * (self.width - 1):
+            dx = 1
+        if dy == self.height - 1:
+            dy = -1
+        if dy == -1 * (self.height - 1):
+            dy = 1
+
+        if (dx, dy) == (0, 0):
+            return 0
+        elif (dx, dy) == (0, -1):
+            return 1
+        elif (dx, dy) == (1, 0):
+            return 2
+        elif (dx, dy) == (0, 1):
+            return 3
+        elif (dx, dy) == (-1, 0):
+            return 4
+        else:
+            print(repr((x, y)) + '\t' + repr((nx, ny)) + '\t' + repr((dx, dy)) + repr((self.width, self.height)))
+            raise CardinalityError
 
     def get_neighbours(self, x, y):
         return [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
@@ -221,3 +246,8 @@ class MapState(object):
         #     self.danger_close = np.minimum(self.danger_close, 1)
         #     self.danger_close = np.multiply(self.danger_close, self.blank)
         #     self.danger_close = np.multiply(self.danger_close, self.strn > 80)
+
+
+class CardinalityError(ValueError):
+    """What did you do?!"""
+    pass
