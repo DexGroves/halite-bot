@@ -8,20 +8,16 @@ from refbot.distance_calculator import DistanceCalculator as dc
 
 class Appraiser(object):
 
-    def __init__(self, map_state, config):
-        # self.config = config
+    def __init__(self, map_state, config, dists):
         self.config = config
-        self.dists = dc.get_distance_matrix(map_state.width,
-                                            map_state.height,
-                                            self.config['falloff'])
+        self.dists = dists
 
     def set_value(self, map_state):
-        self.value = np.zeros((map_state.width, map_state.height), dtype=float)
 
         self.value = \
             np.multiply(map_state.blank, map_state.prod) + \
-            np.multiply(map_state.enemy, map_state.prod) * self.config['epm'] + \
-            np.multiply(map_state.blank, map_state.strn) * self.config['bsm']
+            (np.multiply(map_state.enemy, map_state.prod) * self.config['epm']) + \
+            (np.multiply(map_state.blank, map_state.strn) * self.config['bsm'])
 
         enemy_strn_value = np.multiply(map_state.enemy, map_state.strn)
         self.value += enemy_strn_value * self.config['esm']
@@ -46,9 +42,9 @@ class Appraiser(object):
         self.stay_value += (map_state.mine_border * self.config['stay_border_bonus'])
 
         # self.can_stay = map_state.mine_strn <= self.config['max_stay_strn']
-        size_excl = ((map_state.mine_strn + \
+        size_excl = ((map_state.mine_strn +
                       (map_state.ideal_radius * map_state.density)) > self.config['max_edge_str'])
-        too_strn =  map_state.mine_strn >= self.config['max_stay_strn']
+        too_strn = map_state.mine_strn >= self.config['max_stay_strn']
         self.can_stay = ~(size_excl | too_strn)
 
         self.set_border_values(map_state)
@@ -68,6 +64,9 @@ class Appraiser(object):
                                   # map_state.all_border)
                                   # self.brdr_value_m
                                   )
+
+        prox_masked[prox_masked == 0] = -np.inf  # Stop negative-to-0,0 rush
+        prox_masked[x, y] = -np.inf  # You don't get to just sit there either
         prox_value = np.divide(prox_masked, self.dists[x, y, :, :])
 
         targ_x, targ_y = np.unravel_index(prox_value.argmax(), prox_value.shape)
@@ -78,8 +77,8 @@ class Appraiser(object):
         self.brdr_locs = map_state.get_border_locs()
         self.brdr_value = np.empty(len(self.brdr_locs), dtype=float)
 
-        self.brdr_value_m = np.zeros((map_state.width,map_state.height),
-                                      dtype=float)
+        self.brdr_value_m = np.zeros((map_state.width, map_state.height),
+                                     dtype=float)
 
         for i, (x, y) in enumerate(self.brdr_locs):
             if map_state.prod[x, y] == 0 or map_state.danger_close[x, y]:
@@ -93,4 +92,3 @@ class Appraiser(object):
         if self.can_stay[x, y]:
             return self.stay_value[x, y]
         return 0
-

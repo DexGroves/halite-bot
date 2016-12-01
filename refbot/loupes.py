@@ -20,6 +20,7 @@ class Loupe(object):
         self.locs = np.array(locs)
         self.dirs = np.array(dirs)
 
+
 class Loupes(object):
 
     def __init__(self, east, west, south, north):
@@ -37,7 +38,6 @@ class Loupes(object):
 # west  = Loupe([(-1, 0), (-2, 0)], [0, 2])
 # south = Loupe([(0, 1),  (0, 2)],  [0, 1])
 # north = Loupe([(0, -1), (0, -2)], [0, 3])
-
 
 
 t1 = Loupes(

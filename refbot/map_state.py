@@ -2,9 +2,7 @@
 
 
 import numpy as np
-import refbot.matrix_roller as mr
-from refbot.distance_calculator import DistanceCalculator as dc
-from copy import copy
+import dexbot.matrix_roller as mr
 
 
 class MapState(object):
@@ -19,22 +17,29 @@ class MapState(object):
 
     def update(self, game_map):
         self._set_map_parameters(game_map)
-        self._set_aggregate_stats()
         self._set_border_squares()
         self._set_danger_close()
+        self._set_combat_zones()
+        self._set_aggregate_stats()
 
     def register_move(self, x, y, cardinal):
-        nx, ny = self.cardinal_to_nxny(x, y, cardinal)
-        self.strn[nx, ny] = min(self.strn[nx, ny] + self.strn[x, y], 255)
+        # nx, ny = self.cardinal_to_nxny(x, y, cardinal)
+        # self.strn[nx, ny] = min(self.strn[nx, ny] + self.strn[x, y], 255)
 
         self.mine[x, y] = 0  # This is a hack to save some unnecessary searches
-        self.strn[x, y] = 0
+        # self.strn[x, y] = 0
 
     def get_self_locs(self):
         return np.transpose(np.where(self.mine == 1))
 
     def get_border_locs(self):
+        #  return np.transpose(np.where((self.border - self.combat) == 1))
         return np.transpose(np.where(self.border == 1))
+
+    def get_combat_locs(self):
+        if np.sum(self.combat) == 0:
+            return []
+        return np.transpose(np.where(np.multiply(self.combat, self.mine == 1)))
 
     def can_move_safely(self, x, y, cardinal):
         nx, ny = self.cardinal_to_nxny(cardinal, x, y)
@@ -48,11 +53,14 @@ class MapState(object):
         if self.mine[nx, ny]:
             return True
 
-        if self.danger_close[nx, ny]:
-            return False
+        # if self.danger_close[nx, ny]:
+        #    return False
 
         if self.strn[x, y] >= 255:
             return True
+
+        if self.prod[nx, ny] == 0 and self.strn[x, y] < 200 and self.strn[nx, ny] > 25:
+            return False
 
         if self.strn[nx, ny] < self.strn[x, y]:
             return True
@@ -61,14 +69,46 @@ class MapState(object):
 
     def cardinal_to_nxny(self, x, y, cardinal):
         if cardinal == 1:
-            return x, (y-1) % self.height
+            return x, (y - 1) % self.height
         elif cardinal == 2:
-            return (x+1) % self.width , y
+            return (x + 1) % self.width, y
         elif cardinal == 3:
-            return x, (y+1) % self.height
+            return x, (y + 1) % self.height
         elif cardinal == 4:
-            return (x-1) % self.width, y
+            return (x - 1) % self.width, y
         return x, y
+
+    def nxny_to_cardinal(self, x, y, nx, ny):
+        dx, dy = (nx - x), (ny - y)
+        if dx == self.width - 1:
+            dx = -1
+        if dx == -1 * (self.width - 1):
+            dx = 1
+        if dy == self.height - 1:
+            dy = -1
+        if dy == -1 * (self.height - 1):
+            dy = 1
+
+        if (dx, dy) == (0, 0):
+            return 0
+        elif (dx, dy) == (0, -1):
+            return 1
+        elif (dx, dy) == (1, 0):
+            return 2
+        elif (dx, dy) == (0, 1):
+            return 3
+        elif (dx, dy) == (-1, 0):
+            return 4
+        else:
+            print(repr((x, y)) + '\t' + repr((nx, ny)) + '\t' + repr((dx, dy)) + repr((self.width, self.height)))
+            raise CardinalityError
+
+    def get_neighbours(self, x, y):
+        return [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
+
+    def get_allied_neighbours(self, x, y):
+        nbrs = [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
+        return [n for n in nbrs if self.mine[n[0], n[1]]]
 
     def _set_production(self, game_map):
         self.prod = np.zeros((self.width, self.height), dtype=int)
@@ -111,6 +151,8 @@ class MapState(object):
         self.enemy_strn = np.sum(self.strn) - self.mine_sum_strn
         self.enemy_mean_strn = self.enemy_strn / self.num_enemy
 
+        self.enemies_close = np.sum(np.multiply(self.border, self.enemy_border)) > 0
+
     def _set_border_squares(self):
         self.border = np.zeros((self.width, self.height), dtype=int)
 
@@ -128,19 +170,84 @@ class MapState(object):
         self.all_border = self.border
         self.border = self.border - self.enemy
 
+        self.enemy_border = np.zeros((self.width, self.height), dtype=int)
+        self.enemy_border += mr.roll_x(self.enemy, 1)
+        self.enemy_border += mr.roll_x(self.enemy, -1)
+        self.enemy_border += mr.roll_y(self.enemy, 1)
+        self.enemy_border += mr.roll_y(self.enemy, -1)
+        self.enemy_border += self.enemy
+        self.enemy_border = np.minimum(self.enemy_border, 1)
+        self.enemy_border -= self.enemy
+
+    def _set_combat_zones(self):
+        enemies = np.zeros((self.width, self.height), dtype=int)
+
+        enemies += self.enemy
+        enemies += mr.roll_x(self.enemy, 1)
+        enemies += mr.roll_x(self.enemy, 2)
+        enemies += mr.roll_x(self.enemy, 3)
+        enemies += mr.roll_x(self.enemy, -1)
+        enemies += mr.roll_x(self.enemy, -2)
+        enemies += mr.roll_x(self.enemy, -3)
+        enemies += mr.roll_y(self.enemy, 1)
+        enemies += mr.roll_y(self.enemy, 2)
+        enemies += mr.roll_y(self.enemy, 3)
+        enemies += mr.roll_y(self.enemy, -1)
+        enemies += mr.roll_y(self.enemy, -2)
+        enemies += mr.roll_y(self.enemy, -3)
+        enemies = np.minimum(enemies, 1)
+
+        blanks_base = np.multiply(self.blank, self.strn < 5)
+        blanks = np.zeros((self.width, self.height), dtype=int)
+        blanks += mr.roll_x(blanks_base, 1)
+        # blanks += mr.roll_x(blanks_base, 2)
+        # blanks += mr.roll_x(blanks_base, 3)
+        blanks += mr.roll_x(blanks_base, -1)
+        # blanks += mr.roll_x(blanks_base, -2)
+        # blanks += mr.roll_x(blanks_base, -3)
+
+        blanks += mr.roll_y(blanks_base, 1)
+        # blanks += mr.roll_y(blanks_base, 2)
+        # blanks += mr.roll_y(blanks_base, 3)
+        blanks += mr.roll_y(blanks_base, -1)
+        # blanks += mr.roll_y(blanks_base, -2)
+        # blanks += mr.roll_y(blanks_base, -3)
+        blanks = np.minimum(blanks, 1)
+
+        self.combat = (blanks + enemies) == 2
+
+        enemy_strn = np.multiply(self.enemy, self.strn)
+        self.enemy_1brd = np.zeros((self.width, self.height), dtype=int)
+        self.enemy_2brd = np.zeros((self.width, self.height), dtype=int)
+
+        self.enemy_1brd += mr.roll_x(enemy_strn, 1)
+        self.enemy_1brd += mr.roll_x(enemy_strn, -1)
+        self.enemy_1brd += mr.roll_y(enemy_strn, 1)
+        self.enemy_1brd += mr.roll_y(enemy_strn, -1)
+
+        self.enemy_2brd += mr.roll_x(self.enemy_1brd, 1)
+        self.enemy_2brd += mr.roll_x(self.enemy_1brd, -1)
+        self.enemy_2brd += mr.roll_y(self.enemy_1brd, 1)
+        self.enemy_2brd += mr.roll_y(self.enemy_1brd, -1)
+
     def _set_danger_close(self):
         self.danger_close = np.zeros((self.width, self.height), dtype=int)
-       # if self.enemy_mean_strn > self.mine_sum_strn:
-            # self.danger_close += mr.roll_x(self.enemy, 1)
-            # self.danger_close += mr.roll_x(self.enemy, -1)
-            # self.danger_close += mr.roll_y(self.enemy, 1)
-            # self.danger_close += mr.roll_y(self.enemy, -1)
-            # self.danger_close += mr.roll_x(self.enemy, 2)
-            # self.danger_close += mr.roll_x(self.enemy, -2)
-            # self.danger_close += mr.roll_y(self.enemy, 2)
-            # self.danger_close += mr.roll_y(self.enemy, -2)
-            # self.danger_close += self.enemy
-#
-            # self.danger_close = np.minimum(self.danger_close, 1)
-            # self.danger_close = np.multiply(self.danger_close, self.blank)
-            # self.danger_close = np.multiply(self.danger_close, self.strn > 80)
+        # if self.enemy_mean_strn > self.mine_sum_strn:
+        #     self.danger_close += mr.roll_x(self.enemy, 1)
+        #     self.danger_close += mr.roll_x(self.enemy, -1)
+        #     self.danger_close += mr.roll_y(self.enemy, 1)
+        #     self.danger_close += mr.roll_y(self.enemy, -1)
+        #     self.danger_close += mr.roll_x(self.enemy, 2)
+        #     self.danger_close += mr.roll_x(self.enemy, -2)
+        #     self.danger_close += mr.roll_y(self.enemy, 2)
+        #     self.danger_close += mr.roll_y(self.enemy, -2)
+        #     self.danger_close += self.enemy
+
+        #     self.danger_close = np.minimum(self.danger_close, 1)
+        #     self.danger_close = np.multiply(self.danger_close, self.blank)
+        #     self.danger_close = np.multiply(self.danger_close, self.strn > 80)
+
+
+class CardinalityError(ValueError):
+    """What did you do?!"""
+    pass

@@ -98,7 +98,7 @@ class MoveResolver(MoveQueue):
         self.npend = 0
         self.npreproc = 0
 
-        self.iterlim = 5000
+        self.iterlim = 500
 
     def pend_move(self, x, y, tx, ty):
         """Insert a move that you WANT to make. This object decides."""
