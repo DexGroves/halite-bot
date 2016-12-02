@@ -60,6 +60,10 @@ class StrToCalculator(object):
 
         return str_to
 
+    @classmethod
+    def update_str_to(cls, x, y, strn, dists, Dmax, base_str_to):
+        sub_str = cls.subtile(base_str_to, x, y, Dmax)
+
     @staticmethod
     def jitter(M):
         """Turn the external border squares of a matrix into their lowest
@@ -83,6 +87,12 @@ class StrToCalculator(object):
         at all points in xys using 4D array M.
         """
         return np.apply_along_axis(np.min, 0, M[np.nonzero(mine)])
+
+    @staticmethod
+    def subtile(M, x, y, Dmax):
+        xs = range(x - Dmax, x + Dmax + 1)
+        ys = range(y - Dmax, y + Dmax + 1)
+        return M.take(xs, mode='wrap', axis=0).take(ys, mode='wrap', axis=1)
 
 
 def offset(M, x, y):
