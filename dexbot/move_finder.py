@@ -3,7 +3,6 @@ import numpy as np
 from dexbot.matrix_tools import StrToCalculator as stc
 
 
-
 class MoveFinder(object):
     """Find moves for pieces to make!"""
 
@@ -28,14 +27,16 @@ class MoveFinder(object):
         if ms.strn[x, y] < (self.min_wait_turns * ms.prod[x, y]):
             return x, y
 
-        b_by_dist = np.divide(self.bvals, ms.base_dist[x, y, :, :])
+        wait_time = np.maximum(0, (ms.strn - ms.strn[x, y]) / ms.prod)
+        offset = 10
+        b_by_dist = np.divide(self.bvals, ms.base_dist[x, y, :, :] + wait_time + offset)
 
         # Discount the delta for blocks that are too weak
-        xy_strn = ms.strn[x, y]
-        discount = np.minimum(1, xy_strn / ms.border_strn)
-        b_by_dist_disc = np.multiply(b_by_dist, discount)
+        # xy_strn = ms.strn[x, y]
+        # discount = np.minimum(1, xy_strn / ms.border_strn)
+        # b_by_dist_disc = np.multiply(b_by_dist, discount)
 
-        tx, ty = np.unravel_index(b_by_dist_disc.argmax(), b_by_dist_disc.shape)
+        tx, ty = np.unravel_index(b_by_dist.argmax(), b_by_dist.shape)
 
         # with open('debug.txt', 'w') as f:
         #     f.write(repr(self.bvals) + '\n' +
@@ -58,6 +59,7 @@ class MapScorer(object):
     def __init__(self, Dmax):
         """Config stuff goes here."""
         self.Dmax = Dmax
+        self.optimism = 100
 
     def update(self, ms):
         self.str_to = stc.get_str_to(ms.strn, ms.dist_from_mine, self.Dmax)
@@ -78,7 +80,8 @@ class MapScorer(object):
         ms.enemy[x, y] = False
 
         dist_from_mine = stc.distance_from_owned(ms.base_dist, ms.mine)
-        V = self.eval_owned(ms) + self.eval_near_xy(x, y, ms, dist_from_mine).sum()
+        V = self.eval_owned(ms) + \
+            self.optimism * self.eval_near_xy(x, y, ms, dist_from_mine).sum()
 
         # with open('vs.txt', 'w') as f:
         #     f.write(repr(self.eval_owned(ms)) + '\n' +

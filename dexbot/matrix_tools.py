@@ -48,29 +48,35 @@ class StrToCalculator(object):
         """
         width, height = dists.shape
 
-        brdr_idx = np.where(dists == 1)
-
         str_to = np.zeros_like(strn)
         str_to.fill(BIGNUMBER)
 
         # Need to think about meaning of this more
+        brdr_idx = np.where(dists == 1)
         str_to[brdr_idx] = np.maximum(strn[brdr_idx], 1)
 
         for D in range(2, Dmax):
             D_idx = np.where(dists == D)
+            if len(D_idx[0]) == 0:
+                continue
             # str_dist = np.zeros_like(str_to)
             # str_dist[D_idx] = str_to[D_idx]
             # str_to[D_idx] = strn[D_idx] + cls.jitter(str_dist)[D_idx]
             # Replace with logic to check strn min by neighbours.
-            right = str_to[((D_idx[0] + 1 % width), D_idx[1])]
-            left = str_to[((D_idx[0] - 1 % width), D_idx[1])]
-            up = str_to[(D_idx[0], (D_idx[1] - 1) % height)]
-            down = str_to[(D_idx[0], (D_idx[1] + 1) % height)]
 
-            str_to[D_idx] = np.apply_along_axis(
-                np.min, 0,
-                np.stack([right, left, up, down])
-            )
+            # right = str_to[((D_idx[0] + 1) % width, D_idx[1])]
+            # left = str_to[((D_idx[0] - 1) % width, D_idx[1])]
+            # up = str_to[(D_idx[0], (D_idx[1] - 1) % height)]
+            # down = str_to[(D_idx[0], (D_idx[1] + 1) % height)]
+
+            # str_to[D_idx] = np.apply_along_axis(
+            #     np.min, 0,
+            #     np.stack([right, left, up, down])
+            # )
+
+            for sx, sy in np.transpose(D_idx):
+                str_to[sx, sy] = min(str_to[(sx+1)%width, sy], str_to[(sx-1)%width, sy],
+                                     str_to[sx, (sy+1)%height], str_to[sx, (sy-1)%height])
         return str_to
 
     @classmethod
@@ -83,11 +89,11 @@ class StrToCalculator(object):
         strn_window = cls.subtile(strn, x, y, Dmax)
         dists_window = cls.subtile(dists, x, y, Dmax)
 
-        roll_str_to = cls.offset(base_str_to, x, y)
+        roll_str_to = cls.offset(base_str_to, dx, dy)
         roll_str_to[0:lim, 0:lim] = cls.get_str_to(strn_window, dists_window,
                                                    Dmax)
 
-        return cls.offset(roll_str_to, -1*x, -1*y)
+        return cls.offset(roll_str_to, -1 * dx, -1 * dy)
 
     # @staticmethod
     # def jitter(M):
