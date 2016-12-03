@@ -19,7 +19,7 @@ class DexBot(object):
         self.turn = 0
 
         with open("timing.txt", "w") as f:
-            f.write("MSupdate\t\tMFupdate\t\tMove\n")
+            f.write("MSupdate\t\tMFupdateStrto\t\tMFupdateBrdr\t\tMove\n")
 
     def update(self, game_map):
         t0 = time.time()
@@ -27,10 +27,9 @@ class DexBot(object):
         self.ms.update(game_map)
         t1 = time.time()
         self.mf.update(self.ms)
-        t2 = time.time()
 
         with open("timing.txt", "a") as f:
-            f.write(repr(t1-t0) + '\t' + repr(t2-t1) + '\t')
+            f.write(repr(t1-t0) + '\t')
 
     def move(self, start_time):
         t0 = time.time()

@@ -1,6 +1,8 @@
 import numpy as np
 
 
+BIGNUMBER = 9999999
+
 class DistanceCalculator(object):
     """Process and return a 4D array giving the distances between
     squares. Indexed by x, y, :, :, will return a 2D array of
@@ -44,42 +46,75 @@ class StrToCalculator(object):
         """Calculate the amount of strength that must be battled through
         tor reach all unowned points.
         """
+        width, height = dists.shape
+
         brdr_idx = np.where(dists == 1)
 
         str_to = np.zeros_like(strn)
-        str_to.fill(9999999)
+        str_to.fill(BIGNUMBER)
 
         # Need to think about meaning of this more
         str_to[brdr_idx] = np.maximum(strn[brdr_idx], 1)
 
         for D in range(2, Dmax):
             D_idx = np.where(dists == D)
-            str_dist = np.zeros_like(str_to)
-            str_dist[D_idx] = str_to[D_idx]
-            str_to[D_idx] = strn[D_idx] + cls.jitter(str_dist)[D_idx]
+            # str_dist = np.zeros_like(str_to)
+            # str_dist[D_idx] = str_to[D_idx]
+            # str_to[D_idx] = strn[D_idx] + cls.jitter(str_dist)[D_idx]
+            # Replace with logic to check strn min by neighbours.
+            right = str_to[((D_idx[0] + 1 % width), D_idx[1])]
+            left = str_to[((D_idx[0] - 1 % width), D_idx[1])]
+            up = str_to[(D_idx[0], (D_idx[1] - 1) % height)]
+            down = str_to[(D_idx[0], (D_idx[1] + 1) % height)]
 
+            str_to[D_idx] = np.apply_along_axis(
+                np.min, 0,
+                np.stack([right, left, up, down])
+            )
         return str_to
 
     @classmethod
     def update_str_to(cls, x, y, strn, dists, Dmax, base_str_to):
-        sub_str = cls.subtile(base_str_to, x, y, Dmax)
+        """Update the str_to for a Dmax*2 sized portion of the map."""
+        dx, dy = Dmax + 1 - x, Dmax + 1 - y
+        lim = (2 * Dmax) + 1
 
-    @staticmethod
-    def jitter(M):
-        """Turn the external border squares of a matrix into their lowest
-        valued neighbour.
-        """
-        return np.apply_along_axis(
-            np.min, 0,
-            np.stack(
-                [
-                    np.roll(M, 1, 0),
-                    np.roll(M, -1, 0),
-                    np.roll(M, 1, 1),
-                    np.roll(M, -1, 1)
-                ]
-            )
-        )
+        # Good chance I'm out-by-one here.
+        strn_window = cls.subtile(strn, x, y, Dmax)
+        dists_window = cls.subtile(dists, x, y, Dmax)
+
+        roll_str_to = cls.offset(base_str_to, x, y)
+        roll_str_to[0:lim, 0:lim] = cls.get_str_to(strn_window, dists_window,
+                                                   Dmax)
+
+        return cls.offset(roll_str_to, -1*x, -1*y)
+
+    # @staticmethod
+    # def jitter(M):
+        # """Turn the external border squares of a matrix into their lowest
+        # valued neighbour.
+        # """
+        # return np.apply_along_axis(
+        #     np.min, 0,
+        #     np.stack(
+        #         [
+        #             np.roll(M, 1, 0),
+        #             np.roll(M, -1, 0),
+        #             np.roll(M, 1, 1),
+        #             np.roll(M, -1, 1)
+        #         ]
+        #     )
+        # )
+        # return np.minimum(
+        #     np.roll(M, 1, 0),
+        #     np.minimum(np.roll(M, -1, 0),
+        #                np.minimum(np.roll(M, 1, 1),
+        #                           np.roll(M, -1, 1)))
+        # )
+
+
+
+
 
     @staticmethod
     def distance_from_owned(M, mine):
@@ -94,12 +129,12 @@ class StrToCalculator(object):
         ys = range(y - Dmax, y + Dmax + 1)
         return M.take(xs, mode='wrap', axis=0).take(ys, mode='wrap', axis=1)
 
-
-def offset(M, x, y):
-    """Offset a matrix by x and y with wraparound.
-    Used to position self.dists for other points.
-    """
-    return np.roll(np.roll(M, x, 0), y, 1)
+    @staticmethod
+    def offset(M, x, y):
+        """Offset a matrix by x and y with wraparound.
+        Used to position self.dists for other points.
+        """
+        return np.roll(np.roll(M, x, 0), y, 1)
 
 
 def roll_x(M, x):
