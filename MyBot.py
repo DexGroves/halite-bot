@@ -26,5 +26,5 @@ while True:
     start_time = timeit.default_timer()
     game_map = getFrame()
     db.update(game_map)
-    moves = db.move(start_time)
+    moves = db.move()
     sendFrame(moves)

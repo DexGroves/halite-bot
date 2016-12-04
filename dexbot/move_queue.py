@@ -62,27 +62,6 @@ class MoveQueue(object):
         self.moves = [Move(Location(x, y), 0) for x, y in self.rem_locs]
 
 
-class PendingMoves(object):
-
-    def __init__(self):
-        self.locs = []
-        self.cardinals = []
-
-    def __len__(self):
-        return len(self.locs)
-
-    def __repr__(self):
-        rep = 'PendingMoves:\n'
-        for i in range(len(self.locs)):
-            rep += repr(self.locs[i]) + "\t" + repr(self.cardinals[i]) + "\n"
-        return rep
-
-    def pend_move(self, x, y, cardinal):
-        """Queue a move."""
-        self.locs.append((x, y))
-        self.cardinals.append(cardinal)
-
-
 class MoveResolver(MoveQueue):
 
     def __init__(self, locs):
@@ -102,7 +81,6 @@ class MoveResolver(MoveQueue):
 
     def pend_move(self, x, y, tx, ty):
         """Insert a move that you WANT to make. This object decides."""
-
         self.origins[self.npend] = (x, y)
         self.targets[self.npend] = (tx, ty)
         self.npend += 1

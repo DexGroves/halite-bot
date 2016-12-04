@@ -34,3 +34,24 @@ class DistanceCalculator(object):
         Used to position self.dists for other points.
         """
         return np.roll(np.roll(M, x, 0), y, 1)
+
+    @staticmethod
+    def distance_from_owned(M, mine):
+        """Return the minimum distance to get to any point if already
+        at all points in xys using 4D array M.
+        """
+        return np.apply_along_axis(np.min, 0, M[np.nonzero(mine)])
+
+    @staticmethod
+    def subtile(M, x, y, Dmax):
+        xs = range(x - Dmax, x + Dmax + 1)
+        ys = range(y - Dmax, y + Dmax + 1)
+        return M.take(xs, mode='wrap', axis=0).take(ys, mode='wrap', axis=1)
+
+    @staticmethod
+    def roll_x(M, x):
+        return np.roll(M, x, 0)
+
+    @staticmethod
+    def roll_y(M, y):
+        return np.roll(M, y, 1)
