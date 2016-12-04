@@ -10,7 +10,9 @@ class MoveFinder(object):
         self.min_wait_turns = config['min_wait_turns']
         with open("value.txt", "w") as f:
             f.write("turn,x,y,val\n")
-        self.turn = 0
+        with open("evalby.txt", "w") as f:
+            f.write("turn,x,y,val\n")
+        self.turn = -1
 
     def update(self, ms):
         self.bvals = self.get_border_values(ms)
@@ -62,21 +64,25 @@ class MoveFinder(object):
 
         mv_vals = np.zeros(len(ms.border_locs))
         for i, (bx, by) in enumerate(ms.border_locs):
-            if (bx, by) == (x, y):
-                mv_vals[i] == -99999
-
             prod_cost = ms.ip.get_path_cost(x, y, bx, by) + ms.prod[x, y]
 
-            str_ratio = (ms.strn[bx, by] - ms.strn[x, y]) / ms.prod[x, y]
+            str_ratio = (ms.strn[bx, by] - ms.strn[x, y]) / max(1, ms.prod[x, y])
             str_deficit = max(str_ratio, 0)
-            str_bonus = max(ms.strn[x, y] / max(1, ms.strn[bx, by]), 1)
+            str_bonus = min(max(ms.strn[x, y] / max(1, ms.strn[bx, by]), 1), 10)
 
             turn_cost = ms.base_dist[x, y, bx, by]  # Approximation!
 
-            damage_bonus = ms.get_splash_from(bx, by) * 2
+            damage_bonus = ms.get_splash_from(bx, by) * 1
 
-            total_cost = prod_cost + (str_deficit * 2) + (max(1, turn_cost) * 0.3)
-            mv_vals[i] = (damage_bonus + str_bonus * self.bvals[bx, by]) / total_cost
+            total_cost = prod_cost + (str_deficit * 1) + (max(1, turn_cost) * 1.0)
+            mv_vals[i] = (damage_bonus + str_bonus) * self.bvals[bx, by] / total_cost
+
+            # with open("evalby.txt", "a") as f:
+            #     f.write(",".join([
+            #         repr(self.turn), repr(x), repr(y),
+            #         repr(bx), repr(by), repr(damage_bonus), repr(str_bonus),
+            #         repr(self.bvals[bx, by]), repr(total_cost), repr(mv_vals[i])]))
+            #     f.write("\n")
 
         mv = np.argmax(mv_vals)
         # with open('wtf.txt', 'w') as f:
@@ -84,18 +90,20 @@ class MoveFinder(object):
         #             repr(prod_cost) + '\t' +
         #             repr(mv_vals) + '\t' +
         #             repr(mv))
+
         tx, ty = ms.border_locs[mv]
-        # with open("value.txt", "a") as f:
-        #     for i, (bx, by) in enumerate(ms.border_locs):
-        #         f.write(",".join([
-        #             repr(self.turn), repr(x), repr(y),
-        #             repr(bx), repr(by), repr(mv_vals[i])]))
-        #         f.write("\n")
         px, py = ms.ip.get_path_step(x, y, tx, ty)
-        if px == x and py == y:
-            return tx, ty
-        else:
-            return px, py
+
+        with open("evalby.txt", "a") as f:
+            f.write(",".join(["END",
+                repr(self.turn), repr(x), repr(y), repr(ms.strn[x, y]),
+                repr(tx), repr(ty), repr(px), repr(py), repr(mv_vals[mv])]))
+            f.write("\n")
+        # if px == x and py == y:
+        #     return tx, ty
+        # else:
+        #     return px, py
+        return px, py
 
     def get_border_values(self, ms):
         mapval = self.map_scorer.eval(ms)
@@ -103,8 +111,8 @@ class MoveFinder(object):
         for bx, by in ms.border_locs:
             bvals[bx, by] = self.map_scorer.eval_on_capture(ms, bx, by)
 
-        with open("borders.txt", "a") as f:
-            f.write(repr(self.turn) + '\t' + repr(ms.border_locs) + '\n')
+        # with open("borders.txt", "a") as f:
+        #     f.write(repr(self.turn) + '\t' + repr(ms.border_locs) + '\n')
 
         return bvals - mapval
 
@@ -114,19 +122,22 @@ class MapScorer(object):
 
     def __init__(self):
         """Config stuff goes here."""
-        self.optimism = 5
+        self.optimism = 10
+        with open("eval.txt", "w") as f:
+            f.write("\n")
 
     def eval(self, ms):
         """Return the value of the board state."""
-        V = self.eval_owned(ms) + self.optimism * self.eval_near(ms, ms.sp.reach)
-        return V
+        self.Vown = self.eval_owned(ms)
+        self.Vnear = self.optimism * self.eval_near(ms, ms.sp.reach)
+        return self.Vown + self.Vnear
 
     def eval_on_capture(self, ms, x, y):
         """Return the value of the board state for x, y being captured."""
-        orig_blank = ms.blank[x, y]
-        orig_enemy = ms.enemy[x, y]
 
         # Mock up the new board state
+        orig_blank = ms.blank[x, y]
+        orig_enemy = ms.enemy[x, y]
         ms.mine[x, y] = True
         ms.blank[x, y] = False
         ms.enemy[x, y] = False
@@ -137,18 +148,24 @@ class MapScorer(object):
         #                                  np.stack([hypo_path, ms.sp.reach]))
         longer = hypo_path > ms.sp.reach
         hypo_path[longer] = ms.sp.reach[longer]
-        V = self.eval_owned(ms) + self.optimism * self.eval_near(ms, hypo_path)
 
-        with open("eval.txt", "a") as f:
-            f.write(repr((x, y)) + '\t' + repr(self.eval_owned(ms)) + '\t' +
-                    repr(self.eval_near(ms, hypo_path)) + '\n')
+        if orig_blank == 1 and ms.strn[x, y] > 0:
+            Vown = self.eval_owned(ms)
+        else:
+            Vown = self.Vown + 10  # Flat bonus for taking border square
+
+        Vnear = self.optimism * self.eval_near(ms, hypo_path)
+
+        # with open("eval.txt", "a") as f:
+        #     f.write(repr((x, y)) + '\t' + repr(Vown) + '\t' +
+        #             repr(Vnear) + '\n')
 
         # Unmock the board
         ms.mine[x, y] = False
         ms.blank[x, y] = orig_blank
         ms.enemy[x, y] = orig_enemy
 
-        return V
+        return Vown + Vnear
 
     def eval_owned(self, ms):
         """This ignores owned strength for now. Just sum of owned prod."""
@@ -158,5 +175,6 @@ class MapScorer(object):
     def eval_near(self, ms, reach):
         """Just considers blank production for now."""
         blank_sq = np.nonzero(ms.blank.flatten())
-        map_vals = np.divide(ms.sp.prod_vec[blank_sq], reach[blank_sq])
+        # map_vals = np.divide(ms.sp.prod_vec[blank_sq], reach[blank_sq])
+        map_vals = ms.sp.prod_vec[blank_sq] - (reach[blank_sq]/10)
         return map_vals.sum()

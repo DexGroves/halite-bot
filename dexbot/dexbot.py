@@ -31,6 +31,9 @@ class DexBot(object):
         with open("timing.txt", "a") as f:
             f.write(repr(t1-t0) + '\t' + repr(t2-t1) + '\t')
 
+        with open("eval.txt", "a") as f:
+            f.write(repr(self.turn) + '\t')
+
     def move(self, start_time):
         t0 = time.time()
 

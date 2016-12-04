@@ -1,5 +1,7 @@
 import itertools
 import numpy as np
+import pickle
+
 from scipy.sparse import dok_matrix
 from scipy.sparse.csgraph import dijkstra
 
@@ -55,12 +57,15 @@ class InternalPather(DijkstraPather):
         """
         self.mine_prod = self.get_mine_prod(mine, prod)
         self.dist = self.get_dist(self.mine_prod)
-        d_brdr = np.transpose(np.nonzero(self.prior_brdr - brdr))
 
-        vis = [self.get_vertex(x, y) for (x, y) in d_brdr]
-        self.path_dist[vis], self.route[vis] = \
-            dijkstra(self.dist, False, indices=vis, limit=self.prod_lim,
-                     return_predecessors=True)
+        # d_brdr = np.transpose(np.nonzero(self.prior_brdr - brdr))
+        # vis = [self.get_vertex(x, y) for (x, y) in d_brdr]
+        # vis = [self.get_vertex(x, y) for (x, y) in np.transpose(np.nonzero(brdr))]
+        # self.path_dist[vis], self.route[vis] = \
+        #     dijkstra(self.dist, False, indices=vis, limit=self.prod_lim,
+        #              return_predecessors=True)
+        self.path_dist, self.route = dijkstra(self.dist, False, limit=self.prod_lim,
+                                              return_predecessors=True)
 
         self.prior_brdr = brdr
 
@@ -79,7 +84,7 @@ class InternalPather(DijkstraPather):
         vo = self.get_vertex(x, y)
         vd = self.get_vertex(nx, ny)
         next_node = self.route[vd, vo]
-        if next_node == -9999:
+        if next_node < 0:
             return x, y
         return self.vertices[next_node]
 
@@ -104,17 +109,21 @@ class StrPather(DijkstraPather):
 
         self.prior_strn = strn
 
-    def update(self, strn, mine):
+    def update(self, strn, mine, brdr):
         """Recompute distances and (niamhly) update self.path for a
         set of changed vertices. Maybe it's fairer to search over vertices
         randomly when compute is limited.
         """
         self.dist = self.get_dist(strn)
-        d_strn = np.transpose(np.nonzero(self.prior_strn - strn))
+        # d_strn = np.transpose(np.nonzero(self.prior_strn - strn))
 
-        vis = [self.get_vertex(x, y) for (x, y) in d_strn]
-        self.path[vis] = dijkstra(self.dist, False, indices=vis,
-                                  limit=self.strn_lim)
+        # vis = [self.get_vertex(x, y) for (x, y) in d_strn]
+        # self.path[vis] = dijkstra(self.dist, False, indices=vis,
+        #                           limit=self.strn_lim)
+
+        vis = [self.get_vertex(x, y) for (x, y) in np.transpose(np.nonzero(brdr))]
+        self.path[vis] = \
+            dijkstra(self.dist, False, indices=vis, limit=self.strn_lim)
 
         self.reach = self.get_reach(mine)
         self.prior_strn = strn

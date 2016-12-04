@@ -19,11 +19,13 @@ class MapState(object):
         self.set_map_parameters(game_map)
 
         self.sp = StrPather(self.blank_strn, self.prod)
+        # self.sp = StrPather(self.unowned_strn, self.prod)
         self.ip = InternalPather(self.prod, self.mine, self.border_mat)
 
     def update(self, game_map):
         self.set_map_parameters(game_map)
-        self.sp.update(self.blank_strn, self.mine)
+        self.sp.update(self.blank_strn, self.mine, self.border_mat)
+        # self.sp.update(self.unowned_strn, self.mine, self.border_mat)
         self.ip.update(self.prod, self.mine, self.border_mat)
 
     def set_production(self, game_map):
@@ -68,6 +70,10 @@ class MapState(object):
 
         self.blank_strn = np.zeros_like(self.strn)
         self.blank_strn[np.nonzero(self.blank)] = self.strn[np.nonzero(self.blank)]
+
+        self.unowned_strn = np.zeros_like(self.strn)
+        self.unowned_strn[np.nonzero(self.blank)] = self.strn[np.nonzero(self.blank)]
+        self.unowned_strn[np.nonzero(self.enemy)] = self.strn[np.nonzero(self.enemy)]
 
     def get_self_locs(self):
         return np.transpose(np.where(self.mine == 1))
@@ -125,7 +131,8 @@ class MapState(object):
         elif (dx, dy) == (-1, 0):
             return 4
         else:
-            raise CardinalityError
+            print("FUCK", x, y, nx, ny)
+            # raise CardinalityError
 
     def get_neighbours(self, x, y):
         return [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
