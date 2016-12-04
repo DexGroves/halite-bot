@@ -2,7 +2,7 @@
 
 
 import numpy as np
-import refbot.matrix_roller as mr
+import dexbot.matrix_roller as mr
 
 
 class MapState(object):
