@@ -11,7 +11,7 @@ class MoveFinder(object):
         with open("value.txt", "w") as f:
             f.write("turn,x,y,val\n")
         with open("evalby.txt", "w") as f:
-            f.write("turn,x,y,val\n")
+            f.write("turn,status,x,y,bx,by,dmgbonus,strbonus,bval,cost,mval,px,py\n")
         self.turn = -1
 
     def update(self, ms):
@@ -40,23 +40,30 @@ class MoveFinder(object):
             prod_cost = ms.ip.get_path_cost(x, y, bx, by) + ms.prod[x, y] - ms.prod[bx, by]
 
             str_ratio = (ms.strn[bx, by] - ms.strn[x, y]) / max(1, ms.prod[x, y])
-            # time_to_cap = np.sqrt(max(str_ratio, 1))
+            time_to_cap = np.sqrt(max(str_ratio, 1))
+            # time_to_arr = ms.base_dist[x, y, bx, by]  # Approximation!
+            time_to_arr = ms.ip.get_path_length(x, y, bx, by)
+
             str_bonus = min(max(ms.strn[x, y] / max(1, ms.strn[bx, by]), 1), 1.5)
 
-            turn_cost = ms.base_dist[x, y, bx, by]  # Approximation!
             # recoup_cost = ms.strn[bx, by] / max(1, ms.prod[x, y])
-
             damage_bonus = ms.get_splash_from(bx, by) * 1
 
-            total_cost = prod_cost + (max(1, turn_cost) * 1.0)
-            mv_vals[i] = (damage_bonus + str_bonus) * self.bvals[bx, by] / total_cost
+            # total_cost = np.sqrt(prod_cost + (max(1, time_to_arr) * 1.0))
+            if prod_cost > (0.3 * ms.strn[x, y]):
+                mv_vals[i] = -9999
+                total_cost = 9999
+            else:
+                # See ten turns ahead
+                total_cost = max(time_to_cap + time_to_arr + 1, 6)
+                mv_vals[i] = self.bvals[bx, by] / total_cost
 
-            # with open("evalby.txt", "a") as f:
-            #     f.write(",".join([
-            #         repr(self.turn), repr(x), repr(y),
-            #         repr(bx), repr(by), repr(damage_bonus), repr(str_bonus),
-            #         repr(self.bvals[bx, by]), repr(total_cost), repr(mv_vals[i])]))
-            #     f.write("\n")
+            with open("evalby.txt", "a") as f:
+                f.write(",".join([
+                    repr(self.turn), "think", repr(x), repr(y),
+                    repr(bx), repr(by), repr(damage_bonus), repr(str_bonus),
+                    repr(self.bvals[bx, by]), repr(total_cost), repr(mv_vals[i]), " ", " "]))
+                f.write("\n")
 
         mv = np.argmax(mv_vals)
         # with open('wtf.txt', 'w') as f:
@@ -68,15 +75,17 @@ class MoveFinder(object):
         tx, ty = ms.border_locs[mv]
         px, py = ms.ip.get_path_step(x, y, tx, ty)
 
-        # with open("evalby.txt", "a") as f:
-        #     f.write(",".join(["END",
-        #         repr(self.turn), repr(x), repr(y), repr(ms.strn[x, y]),
-        #         repr(tx), repr(ty), repr(px), repr(py), repr(mv_vals[mv])]))
-        #     f.write("\n")
+        with open("evalby.txt", "a") as f:
+            f.write(",".join([
+                    repr(self.turn), "choose", repr(x), repr(y),
+                    repr(tx), repr(ty), " ", " ", " ", " ", repr(mv_vals[i]), repr(px), repr(py)]))
+            f.write("\n")
+
         # if px == x and py == y:
         #     return tx, ty
         # else:
         #     return px, py
+
         return px, py
 
     def get_border_values(self, ms):
@@ -134,7 +143,7 @@ class MapScorer(object):
         if orig_blank == 1 and ms.strn[x, y] > 0:
             Vown = self.eval_owned(ms)
         else:
-            Vown = self.Vown + 10  # Flat bonus for taking border square
+            Vown = self.Vown + 1  # Flat bonus for taking border square
 
         map_vals = self.eval_near(ms, hypo_path)
 
@@ -143,7 +152,8 @@ class MapScorer(object):
 
         Vnear = self.optimism * map_vals.sum()
         with open("eval.txt", "a") as f:
-            f.write(repr(map_vals.sum()) + '\t' + repr((x, y)) + '\t' + repr(Vown) + '\t' + repr(hypo_path.sum()) + '\t' + repr(Vnear) + '\n')
+            f.write(repr(map_vals.sum()) + '\t' + repr((x, y)) + '\t' + repr(Vown) +
+                    '\t' + repr(Vnear) + '\n')
 
         # Unmock the board
         ms.mine[x, y] = False
@@ -155,14 +165,14 @@ class MapScorer(object):
     def eval_owned(self, ms):
         """This ignores owned strength for now. Just sum of owned prod."""
         mine_idx = np.nonzero(ms.mine)
-        return np.sum(ms.prod[mine_idx] / ms.orig_strn[mine_idx])
+        return np.sum(ms.prod[mine_idx] ** 2 / ms.orig_strn[mine_idx])
 
     def eval_near(self, ms, reach):
         """Just considers blank production for now."""
         blank_sq = np.nonzero(ms.blank.flatten())
         orig_strn = ms.orig_strn.flatten()
         map_vals = np.zeros(len(reach), dtype=float)
-        map_vals[blank_sq] = np.divide(ms.sp.prod_vec[blank_sq],
+        map_vals[blank_sq] = np.divide(ms.sp.prod_vec[blank_sq] ** 2,
                                        np.multiply(reach[blank_sq],
                                                    orig_strn[blank_sq]))
 

@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 import pickle
+import random
 
 from scipy.sparse import dok_matrix
 from scipy.sparse.csgraph import dijkstra
@@ -88,6 +89,24 @@ class InternalPather(DijkstraPather):
             return x, y
         return self.vertices[next_node]
 
+    def get_path_length(self, x, y, nx, ny):
+        """This could be faster!"""
+        vo = self.get_vertex(x, y)
+        vd = self.get_vertex(nx, ny)
+        path = self.reconstruct_path(vo, vd)
+        if len(path) == 0:
+            return 999
+        return len(path)
+
+    def reconstruct_path(self, vd, vo):
+        nodes = []
+        while vd != vo:
+            if vd == -9999:
+                return []
+            nodes.append(vd)
+            vd = self.route[vo, vd]
+        return nodes
+
 
 class StrPather(DijkstraPather):
     """Calculate shortest paths about the place.
@@ -96,10 +115,11 @@ class StrPather(DijkstraPather):
     solve this problem exactly.
     """
 
-    def __init__(self, strn, prod, strn_lim=400):
+    def __init__(self, strn, prod, strn_lim=400, budget=20):
         # Can consider setting harder searches for smaller maps.
         self.prod_vec = prod.flatten()
         self.strn_lim = strn_lim
+        self.budget = budget
 
         self.w, self.h = strn.shape
         self.vertices = list(itertools.product(range(self.w), range(self.h)))
@@ -122,6 +142,9 @@ class StrPather(DijkstraPather):
         #                           limit=self.strn_lim)
 
         vis = [self.get_vertex(x, y) for (x, y) in np.transpose(np.nonzero(brdr))]
+        if len(vis) > self.budget:
+            vis = random.sample(vis, self.budget)
+
         self.path[vis] = \
             dijkstra(self.dist, False, indices=vis, limit=self.strn_lim)
 
