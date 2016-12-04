@@ -60,12 +60,12 @@ class InternalPather(DijkstraPather):
 
         # d_brdr = np.transpose(np.nonzero(self.prior_brdr - brdr))
         # vis = [self.get_vertex(x, y) for (x, y) in d_brdr]
-        # vis = [self.get_vertex(x, y) for (x, y) in np.transpose(np.nonzero(brdr))]
-        # self.path_dist[vis], self.route[vis] = \
-        #     dijkstra(self.dist, False, indices=vis, limit=self.prod_lim,
-        #              return_predecessors=True)
-        self.path_dist, self.route = dijkstra(self.dist, False, limit=self.prod_lim,
-                                              return_predecessors=True)
+        vis = [self.get_vertex(x, y) for (x, y) in np.transpose(np.nonzero(brdr))]
+        self.path_dist[vis], self.route[vis] = \
+            dijkstra(self.dist, False, indices=vis, limit=self.prod_lim,
+                     return_predecessors=True)
+        # self.path_dist, self.route = dijkstra(self.dist, False, limit=self.prod_lim,
+        #                                       return_predecessors=True)
 
         self.prior_brdr = brdr
 
@@ -96,13 +96,13 @@ class StrPather(DijkstraPather):
     solve this problem exactly.
     """
 
-    def __init__(self, strn, prod, strn_lim=4000):
+    def __init__(self, strn, prod, strn_lim=400):
         # Can consider setting harder searches for smaller maps.
         self.prod_vec = prod.flatten()
         self.strn_lim = strn_lim
 
         self.w, self.h = strn.shape
-        self.vertices = itertools.product(range(self.w), range(self.h))
+        self.vertices = list(itertools.product(range(self.w), range(self.h)))
 
         self.dist = self.get_dist(strn)
         self.path = dijkstra(self.dist, False, limit=strn_lim)
@@ -131,16 +131,21 @@ class StrPather(DijkstraPather):
     def get_reach(self, mine):
         owned_vi = np.nonzero(mine.flatten())
         global_reach = np.apply_along_axis(np.min, 0, self.path[owned_vi])
-        global_reach[global_reach == 0] = 0.01
+        global_reach[global_reach == 0] = 1
         return global_reach
 
-    def update_path_acquisition(self, x, y):
-        """Niamhly update the path for one, hypothetical block acquisition."""
-        # Mock the strn in place
-        orig_strn = self.prior_strn[x, y]
-        self.prior_strn[x, y] = 0
-        hypo_dist = self.get_dist(self.prior_strn)
-        self.prior_strn[x, y] = orig_strn
+    # def update_path_acquisition(self, x, y):
+    #     """Niamhly update the path for one, hypothetical block acquisition."""
+    #     # Mock the strn in place
+    #     orig_strn = self.prior_strn[x, y]
+    #     self.prior_strn[x, y] = 0
+    #     hypo_dist = self.get_dist(self.prior_strn)
+    #     self.prior_strn[x, y] = orig_strn
 
-        return dijkstra(hypo_dist, False, indices=self.get_vertex(x, y),
-                        limit=self.strn_lim)
+    #     pickle.dump((hypo_dist, self.dist), file=open("dists.pk", "wb"))
+
+    #     return dijkstra(hypo_dist, False, indices=self.get_vertex(x, y),
+    #                     limit=self.strn_lim)
+
+    def get_path(self, x, y):
+        return self.path[self.get_vertex(x, y)]

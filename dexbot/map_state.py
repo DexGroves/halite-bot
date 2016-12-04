@@ -1,6 +1,8 @@
 """Hold the state of the map, and derive important features."""
 
 import numpy as np
+import itertools
+from copy import copy
 from dexbot.matrix_tools import DistanceCalculator as dc
 from dexbot.matrix_tools import StrToCalculator as stc
 from dexbot.pathing import StrPather, InternalPather
@@ -18,9 +20,13 @@ class MapState(object):
         self.set_production(game_map)
         self.set_map_parameters(game_map)
 
-        self.sp = StrPather(self.blank_strn, self.prod)
         # self.sp = StrPather(self.unowned_strn, self.prod)
+        self.sp = StrPather(self.blank_strn, self.prod)
         self.ip = InternalPather(self.prod, self.mine, self.border_mat)
+
+        self.nbrs = self.get_all_neighbours_dict()
+
+        self.orig_strn = copy(self.strn)
 
     def update(self, game_map):
         self.set_map_parameters(game_map)
@@ -145,6 +151,10 @@ class MapState(object):
         nbrs = [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]
         return np.sum([self.prod[nx, ny]
                        for (nx, ny) in nbrs if self.enemy[nx, ny]])
+
+    def get_all_neighbours_dict(self):
+        allxy = itertools.product(range(self.width), range(self.height))
+        return {(x, y): self.get_neighbours(x, y) for (x, y) in allxy}
 
 
 class CardinalityError(ValueError):
