@@ -159,6 +159,11 @@ class Pathfinder(object):
         can_mv_x = map_state.can_occupy_safely(x, y, xnx, xny) == 1
         can_mv_y = map_state.can_occupy_safely(x, y, ynx, yny) == 1
 
+        if map_state.mine[xnx, xny] == 1 and xdist > 0:
+          return (xnx, xny), (ynx, yny)
+        if map_state.mine[ynx, yny] == 1 and ydist > 0:
+          return (ynx, yny), (xnx, xny)
+
         if ypref is None and can_mv_x:
             return (xnx, xny), (None, None)
         if xpref is None and can_mv_y:

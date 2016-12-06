@@ -31,9 +31,12 @@ run_playoff <- function(nrun, ncore, start_seed,
 }
 
 
-nrun <- 500
+nrun <- 2000
 ncore <- 45
 start_seed <- 40240
+
+run_playoff(nrun, ncore, start_seed, 25, 1, "dexbot.config")
+# 1635
 
 for (nopp in seq(2, 3, 1)) {
   for (dim in c(20, 50)) {

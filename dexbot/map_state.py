@@ -23,10 +23,12 @@ class MapState(object):
         self._set_aggregate_stats()
 
     def register_move(self, x, y, cardinal):
+        self.moved[x, y] = 1
+        self.mine_strn[x, y] = 0
         # nx, ny = self.cardinal_to_nxny(x, y, cardinal)
         # self.strn[nx, ny] = min(self.strn[nx, ny] + self.strn[x, y], 255)
 
-        self.mine[x, y] = 0  # This is a hack to save some unnecessary searches
+        # self.mine[x, y] = 0  # This is a hack to save some unnecessary searches
         # self.strn[x, y] = 0
 
     def get_self_locs(self):
@@ -124,6 +126,7 @@ class MapState(object):
         self.blank = np.zeros((self.width, self.height), dtype=int)
         self.strn = np.zeros((self.width, self.height), dtype=int)
         self.mine_strn = np.zeros((self.width, self.height), dtype=int)
+        self.moved = np.zeros((self.width, self.height), dtype=int)
 
         # self.originally_mine = copy(self.mine)
 
