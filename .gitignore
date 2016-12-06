@@ -6,3 +6,4 @@ nohup.out
 debug.txt
 __pycache__
 playoff.out
+mats/*.txt

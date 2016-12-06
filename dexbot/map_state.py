@@ -70,6 +70,7 @@ class MapState(object):
         self.blank_strn[np.where(self.strn == 0)] = 99999
 
         self.total_prod = np.sum(np.multiply(self.mine, self.prod))
+        self.total_blocks = np.sum(self.mine)
 
     def set_unowned(self):
         self.value_prod = copy(self.prod)

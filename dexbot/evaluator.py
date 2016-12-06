@@ -12,14 +12,17 @@ class Evaluator(object):
         self.blur_val = 3
 
         self.turn_offset = 0
-        self.turn_exponent = 1
-        self.turn_severity = 0.1
+        self.turn_exponent = 0
+        self.turn_severity = 0
 
         self.prod_imped = 5
-        self.strn_exponent = 0.7
+        self.strn_exponent = 1.0
 
         self.min_wait = 5
-        self.path_lim = 3
+        self.path_lim = 20
+
+        self.turn_limit_multi = 1
+        self.turn_limit_minimum = 3
 
         self.base_dist = dc.get_distance_matrix(ms.width, ms.height,
                                                 self.turn_exponent) + \
@@ -27,15 +30,19 @@ class Evaluator(object):
 
         self.pather = AllPather(self.prod_imped * np.multiply(ms.prod, ms.mine == 1),
                                 np.multiply(ms.strn, ms.mine == 0),
-                                self.path_lim * ms.total_prod)
+                                # self.path_lim * ms.total_prod)
+                                4000)
 
     def update(self, ms):
         self.value = ms.value_prod + ms.value_blur * self.blur_val
         self.pather.update(self.prod_imped * np.multiply(ms.prod, ms.mine == 1),
                            np.multiply(ms.strn, ms.mine == 0),
                            ms.border_mat,
-                           self.path_lim * ms.total_prod)
-        # self.value[np.where(ms.dist_from_mine != 1)] = 0
+                           # self.path_lim * ms.total_prod)
+                           4000)
+
+        srch_cutoff = self.turn_limit_multi * ms.total_blocks + self.turn_limit_minimum
+        self.value[np.where(ms.dist_from_mine > srch_cutoff)] = 0
 
     def get_move(self, x, y, ms):
         if ms.strn[x, y] <= (ms.prod[x, y] * self.min_wait):
@@ -55,7 +62,8 @@ class Evaluator(object):
         np.savetxt("mats/mcost.txt", movement_cost)
         tx, ty = np.unravel_index(value_prox.argmax(), value_prox.shape)
 
-        # return tx, ty
-        self.pather.update_xy(tx, ty, self.path_lim * ms.total_prod)
-        nx, ny = self.pather.get_path_step(x, y, tx, ty)
-        return nx, ny
+        return tx, ty
+        # self.pather.update_xy(tx, ty, self.path_lim * ms.total_prod)
+        # self.pather.update_xy(tx, ty, 4000)
+        # nx, ny = self.pather.get_path_step(x, y, tx, ty)
+        # return nx, ny

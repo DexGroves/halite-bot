@@ -12,6 +12,7 @@ class DexBot(object):
         self.pathfinder = Pathfinder(self.ms)
 
         self.turn = 0
+        print("turn\tx\ty\tnx\tny", file=open('moves.txt', 'w'))
 
     def update(self, game_map):
         self.ms.update(game_map)
@@ -24,6 +25,8 @@ class DexBot(object):
             tx, ty = self.evaluator.get_move(x, y, self.ms)
             mq.pend_move(x, y, tx, ty)
         self.turn += 1
+        print('\t'.join([str(self.turn), str(x), str(y), str(tx), str(ty)]),
+              file=open('moves.txt', 'a'))
 
         mq.resolve_dirs(self.pathfinder, self.ms)
         mq.write_moves(self.ms)
