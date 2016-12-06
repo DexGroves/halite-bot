@@ -73,7 +73,8 @@ class EarlybotAPI(object):
 
         for (x, y), ((tx, ty), val) in static_moves.items():
             if (x, y) in mq.rem_locs and tx is not None:
-                if val > (best_val*0.4) or map_state.strn[x, y] < (6 * map_state.prod[x, y]):
+                if val > (best_val * 0.4) or map_state.strn[x, y] < (6 * map_state.prod[x, y]) or \
+                        np.sum(map_state.mine) < 3:
                     direction = self.pathfinder.find_path(x, y, tx, ty, map_state)
                     mq.pend_move(x, y, direction)
                 else:
