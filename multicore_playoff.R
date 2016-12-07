@@ -31,12 +31,14 @@ run_playoff <- function(nrun, ncore, start_seed,
 }
 
 
-nrun <- 2000
-ncore <- 45
-start_seed <- 40240
+nrun <- 1000
+ncore <- 32
+start_seed <- 240240
 
-run_playoff(nrun, ncore, start_seed, 25, 1, "dexbot.config")
+run_playoff(nrun, ncore, start_seed, 30, 1, "dexbot.config")
 # 1635
+
+run_playoff(nrun, ncore, start_seed, 20, 5, "dexbot.multiway.config")
 
 for (nopp in seq(2, 3, 1)) {
   for (dim in c(20, 50)) {

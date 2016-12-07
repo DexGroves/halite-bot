@@ -31,13 +31,13 @@ class BorderOperator(object):
 
         rem_locs = [loc for loc in self.impt_locs
                     if loc not in ic_queue.locs]
-        # t1_queue = self.get_border_moves(rem_locs, map_state, loupes.t1)
+        t1_queue = self.get_border_moves(rem_locs, map_state, loupes.t1)
 
-        # rem_locs = [loc for loc in self.impt_locs
-        #             if not loc in ic_queue.locs]
+        rem_locs = [loc for loc in self.impt_locs
+                    if not loc in ic_queue.locs]
         t2_queue = self.get_border_moves(rem_locs, map_state, loupes.t2)
 
-        return ic_queue, PendingMoves(), t2_queue
+        return ic_queue, t1_queue, t2_queue
 
     def get_immediate_captures(self, rem_locs, map_state):
         pm = PendingMoves()
