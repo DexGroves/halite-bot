@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 import time
+from copy import copy
 
 
 class MCTSApi(object):
@@ -12,8 +13,9 @@ class MCTSApi(object):
         self.startxy = ms.get_self_locs()[0]
         self.startv = self.graph.get_vertex(*self.startxy)
 
+        self.state = State([self.startv])
         self.tree = Node(self.startv)
-        self.dora = MCTSExplorer(6, 1, ms.prod.shape[0] * ms.prod.shape[1])
+        self.dora = Explorer(0.1, 12, self.state)
 
         self.nowned = 1
 
@@ -24,36 +26,39 @@ class MCTSApi(object):
         while time.time() - start_time < nsec:
             for rep in range(10):
                 self.dora.explore(self.tree)
+        self.soln = [self.graph.vertices[v] for v in reconstruct(self.tree)]
+        print(self.soln, file=open('debug.txt', 'a'))
+        print([(child.vi, child.value, child.visits) for child in self.tree.children],
+              file=open('debug.txt', 'a'))
+
+    def set_depth(self, newdepth):
+        self.dora.depth = newdepth
 
     def update(self, ms, turn):
-        if np.sum(ms.mine) > self.nowned:
-            self.nowned += 1
-            vals = self.tree.child_values
-            next_i = np.argmax(vals)
-            self.tree = self.tree.children[next_i]
+        if np.sum(ms.mine) - self.nowned != 1:
+            # Completely restart the state
+            self.state = State([self.graph.get_vertex(x, y)
+                                for (x, y) in ms.get_self_locs()])
+            self.tree = Node(self.startv)
+            self.tree.children = [Node(self.graph.get_vertex(nx, ny))
+                                  for nx, ny in ms.border_locs]
+            self.nowned = np.sum(ms.mine)
 
-            all_nbrs = [self.graph.get_vertex(x, y) for x, y in ms.border_locs] + [self.startv]
-            members = [self.graph.get_vertex(x, y) for x, y in ms.get_self_locs()]
-            capacity = np.sum(np.multiply(ms.mine, ms.prod))
-            self.tree = Node(self.startv, members, all_nbrs, capacity, turn)
+        self.set_target_matrix(ms)
 
-    def get_target(self, ms):
-        owned = ms.get_self_locs()
-        owned = [(o[0], o[1]) for o in owned]
-        path = [self.graph.vertices[v]
-                for v in self.tree.reconstruct_best().members]
-        print(path, file=open('debug.txt', 'a'))
-        path = [p for p in path if p not in owned]
-        return path[0]
+    def set_target_matrix(self, ms):
+        self.tmat = np.zeros_like(ms.prod)
+        for i, (x, y) in enumerate(self.soln):
+            self.tmat[x, y] = 1
 
-    def get_closest_target(self, x, y, ms):
-        vals = np.zeros(len(self.tree.full_nbrs), dtype=float)
-        for i, v in enumerate(self.tree.full_nbrs):
-            bx, by = self.graph.vertices[v]
-            node_val = self.tree.child_values[i]
-            dist = ms.base_dist[x, y, bx, by]
-            vals[i] = node_val / dist
-        return self.graph.vertices[np.argmax(vals)]
+    def get_best_target(self, x, y, ms):
+        strn_bonus = 1
+        prox_val = np.divide(np.multiply(self.tmat, strn_bonus),
+                             ms.base_dist[x, y, :, :])
+        prox_val[x, y] = 0
+        prox_val[np.nonzero(ms.mine)] = 0
+        print(np.unravel_index(prox_val.argmax(), prox_val.shape), file=open('debug.txt', 'a'))
+        return np.unravel_index(prox_val.argmax(), prox_val.shape)
 
 
 class MapGraph(object):
@@ -88,106 +93,82 @@ class Tree(object):
         cls.graph = graph
 
 
-class Node(Tree):
-    """A decision point in the Monte Carlo tree."""
-    def __init__(self, vi, members=[], full_nbrs=[], cum_prod=0, clock=1):
-        self.vi = vi                # Vertex id
-        self.times_expld = 1        # Number of times explored
-        self.cum_prod = cum_prod + self.graph.prod[self.vi]
+class State(Tree):
+    """A manipulable, disposable representation of the board that nodes use."""
+    def __init__(self, members):
+        self.members = members
 
-        self.clock = clock
-        self.members = members + [self.vi]
-        self.own_nbrs = [n for n in self.graph.nbrs[self.vi]
-                         if n not in self.members]
-        self.full_nbrs = list(set(full_nbrs + self.own_nbrs))
+    def add_member(self, member):
+        self.members.append(member)
 
-        # If I was passed neighbours, then I'm in them
-        if len(full_nbrs) > 0:
-            self.full_nbrs.remove(vi)
+    def get_value(self, depth):
+        # prod_sum = np.sum([self.graph.prod[vi] for vi in self.members[-depth:]])
+        # strn_sum = np.sum([self.graph.strn[vi] for vi in self.members[-depth:]])
+        prod_sum = np.sum([self.graph.prod[vi] for vi in self.members])
+        strn_sum = np.sum([self.graph.strn[vi] for vi in self.members])
+        return prod_sum / strn_sum
 
-        self.child_values = self.get_child_values()
-        self.child_srches = np.zeros_like(self.child_values)
-        self.child_srches.fill(1)
+    def clone(self):
+        return State(copy(self.members))
 
+
+class Node(object):
+    def __init__(self, vi):
+        self.vi = vi
+        self.visits = 0.001  # Small number so no infs later
+        self.value = 0
         self.children = None
 
-        self.intr_value = self.cum_prod / self.clock
-        self.srch_value = 0
+    def set_children(self, children):
+        self.children = children
 
-    def __repr__(self):
-        repr_ = '\n'.join([
-            '\nMCTS Node object.',
-            'xy\'s:\t\t' + repr([self.graph.vertices[x] for x in self.members]),
-            'Members:\t' + repr(self.members),
-            'Nbrs\t\t' + repr(self.full_nbrs),
-            'Clock:\t\t' + repr(self.clock),
-            'Cum_prod:\t' + repr(self.cum_prod),
-            'Intr. Value:\t' + repr(self.intr_value),
-            'Srch Value:\t' + repr(self.srch_value),
-            'Times expl\'d:\t' + repr(self.times_expld)
-        ])
-        return repr_
+    def update_value(self, newval):
+        self.value = ((self.visits / (self.visits + 1)) * self.value) + \
+            newval / (self.visits + 1)
+        self.visits += 1
 
-    def set_children(self):
-        self.children = [
-            Node(ni, self.members, self.full_nbrs, self.cum_prod,
-                 (self.clock + (self.graph.strn[ni] / self.cum_prod)))
-            for ni in self.full_nbrs
-        ]
 
-    def get_child_values(self):
-        vals = [(self.cum_prod + self.graph.prod[ni]) /
-                (self.clock + (self.graph.strn[ni] / self.cum_prod))
-                for ni in self.full_nbrs]
-        return np.array(vals)
+class Explorer(object):
+    """MCTS Explorer."""
+    def __init__(self, expl_wt, maxdepth, state):
+        self.expl_wt = expl_wt
+        self.maxdepth = maxdepth
+        self.true_state = copy(state)
 
-    def update_value(self, i, newval):
-        """Overwrite srch_value with newval if it is higher."""
-        self.child_values[i] = max(newval, self.child_values[i])
+    def explore(self, tree, state=None, depth=0):
+        if state is None:
+            state = self.true_state.clone()
 
-    def reconstruct_best(self, tree=None):
-        """Get the best solution to a tree."""
-        if tree is None:
-            tree = self
+        if depth == self.maxdepth:
+            return state.get_value(self.maxdepth)
 
         if tree.children is None:
-            return tree
+            tree.set_children([Node(ni) for ni in state.graph.nbrs[tree.vi]
+                               if ni not in state.members])
 
-        best = np.argmax(self.child_values)
-        return tree.reconstruct_best(tree.children[best])
+        if len(tree.children) == 0:
+            return 0
 
-
-class MCTSExplorer(object):
-    """Orchestrate the state space exploration!"""
-    def __init__(self, max_depth, explore_wt, num_verts):
-        self.max_depth = max_depth
-        self.explore_wt = explore_wt
-        # Times explored is at a vertex level
-        self.times_explored = np.zeros(num_verts, dtype=int)
-        self.times_explored.fill(1)
-
-    def explore(self, tree, depth=0):
-        if tree.children is None:
-            tree.set_children()
-
-        if depth == self.max_depth:
-            return tree.child_values.max()
-
-        # Calculate the probability of searching each node based on UCT
-        values = tree.child_values
-        values = values / np.std(values)
-        times_explds = self.times_explored[tree.full_nbrs]
+        values = np.array([child.value for child in tree.children])
+        visits = np.array([child.visits for child in tree.children])
 
         p_explore = values + \
-            self.explore_wt * np.sqrt(np.log(times_explds.sum()) / times_explds)
+            self.expl_wt * np.sqrt(np.log(max(visits.sum(), 1.0001)) / visits)
         p_explore = p_explore / p_explore.sum()
 
-        # Recurse down down down!
-        expl_i = np.random.choice(range(len(tree.children)), p=p_explore)
+        chosen_child = np.random.choice(tree.children, p=p_explore)
+        state.add_member(chosen_child.vi)
 
-        self.times_explored[tree.children[expl_i].vi] += 1
-        mcts_value = self.explore(tree.children[expl_i], depth=depth + 1)
+        mcts_value = self.explore(chosen_child, state, depth=depth + 1)
 
         # Update this node, and return srch_val to update nodes up the chain
-        tree.update_value(expl_i, mcts_value)
+        chosen_child.update_value(mcts_value)
         return mcts_value
+
+
+def reconstruct(tree):
+    if tree.children is None:
+        return [tree.vi]
+    child_vals = [child.value for child in tree.children]
+    i = np.argmax(child_vals)
+    return [tree.vi] + reconstruct(tree.children[i])

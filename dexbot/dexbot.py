@@ -12,7 +12,8 @@ class DexBot(object):
         self.evaluator = Evaluator(config, self.ms)
         self.pathfinder = Pathfinder(self.ms)
         self.mcts = MCTSApi(self.ms)
-        self.mcts.think(14)
+        self.mcts.think(15)
+        self.mcts.set_depth(7)
 
         self.turn = 1
         # print("turn\tx\ty\tnx\tny", file=open('moves.txt', 'w'))
@@ -20,15 +21,16 @@ class DexBot(object):
     def update(self, game_map):
         self.ms.update(game_map)
         # self.evaluator.update(self.ms)
-        self.mcts.update(self.ms, self.turn)
-        self.mcts.think(0.75)
+        # self.mcts.update(self.ms, self.turn)
+        # mcts.think(1)
+        self.mcts.set_target_matrix(self.ms)
 
     def move(self):
         mq = MoveResolver(self.ms.get_self_locs())
         # tx, ty = self.mcts.get_target(self.ms)
         for x, y in mq.rem_locs:
             if self.ms.strn[x, y] > self.ms.prod[x, y] * 5:
-                tx, ty = self.mcts.get_closest_target(x, y, self.ms)
+                tx, ty = self.mcts.get_best_target(x, y, self.ms)
                 mq.pend_move(x, y, tx, ty)
             else:
                 mq.pend_move(x, y, x, y)
