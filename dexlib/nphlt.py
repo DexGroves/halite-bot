@@ -7,8 +7,11 @@ base starter.
 """
 
 import sys
-from numpy import array, zeros, zeros_like
+from numpy import array, zeros
 from collections import namedtuple
+
+import logging
+logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
 Move = namedtuple('Move', 'x y dir')
@@ -16,13 +19,15 @@ Move = namedtuple('Move', 'x y dir')
 
 class GameMap:
     """Hold prod, strn and owners and update on each new frame."""
-    def __init__(self, size_string, prod_string, map_string=None):
+
+    def __init__(self, size_string, prod_string, my_id):
         self.width, self.height = tuple(map(int, size_string.split()))
+        self.my_id = my_id
 
         prod = [int(p) for p in prod_string.split()]
         self.prod = array(prod, dtype=int).reshape((self.width, self.height))
 
-        self.get_frame(map_string)
+        self.get_frame()
 
     def get_frame(self, map_string=None):
         if map_string is None:
@@ -35,10 +40,11 @@ class GameMap:
         while ctr < self.width * self.height:
             increment = int(split_string[strloc])
             owner_id = int(split_string[strloc + 1])
-            owners[ctr:increment] = owner_id
+            owners[ctr:(ctr + increment)] = owner_id
             ctr += increment
             strloc += 2
         self.owners = owners.reshape((self.width, self.height))
+        logging.info(self.owners)
 
         strn = [int(s) for s in split_string[strloc:]]
         self.strn = array(strn, dtype=int).reshape((self.width, self.height))
@@ -55,9 +61,9 @@ def get_string():
 
 
 def get_init():
-    playerID = int(get_string())
-    m = GameMap(get_string(), get_string())
-    return playerID, m
+    my_id = int(get_string())
+    m = GameMap(get_string(), get_string(), my_id)
+    return my_id, m
 
 
 def send_init(name):
