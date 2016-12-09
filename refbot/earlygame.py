@@ -3,9 +3,9 @@
 
 import numpy as np
 import random
-from dexbot.move_queue import MoveQueue, PendingMoves
-from dexbot.pathfinder import Pathfinder
-from dexbot.distance_calculator import DistanceCalculator as dc
+from refbot.move_queue import MoveQueue, PendingMoves
+from refbot.pathfinder import Pathfinder
+from refbot.distance_calculator import DistanceCalculator as dc
 
 
 class EarlybotAPI(object):
