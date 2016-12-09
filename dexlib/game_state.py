@@ -19,7 +19,7 @@ class GameState(GameMap):
 
     def update(self):
         self._set_id_matrices()
-        self._set_distances()
+        self._set_distances()  # This is expensiveish
 
     def _set_id_matrices(self):
         self.blank = np.zeros((self.width, self.height), dtype=bool)

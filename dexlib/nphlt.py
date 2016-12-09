@@ -44,7 +44,6 @@ class GameMap:
             ctr += increment
             strloc += 2
         self.owners = owners.reshape((self.width, self.height))
-        logging.info(self.owners)
 
         strn = [int(s) for s in split_string[strloc:]]
         self.strn = array(strn, dtype=int).reshape((self.width, self.height))
