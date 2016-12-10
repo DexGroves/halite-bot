@@ -25,8 +25,8 @@ class MoveFinder:
     def update(self, ms):
         self.roi_time = np.divide(ms.strn, np.maximum(1, ms.prod))
         roi_vals = self.roi_time[np.where(ms.dist_from_owned == 1)]
-        # print("-\n", roi_vals, file=open('values.txt', 'a'))
-        self.roi_cutoff = np.percentile(roi_vals, 0.4)
+        print(roi_vals, file=open('values.txt', 'a'))
+        self.roi_cutoff = np.percentile(roi_vals, 0.6)
 
     def get_target(self, x, y, ms):
         # Simple. Take the block with the minimum time to pay itself back.
@@ -53,7 +53,7 @@ class MoveFinder:
         # print(dpdt, file=open('values.txt', 'a'))
 
         if dpdt < 1e-4 and wait_ratio > 5 and \
-                self.roi_time[tx, ty] < self.roi_cutoff:
+                self.roi_time[tx, ty] > self.roi_cutoff:
             return self.get_global_target(x, y, ms)
 
         if wait_ratio < 8 and \
