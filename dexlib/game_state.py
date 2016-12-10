@@ -15,7 +15,7 @@ class GameState(GameMap):
     def __init__(self, size_string, prod_string, my_id):
         super().__init__(size_string, prod_string, my_id)
         self.dists = get_distance_matrix(self.width, self.height, 1)
-        self.dists_inv = 1 / self.dists  # Faster to mult by this
+        # self.dists_inv = 1 / self.dists  # Faster to mult by this
 
         self.str_to = ShortestPather(self.strn).get_dist_matrix()
 

@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
-
+from copy import copy
+# from stats import percentileofscore
 # import logging
 # logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
@@ -17,12 +18,15 @@ class MoveFinder:
                 self.locality_value[x, y] = np.sum(map_value)
 
         np.savetxt("local.txt", self.locality_value)
-        self.locality_value = gaussian_filter(self.locality_value, 3, mode="wrap")
+        self.locality_value = gaussian_filter(self.locality_value, 2, mode="wrap")
         np.savetxt("localblur.txt", self.locality_value)
         print("", file=open('values.txt', 'w'))
 
     def update(self, ms):
         self.roi_time = np.divide(ms.strn, np.maximum(1, ms.prod))
+        roi_vals = self.roi_time[np.where(ms.dist_from_owned == 1)]
+        # print("-\n", roi_vals, file=open('values.txt', 'a'))
+        self.roi_cutoff = np.percentile(roi_vals, 0.4)
 
     def get_target(self, x, y, ms):
         # Simple. Take the block with the minimum time to pay itself back.
@@ -42,17 +46,14 @@ class MoveFinder:
         roi_targ = np.multiply(roi_targ, ms.dist_from_owned == 1)
         roi_targ[np.where(roi_targ == 0)] = np.inf
 
-        # value = (1 / roi_targ)
-        # np.savetxt("value.txt", value)
-        # print(value.max(), file=open('values.txt', 'a'))
-
         tx, ty = np.unravel_index(roi_targ.argmin(), roi_targ.shape)
 
         dpdt = (ms.prod[tx, ty] / roi_targ.argmin()) / \
             np.sum(ms.prod[np.nonzero(ms.owned)])
-        print(dpdt, file=open('values.txt', 'a'))
+        # print(dpdt, file=open('values.txt', 'a'))
 
-        if dpdt < 1e-4 and wait_ratio > 5:
+        if dpdt < 1e-4 and wait_ratio > 5 and \
+                self.roi_time[tx, ty] < self.roi_cutoff:
             return self.get_global_target(x, y, ms)
 
         if wait_ratio < 8 and \
@@ -62,7 +63,10 @@ class MoveFinder:
 
     def get_global_target(self, x, y, ms):
         """Get the best target NOT on the border."""
-        locality_here = np.divide(self.locality_value, ms.dists[x, y, :, :] ** 1)
-        # locality_here[np.nonzero(ms.owned)] = 0
+        long_view = copy(ms.dists[x, y, :, :])
+        long_view[np.where(long_view < 5)] = 5
+        # locality_here = np.divide(self.locality_value, long_view)
+        locality_here = self.locality_value
+        locality_here[np.nonzero(ms.owned)] = 0
         tx, ty = np.unravel_index(locality_here.argmax(), locality_here.shape)
         return tx, ty
