@@ -3,6 +3,7 @@ import numpy as np
 from collections import namedtuple
 from dexlib.nphlt import GameMap
 from dexlib.matrix_tools import get_distance_matrix, distance_from_owned
+from dexlib.dijkstra import ShortestPather
 
 
 Move = namedtuple('Move', 'x y dir')
@@ -15,6 +16,8 @@ class GameState(GameMap):
         super().__init__(size_string, prod_string, my_id)
         self.dists = get_distance_matrix(self.width, self.height, 1)
         self.dists_inv = 1 / self.dists  # Faster to mult by this
+
+        self.str_to = ShortestPather(self.strn).get_dist_matrix()
 
     def update(self):
         self._set_id_matrices()

@@ -34,7 +34,7 @@ class DexBot(object):
 
         self.is_earlygame = True
 
-        self.handicap = 20
+        self.handicap = -1
 
     def update(self, game_map):
         self.map_state.update(game_map)

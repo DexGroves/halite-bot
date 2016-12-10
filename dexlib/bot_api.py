@@ -12,7 +12,7 @@ class BotAPI:
 
     def __init__(self, ms):
         self.pf = PathFinder(ms)
-        self.mf = MoveFinder()
+        self.mf = MoveFinder(ms)
 
     def update(self, ms):
         """Trigger all start-of-turn calculations."""
