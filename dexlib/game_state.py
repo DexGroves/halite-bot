@@ -32,6 +32,8 @@ class GameState(GameMap):
 
         self.owned_locs = np.transpose(np.nonzero(self.owned))
 
+        self.combat = (self.enemy) | (self.strn <= 1)
+
     def _set_distances(self):
         self.dist_from_owned = distance_from_owned(self.dists, self.owned)
         self.dist_from_owned[np.nonzero(self.owned)] = 0
