@@ -27,15 +27,24 @@ class MoveFinder:
 
         cap_time = np.maximum(0, ms.strn + (ms.combat * 80) - ms.strn[x, y]) / \
             max(0.01, ms.prod[x, y])
-        roi_targ = self.roi_time + \
-            (ms.dists[x, y, :, :] * (1 + ms.prod_mu)) + \
-            cap_time
+        arrival_time = ms.dists[x, y, :, :]
+        recoup_time = np.divide(ms.prod_mu * ms.dists[x, y, :, :],
+                                np.maximum(ms.prod, 0.01))
+        total_time = cap_time + arrival_time + recoup_time
+
+        roi_targ = self.roi_time + total_time
+        # roi_targ = self.roi_time + \
+        #     (ms.dists[x, y, :, :] * (1 + ms.prod_mu)) + \
+        #     cap_time
 
         roi_targ = np.multiply(roi_targ, ms.dist_from_owned == 1)
         roi_targ[np.where(roi_targ == 0)] = np.inf
 
-        tx, ty = np.unravel_index(roi_targ.argmin(),
-                                  roi_targ.shape)
+        value = (1 / roi_targ)
+        np.savetxt("value.txt", value)
+
+        tx, ty = np.unravel_index(value.argmax(),
+                                  value.shape)
         if cap_time[tx, ty] > ms.dists[x, y, tx, ty] or \
                 cap_time[tx, ty] > 5:
             return x, y  # Stay if we may as well not move
