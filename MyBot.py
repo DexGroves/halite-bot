@@ -3,7 +3,7 @@ from dexlib.game_state import send_init, send_frame, get_init
 
 
 my_id, map_state = get_init()
-bot = BotAPI()
+bot = BotAPI(map_state)
 
 send_init("DexBot")
 

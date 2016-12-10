@@ -5,8 +5,6 @@ the 4D matrix giving the distance between all points.
 
 
 import numpy as np
-import logging
-logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
 def get_distance_matrix(width, height, falloff):

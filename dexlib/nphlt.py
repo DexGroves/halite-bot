@@ -7,11 +7,8 @@ base starter.
 """
 
 import sys
-from numpy import array, zeros
+from numpy import array, zeros, transpose
 from collections import namedtuple
-
-import logging
-logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
 Move = namedtuple('Move', 'x y dir')
@@ -25,7 +22,7 @@ class GameMap:
         self.my_id = my_id
 
         prod = [int(p) for p in prod_string.split()]
-        self.prod = array(prod, dtype=int).reshape((self.width, self.height))
+        self.prod = transpose(array(prod, dtype=int).reshape((self.height, self.width)))
 
         self.get_frame()
 
@@ -43,10 +40,10 @@ class GameMap:
             owners[ctr:(ctr + increment)] = owner_id
             ctr += increment
             strloc += 2
-        self.owners = owners.reshape((self.width, self.height))
+        self.owners = transpose(owners.reshape((self.height, self.width)))
 
         strn = [int(s) for s in split_string[strloc:]]
-        self.strn = array(strn, dtype=int).reshape((self.width, self.height))
+        self.strn = transpose(array(strn, dtype=int).reshape((self.height, self.width)))
 
 
 def send_string(s):
