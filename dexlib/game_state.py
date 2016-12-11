@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+from copy import copy
 from collections import namedtuple
 from dexlib.nphlt import GameMap
 from dexlib.dijkstra import ShortestPather
@@ -39,8 +40,6 @@ class GameState(GameMap):
 
         self.owned_locs = np.transpose(np.nonzero(self.owned))
 
-        self.combat = (self.enemy) | (self.strn <= 1)
-
     def _set_distances(self):
         """Set self.dist_from_owned, a 2D array of the number of
         moves required to reach the target block from _any_ owned.
@@ -52,11 +51,16 @@ class GameState(GameMap):
         self.border_idx = np.where(self.dist_from_owned == 1)
         self.border_locs = np.transpose(self.border_idx)
 
+        self.combat = (self.enemy) | (self.strn <= 1)
+        self.in_combat = np.multiply(self.combat, self.dist_from_owned == 1)
+
     def _set_splashes(self):
         """Get splash damage possibilities. self.splash is a 3D
         array where the z-axis is splash on different axes,
         (NESW, still). Total splash damage is:
-            [min(strn_attacker, axis) for axis in splash[x, y, :]]
+            [min(strn_attacker, axis) for axis in splash[:, x, y]]
+        prod_deny is a similar affair of how much production can be denied
+        by a move.
         """
         enemy_strn = np.multiply(self.enemy, self.strn)
         # Strictly this info is one turn out of date, = bad decisions
@@ -66,6 +70,16 @@ class GameState(GameMap):
             roll_x(enemy_strn, -1),
             roll_y(enemy_strn, 1),
             roll_y(enemy_strn, -1),
+        ])
+
+        enemy_prod = np.multiply(self.blank + self.enemy, self.prod)
+        self.prod_deny = np.stack([
+            enemy_prod,
+            roll_x(enemy_prod, 1),
+            roll_x(enemy_prod, -1),
+            roll_y(enemy_prod, 1),
+            roll_y(enemy_prod, -1),
+
         ])
 
     def _set_globals(self):
