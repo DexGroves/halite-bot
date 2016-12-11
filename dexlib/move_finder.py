@@ -1,8 +1,12 @@
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter, maximum_filter
+from collections import namedtuple
 # from stats import percentileofscore
 # import logging
 # logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
+
+
+QMove = namedtuple('Move', 'x y tx ty priority score')
 
 
 class MoveFinder:
@@ -34,17 +38,21 @@ class MoveFinder:
     def get_target_combat(self, x, y, ms):
         wait_ratio = ms.strn[x, y] / max(ms.prod[x, y], 0.001)
         if wait_ratio < 3:
-            return x, y
+            return QMove(x, y, x, y, 100, 0)
+
         comb_val = self.get_combat_values(x, y, ms)
+        if comb_val.max() == 0:
+            return self.get_target_noncombat(x, y, ms)
+
         tx, ty = np.unravel_index(comb_val.argmax(), comb_val.shape)
 
-        return tx, ty
+        return QMove(x, y, tx, ty, 0, comb_val.max())
 
     def get_target_noncombat(self, x, y, ms):
         # Skip if you haven't waited at least 3 turns
         wait_ratio = ms.strn[x, y] / max(ms.prod[x, y], 0.001)
         if wait_ratio < 3:
-            return x, y
+            return QMove(x, y, x, y, 100, 0)
 
         # Calculate the ROI time for all border squares.
         # This could be faster if the border square filter happened
@@ -72,8 +80,8 @@ class MoveFinder:
 
         if wait_ratio < 8 and \
                 (cap_time[tx, ty] > ms.dists[x, y, tx, ty] or cap_time[tx, ty] > 5):
-            return x, y  # Stay if we may as well not move
-        return tx, ty  # Else goooo
+            return QMove(x, y, x, y, 100, 0)  # Stay if we may as well not move
+        return QMove(x, y, tx, ty, 2, (1 / roi_targ.min()))  # Else goooo
 
     def get_combat_values(self, x, y, ms):
         val = np.zeros((ms.width, ms.height), dtype=int)
@@ -92,7 +100,7 @@ class MoveFinder:
                                   ms.dists[x, y, :, :]**0.5)
         locality_here[np.nonzero(ms.owned)] = 0
         tx, ty = np.unravel_index(locality_here.argmax(), locality_here.shape)
-        return tx, ty
+        return QMove(x, y, tx, ty, 1, locality_here.max())
 
     def get_locality_value(self, ms):
         """Get the inherent value of squares on the map based on
@@ -108,6 +116,7 @@ class MoveFinder:
         np.savetxt("local.txt", locality_value)
         locality_value = gaussian_filter(locality_value, 5, mode="wrap")
         np.savetxt("localblur.txt", locality_value)
+        print('gettingloc' + repr(ms.turn), file=open('locing.txt', 'a'))
 
         return locality_value
 

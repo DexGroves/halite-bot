@@ -1,6 +1,5 @@
 import sys
 import numpy as np
-from copy import copy
 from collections import namedtuple
 from dexlib.nphlt import GameMap
 from dexlib.dijkstra import ShortestPather

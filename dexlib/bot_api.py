@@ -2,9 +2,9 @@
 objects. Exposes update and get_moves that the top level MyBot.py
 interfaces with.
 """
-from dexlib.game_state import Move
 from dexlib.pathing import PathFinder
 from dexlib.move_finder import MoveFinder
+from dexlib.move_resolver import MoveResolver
 
 
 class BotAPI:
@@ -22,10 +22,9 @@ class BotAPI:
 
     def get_moves(self, ms):
         """Find all moves!"""
-        moves = []
+        mr = MoveResolver()
         for x, y in ms.owned_locs:
-            tx, ty = self.mf.get_target(x, y, ms)
-            cardinal = self.pf.find_pref_cardinal(x, y, tx, ty, ms)
-            print(ms.turn, x, y, tx, ty, file=open('moves.txt', 'a'))
-            moves.append(Move(x, y, cardinal))
-        return moves
+            qmove = self.mf.get_target(x, y, ms)
+            mr.add_move(qmove)
+
+        return mr.process_moves(ms, self.pf)
