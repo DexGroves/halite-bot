@@ -19,6 +19,7 @@ class GameState(GameMap):
         # self.dists_inv = 1 / self.dists  # Faster to mult by this
 
         self.str_to = ShortestPather(self.strn).get_dist_matrix()
+        self.nbrs = self._get_nbrs()
         self.turn = -1
 
     def update(self):
@@ -85,6 +86,16 @@ class GameState(GameMap):
         self.capacity = np.sum(self.prod[np.nonzero(self.owned)])
         self.size = np.sum(self.owned)
         self.prod_mu = self.capacity / self.size
+
+    def _get_nbrs(self):
+        nbrs = {}
+        for x in range(self.width):
+            for y in range(self.height):
+                nbrs[(x, y)] = [((x + 1) % self.width, y),
+                                ((x - 1) % self.width, y),
+                                (x, (y + 1) % self.height),
+                                (x, (y - 1) % self.height)]
+        return nbrs
 
 
 def send_string(s):
