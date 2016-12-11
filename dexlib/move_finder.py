@@ -16,10 +16,14 @@ class MoveFinder:
         self.locality_value = self.get_locality_value(ms)
         self.maxima = self.get_maxima(self.locality_value, ms)
 
+        self.warmongery = 0.5
+        self.assumed_combat = 40
+
         print('', file=open('values.txt', 'w'))
 
     def update(self, ms):
-        self.roi_time = np.divide(ms.strn, np.maximum(1, ms.prod))
+        self.roi_time = np.divide(ms.strn + (ms.combat * self.assumed_combat),
+                                  np.maximum(1, ms.prod))
         roi_vals = self.roi_time[np.where(ms.dist_from_owned == 1)]
         self.roi_cutoff = np.percentile(roi_vals, 0.6)
         # print(self.roi_cutoff, file=open("roic.txt", "a"))
@@ -57,7 +61,7 @@ class MoveFinder:
         # Calculate the ROI time for all border squares.
         # This could be faster if the border square filter happened
         # earlier in the computation.
-        cap_time = np.maximum(0, ms.strn + (ms.combat * 80) - ms.strn[x, y]) / \
+        cap_time = np.maximum(0, ms.strn + (ms.combat * self.assumed_combat) - ms.strn[x, y]) / \
             max(0.01, ms.prod[x, y])
         arrival_time = ms.dists[x, y, :, :]
         recoup_time = np.divide(ms.prod_mu * ms.dists[x, y, :, :],
@@ -67,14 +71,15 @@ class MoveFinder:
 
         roi_targ = np.multiply(roi_targ, ms.dist_from_owned == 1)
         roi_targ[np.where(roi_targ == 0)] = np.inf
+        roi_targ[np.nonzero(ms.combat)] *= self.warmongery
 
         tx, ty = np.unravel_index(roi_targ.argmin(), roi_targ.shape)
 
         dpdt = (ms.prod[tx, ty] / roi_targ.min()) / \
             np.sum(ms.prod[np.nonzero(ms.owned)])
 
-        if dpdt < 0.005 and wait_ratio > 5 and \
-                self.roi_time[tx, ty] > (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) * 1.3) and \
+        if dpdt < 0.005 and wait_ratio > 4 and \
+                self.roi_time[tx, ty] > (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) * 1.5) and \
                 np.sum(self.maxima) > 0:
             return self.get_global_target(x, y, ms)
 
