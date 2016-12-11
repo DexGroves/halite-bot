@@ -1,7 +1,7 @@
 import numpy as np
 from dexlib.move_finder import QMove
-import logging
-logging.basicConfig(filename='bo.info', filemode="w", level=logging.DEBUG)
+# import logging
+# logging.basicConfig(filename='bo.info', filemode="w", level=logging.DEBUG)
 
 
 EmptyMove = QMove(None, None, None, None, 1000, 1000)
@@ -10,8 +10,8 @@ EmptyMove = QMove(None, None, None, None, 1000, 1000)
 class BorderOperator:
     """Overwrite moves that can be improved by clutch teamup mechanics."""
 
-    def __init__(self):
-        pass
+    def __init__(self, config):
+        self.roi_boost = config['roi_boost']
 
     def improve_moves(self, mr, ms, mf):
         for bx, by in ms.border_locs:
@@ -24,7 +24,7 @@ class BorderOperator:
         broi = ms.strn[bx, by] / ms.prod[bx, by]
 
         # If this isn't ultrapremium, skip it
-        if broi > mf.roi_limit * 2:
+        if broi > mf.roi_limit * self.roi_boost:
             return
 
         bstrn = ms.strn[bx, by]
@@ -51,7 +51,7 @@ class BorderOperator:
                     mr.moves[cur_move_key][cur_move_loc] = EmptyMove
                     mr.add_move(QMove(nx, ny, bx, by, -2, 1 / broi))
 
-                logging.debug((ms.turn, 'immediate', bx, by))
+                # logging.debug((ms.turn, 'immediate', bx, by))
 
                 return
 
@@ -73,6 +73,6 @@ class BorderOperator:
                     mr.add_move(QMove(hx, hy, ix, iy, -1, 1 / broi))
                     mr.add_move(QMove(ix, iy, ix, iy, 100, 1 / broi))
 
-                    logging.debug((ms.turn, 'delayed', bx, by))
+                    # logging.debug((ms.turn, 'delayed', bx, by))
 
                     return

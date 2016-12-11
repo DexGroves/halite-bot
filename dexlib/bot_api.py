@@ -10,11 +10,11 @@ from dexlib.border_operator import BorderOperator
 
 class BotAPI:
 
-    def __init__(self, ms):
+    def __init__(self, ms, config):
         ms.update()
         self.pf = PathFinder(ms)
-        self.mf = MoveFinder(ms)
-        self.bo = BorderOperator()
+        self.mf = MoveFinder(ms, config)
+        self.bo = BorderOperator(config)
 
     def update(self, ms):
         """Trigger all start-of-turn calculations."""

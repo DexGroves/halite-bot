@@ -12,14 +12,24 @@ QMove = namedtuple('Move', 'x y tx ty priority score')
 class MoveFinder:
     """Find moves for pieces to make!"""
 
-    def __init__(self, ms):
+    def __init__(self, ms, config):
+        self.warmongery = config['warmongery']
+        self.assumed_combat = config['assumed_combat']
+        self.dist_lim = config['dist_lim']
+
+        self.combat_wait = config['combat_wait']
+        self.noncombat_wait = config['noncombat_wait']
+        self.max_wait = config['max_wait']
+
+        self.min_dpdt = config['min_dpdt']
+        self.roi_skew = config['roi_skew']
+
+        self.blur_sigma = config['blur_sigma']
+
+        self.global_exponent = config['global_exponent']
+
         self.locality_value = self.get_locality_value(ms)
         self.maxima = self.get_maxima(self.locality_value, ms)
-
-        self.warmongery = 0.2
-        self.assumed_combat = 40
-
-        print('', file=open('values.txt', 'w'))
 
     def update(self, ms):
         self.locality_value = self.get_locality_value(ms)
@@ -34,7 +44,7 @@ class MoveFinder:
         # print(np.transpose(np.where(self.maxima)), file=open('values.txt', 'a'))
 
         map_skew = self.locality_value.max() / self.locality_value.mean()
-        self.roi_cutoff = (map_skew * 2) - 1
+        self.roi_cutoff = ((map_skew - 1) * self.roi_skew) + 1
         self.roi_limit = (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) *
                           self.roi_cutoff)
 
@@ -46,7 +56,7 @@ class MoveFinder:
 
     def get_target_combat(self, x, y, ms):
         wait_ratio = ms.strn[x, y] / max(ms.prod[x, y], 0.001)
-        if wait_ratio < 1:
+        if wait_ratio < self.combat_wait:
             return QMove(x, y, x, y, 100, 0)
 
         comb_val = self.get_combat_values(x, y, ms)
@@ -60,7 +70,7 @@ class MoveFinder:
     def get_target_noncombat(self, x, y, ms):
         # Skip if you haven't waited at least 3 turns
         wait_ratio = ms.strn[x, y] / max(ms.prod[x, y], 0.001)
-        if wait_ratio < 3:
+        if wait_ratio < self.noncombat_wait:
             return QMove(x, y, x, y, 100, 0)
 
         # Calculate the ROI time for all border squares.
@@ -74,7 +84,8 @@ class MoveFinder:
         total_time = cap_time + arrival_time + recoup_time
         roi_targ = self.roi_time + total_time
 
-        roi_targ = np.multiply(roi_targ, ms.dist_from_owned == 1)
+        roi_targ = np.multiply(roi_targ, ms.dist_from_owned <= self.dist_lim)
+        roi_targ = np.multiply(roi_targ, ms.dist_from_owned > 0)
         roi_targ[np.where(roi_targ == 0)] = np.inf
         roi_targ[np.nonzero(ms.combat)] *= self.warmongery
 
@@ -86,7 +97,7 @@ class MoveFinder:
         dpdt = (ms.prod[tx, ty] / roi_targ.min()) / \
             np.sum(ms.prod[np.nonzero(ms.owned)])
 
-        if dpdt < 0.005 and wait_ratio > 4 and \
+        if dpdt < self.min_dpdt and wait_ratio > self.noncombat_wait and \
                 self.roi_time[tx, ty] > self.roi_limit and \
                 ms.strn[x, y] < 180 and \
                 np.sum(self.maxima) > 0:
@@ -95,7 +106,7 @@ class MoveFinder:
             if ms.dist_from_owned[gmove.x, gmove.y] < ms.dists[gmove.x, gmove.y, x, y]:
                 return gmove
 
-        if wait_ratio < 8 and \
+        if wait_ratio < self.max_wait and \
                 (cap_time[tx, ty] > ms.dists[x, y, tx, ty] or cap_time[tx, ty] > 5):
             return QMove(x, y, x, y, 100, 0)  # Stay if we may as well not move
 
@@ -115,7 +126,7 @@ class MoveFinder:
     def get_global_target(self, x, y, ms):
         """Get the best target NOT on the border."""
         locality_here = np.divide(np.multiply(self.locality_value, self.maxima),
-                                  ms.dists[x, y, :, :]**0.5)
+                                  ms.dists[x, y, :, :]**self.global_exponent)
         locality_here[np.nonzero(ms.owned)] = 0
         tx, ty = np.unravel_index(locality_here.argmax(), locality_here.shape)
         return QMove(x, y, tx, ty, 1, locality_here.max())
@@ -132,17 +143,16 @@ class MoveFinder:
                 locality_value[x, y] = np.sum(map_value)
 
         locality_value[np.nonzero(ms.enemy)] = 0
-        np.savetxt("local.txt", locality_value)
-        locality_value = gaussian_filter(locality_value, 5, mode="wrap")
-        np.savetxt("localblur.txt", locality_value)
-        print('gettingloc' + repr(ms.turn), file=open('locing.txt', 'a'))
+        # np.savetxt("local.txt", locality_value)
+        locality_value = gaussian_filter(locality_value, self.blur_sigma, mode="wrap")
+        # np.savetxt("localblur.txt", locality_value)
 
         return locality_value
 
     def get_maxima(self, value, ms):
         """Get the local maxima of a value matrix where unowned."""
         data_max = maximum_filter(
-            np.multiply(value, 1 - ms.owned), 5, mode="wrap")
+            np.multiply(value, 1 - ms.owned), 4, mode="wrap")
 
         maxima = (value == data_max)
         maxima[np.nonzero(ms.owned)] = False
