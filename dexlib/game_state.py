@@ -18,11 +18,13 @@ class GameState(GameMap):
         # self.dists_inv = 1 / self.dists  # Faster to mult by this
 
         self.str_to = ShortestPather(self.strn).get_dist_matrix()
+        self.turn = -1
 
     def update(self):
         self._set_id_matrices()
         self._set_distances()  # This is expensiveish
         self._set_globals()
+        self.turn += 1
 
     def _set_id_matrices(self):
         self.blank = np.zeros((self.width, self.height), dtype=bool)

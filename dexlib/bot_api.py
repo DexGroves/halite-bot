@@ -10,17 +10,16 @@ from dexlib.move_finder import MoveFinder
 class BotAPI:
 
     def __init__(self, ms):
+        ms.update()
         self.pf = PathFinder(ms)
         self.mf = MoveFinder(ms)
         print('', file=open('moves.txt', 'w'))
-        self.turn = -1
 
     def update(self, ms):
         """Trigger all start-of-turn calculations."""
         ms.update()
         self.mf.update(ms)
-        self.turn += 1
-        print("Turn ", self.turn, " -----", file=open('moves.txt', 'a'))
+        print("Turn ", ms.turn, " -----", file=open('moves.txt', 'a'))
 
     def get_moves(self, ms):
         """Find all moves!"""

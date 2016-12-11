@@ -1,6 +1,5 @@
 import numpy as np
-from scipy.ndimage.filters import gaussian_filter
-from copy import copy
+from scipy.ndimage.filters import gaussian_filter, maximum_filter
 # from stats import percentileofscore
 # import logging
 # logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
@@ -10,23 +9,20 @@ class MoveFinder:
     """Find moves for pieces to make!"""
 
     def __init__(self, ms):
-        self.locality_value = np.zeros((ms.width, ms.height))
-        for x in range(ms.width):
-            for y in range(ms.height):
-                map_value = np.divide(ms.prod, ms.str_to[x, y, :, :])
-                map_value[x, y] = 0
-                self.locality_value[x, y] = np.sum(map_value)
+        self.locality_value = self.get_locality_value(ms)
+        self.maxima = self.get_maxima(self.locality_value, ms)
 
-        np.savetxt("local.txt", self.locality_value)
-        self.locality_value = gaussian_filter(self.locality_value, 2, mode="wrap")
-        np.savetxt("localblur.txt", self.locality_value)
-        print("", file=open('values.txt', 'w'))
+        print(np.transpose(np.where(self.maxima)), file=open('values.txt', 'w'))
 
     def update(self, ms):
         self.roi_time = np.divide(ms.strn, np.maximum(1, ms.prod))
         roi_vals = self.roi_time[np.where(ms.dist_from_owned == 1)]
-        print(roi_vals, file=open('values.txt', 'a'))
         self.roi_cutoff = np.percentile(roi_vals, 0.6)
+
+        self.maxima = self.get_maxima(self.locality_value, ms)
+
+        print("Turn\t", ms.turn, file=open('values.txt', 'a'))
+        print(np.transpose(np.where(self.maxima)), file=open('values.txt', 'a'))
 
     def get_target(self, x, y, ms):
         # Simple. Take the block with the minimum time to pay itself back.
@@ -63,10 +59,36 @@ class MoveFinder:
 
     def get_global_target(self, x, y, ms):
         """Get the best target NOT on the border."""
-        long_view = copy(ms.dists[x, y, :, :])
-        long_view[np.where(long_view < 5)] = 5
-        # locality_here = np.divide(self.locality_value, long_view)
-        locality_here = self.locality_value
+        locality_here = np.divide(np.multiply(self.locality_value, self.maxima),
+                                  ms.dists[x, y, :, :])
         locality_here[np.nonzero(ms.owned)] = 0
         tx, ty = np.unravel_index(locality_here.argmax(), locality_here.shape)
         return tx, ty
+
+    def get_locality_value(self, ms):
+        """Get the inherent value of squares on the map based on
+        their access to production.
+        """
+        locality_value = np.zeros((ms.width, ms.height))
+        for x in range(ms.width):
+            for y in range(ms.height):
+                map_value = np.divide(ms.prod, ms.str_to[x, y, :, :])
+                map_value[x, y] = 0
+                locality_value[x, y] = np.sum(map_value)
+
+        np.savetxt("local.txt", locality_value)
+        locality_value = gaussian_filter(locality_value, 2, mode="wrap")
+        np.savetxt("localblur.txt", locality_value)
+
+        return locality_value
+
+    def get_maxima(self, value, ms):
+        """Get the local maxima of a value matrix where unowned."""
+        data_max = maximum_filter(
+            np.multiply(value, 1 - ms.owned), 3, mode="wrap")
+
+        maxima = (value == data_max)
+        maxima[np.nonzero(ms.owned)] = False
+        maxima[np.where(ms.dist_from_owned < 2)] = False
+
+        return maxima
