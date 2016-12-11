@@ -35,6 +35,8 @@ class MoveFinder:
 
         map_skew = self.locality_value.max() / self.locality_value.mean()
         self.roi_cutoff = (map_skew * 2) - 1
+        self.roi_limit = (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) *
+                          self.roi_cutoff)
 
     def get_target(self, x, y, ms):
         if self.warzones[x, y] == 1:
@@ -85,8 +87,7 @@ class MoveFinder:
             np.sum(ms.prod[np.nonzero(ms.owned)])
 
         if dpdt < 0.005 and wait_ratio > 4 and \
-                self.roi_time[tx, ty] > \
-                    (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) * self.roi_cutoff) and \
+                self.roi_time[tx, ty] > self.roi_limit and \
                 ms.strn[x, y] < 180 and \
                 np.sum(self.maxima) > 0:
             gmove = self.get_global_target(x, y, ms)

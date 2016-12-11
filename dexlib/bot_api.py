@@ -5,6 +5,7 @@ interfaces with.
 from dexlib.pathing import PathFinder
 from dexlib.move_finder import MoveFinder
 from dexlib.move_resolver import MoveResolver
+from dexlib.border_operator import BorderOperator
 
 
 class BotAPI:
@@ -13,7 +14,7 @@ class BotAPI:
         ms.update()
         self.pf = PathFinder(ms)
         self.mf = MoveFinder(ms)
-        print('turn x y tx ty', file=open('moves.txt', 'w'))
+        self.bo = BorderOperator()
 
     def update(self, ms):
         """Trigger all start-of-turn calculations."""
@@ -23,8 +24,11 @@ class BotAPI:
     def get_moves(self, ms):
         """Find all moves!"""
         mr = MoveResolver()
+
         for x, y in ms.owned_locs:
             qmove = self.mf.get_target(x, y, ms)
             mr.add_move(qmove)
+
+        self.bo.improve_moves(mr, ms, self.mf)
 
         return mr.process_moves(ms, self.pf)

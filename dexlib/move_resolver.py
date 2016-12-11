@@ -2,7 +2,7 @@ import operator
 import numpy as np
 from dexlib.game_state import Move
 # import logging
-# logging.basicConfig(filename='mr.info', filemode="w", level=logging.DEBUG)
+# logging.basicConfig(filename='bo.info', filemode="w", level=logging.DEBUG)
 
 
 class MoveResolver:
@@ -12,6 +12,7 @@ class MoveResolver:
 
     def __init__(self):
         self.moves = {}
+        self.map_ = {}
         self.dodges = []
 
     def add_move(self, qmove):
@@ -19,6 +20,7 @@ class MoveResolver:
             self.moves[qmove.priority].append(qmove)
         else:
             self.moves[qmove.priority] = [qmove]
+        self.map_[(qmove.x, qmove.y)] = qmove.priority, len(self.moves[qmove.priority]) - 1
 
     def process_moves(self, ms, pf):
         output_moves = []
@@ -29,6 +31,13 @@ class MoveResolver:
             self.moves[priority].sort(key=operator.attrgetter('score'))
 
             for move in self.moves[priority]:
+                if move.x is None:
+                    continue
+
+                if priority == -2:
+                    output_moves.append(self.force_move(ms, move))
+                    continue
+
                 tx, ty = self.resolve_move(move, ms, pf)
                 if tx is None:
                     continue
@@ -42,6 +51,10 @@ class MoveResolver:
             output_moves.append(Move(move.x, move.y, cardinal))
 
         return output_moves
+
+    def force_move(self, ms, move):
+        cardinal = self.nxny_to_cardinal(ms, move.x, move.y, move.tx, move.ty)
+        return Move(move.x, move.y, cardinal)
 
     def resolve_move(self, move, ms, pf):
         strn = ms.strn[move.x, move.y]
