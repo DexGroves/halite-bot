@@ -22,16 +22,19 @@ class MoveFinder:
         print('', file=open('values.txt', 'w'))
 
     def update(self, ms):
+        self.locality_value = self.get_locality_value(ms)
         self.roi_time = np.divide(ms.strn + (ms.combat * self.assumed_combat),
                                   np.maximum(1, ms.prod))
-        roi_vals = self.roi_time[np.where(ms.dist_from_owned == 1)]
-        self.roi_cutoff = np.percentile(roi_vals, 0.6)
+        # roi_vals = self.roi_time[np.where(ms.dist_from_owned == 1)]
         # print(self.roi_cutoff, file=open("roic.txt", "a"))
 
         self.maxima = self.get_maxima(self.locality_value, ms)
         self.warzones = self.get_warzones(ms.in_combat)
         # print("Turn\t", ms.turn, file=open('values.txt', 'a'))
         # print(np.transpose(np.where(self.maxima)), file=open('values.txt', 'a'))
+
+        map_skew = self.locality_value.max() / self.locality_value.mean()
+        self.roi_cutoff = (map_skew * 2) - 1
 
     def get_target(self, x, y, ms):
         if self.warzones[x, y] == 1:
@@ -73,19 +76,28 @@ class MoveFinder:
         roi_targ[np.where(roi_targ == 0)] = np.inf
         roi_targ[np.nonzero(ms.combat)] *= self.warmongery
 
+        str_bonus = max(1, ms.strn[x, y] / np.mean(ms.strn[(ms.border_idx)]))
+        roi_targ[np.where(ms.dists[x, y] <= 2)] *= 1 / str_bonus
+
         tx, ty = np.unravel_index(roi_targ.argmin(), roi_targ.shape)
 
         dpdt = (ms.prod[tx, ty] / roi_targ.min()) / \
             np.sum(ms.prod[np.nonzero(ms.owned)])
 
         if dpdt < 0.005 and wait_ratio > 4 and \
-                self.roi_time[tx, ty] > (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) * 1.5) and \
+                self.roi_time[tx, ty] > \
+                    (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) * self.roi_cutoff) and \
+                ms.strn[x, y] < 180 and \
                 np.sum(self.maxima) > 0:
-            return self.get_global_target(x, y, ms)
+            gmove = self.get_global_target(x, y, ms)
+
+            if ms.dist_from_owned[gmove.x, gmove.y] < ms.dists[gmove.x, gmove.y, x, y]:
+                return gmove
 
         if wait_ratio < 8 and \
                 (cap_time[tx, ty] > ms.dists[x, y, tx, ty] or cap_time[tx, ty] > 5):
             return QMove(x, y, x, y, 100, 0)  # Stay if we may as well not move
+
         return QMove(x, y, tx, ty, 2, (1 / roi_targ.min()))  # Else goooo
 
     def get_combat_values(self, x, y, ms):
@@ -118,6 +130,7 @@ class MoveFinder:
                 map_value[x, y] = 0
                 locality_value[x, y] = np.sum(map_value)
 
+        locality_value[np.nonzero(ms.enemy)] = 0
         np.savetxt("local.txt", locality_value)
         locality_value = gaussian_filter(locality_value, 5, mode="wrap")
         np.savetxt("localblur.txt", locality_value)
@@ -132,6 +145,8 @@ class MoveFinder:
 
         maxima = (value == data_max)
         maxima[np.nonzero(ms.owned)] = False
+        maxima[np.nonzero(ms.enemy)] = False
+
         maxima[np.where(ms.dist_from_owned < 2)] = False
 
         return maxima
