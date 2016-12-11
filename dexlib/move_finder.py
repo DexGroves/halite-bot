@@ -16,7 +16,7 @@ class MoveFinder:
         self.locality_value = self.get_locality_value(ms)
         self.maxima = self.get_maxima(self.locality_value, ms)
 
-        self.warmongery = 0.5
+        self.warmongery = 0.2
         self.assumed_combat = 40
 
         print('', file=open('values.txt', 'w'))
@@ -44,7 +44,7 @@ class MoveFinder:
 
     def get_target_combat(self, x, y, ms):
         wait_ratio = ms.strn[x, y] / max(ms.prod[x, y], 0.001)
-        if wait_ratio < 3:
+        if wait_ratio < 1:
             return QMove(x, y, x, y, 100, 0)
 
         comb_val = self.get_combat_values(x, y, ms)
