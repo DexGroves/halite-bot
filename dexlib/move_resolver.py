@@ -1,6 +1,8 @@
 import operator
 import numpy as np
 from dexlib.game_state import Move
+# import logging
+# logging.basicConfig(filename='mr.info', filemode="w", level=logging.DEBUG)
 
 
 class MoveResolver:
@@ -48,17 +50,36 @@ class MoveResolver:
         if (self.landscape[fx, fy] + strn) <= max(strn, 255):
             # Can move safely, so do it
             self.landscape[fx, fy] += strn
+            if ms.combat[fx, fy]:
+                self.set_combat_patch(ms, move.x, move.y, fx, fy)
+
+            # logging.debug(
+            #     (ms.turn, (move.x, move.y), (fx, fy), 'first card')
+            # )
+
             return fx, fy
 
         if sx is not None and \
                 (self.landscape[sx, sy] + strn) <= max(strn, 255):
             # Maybe our second cardinal is better
             self.landscape[sx, sy] += strn
+            if ms.combat[sx, sy]:
+                self.set_combat_patch(ms, move.x, move.y, sx, sy)
+
+            # logging.debug(
+            #     (ms.turn, (move.x, move.y), (sx, sy), 'second card')
+            # )
+
             return sx, sy
 
         if (self.landscape[move.x, move.y] + strn) <= max(strn, 255):
             # Maybe we can just stay instead
             self.landscape[move.x, move.y] += strn
+
+            # logging.debug(
+            #     (ms.turn, (move.x, move.y), (move.x, move.y), 'force stay')
+            # )
+
             return move.x, move.y
 
         # Else kick it to the dodge queue
@@ -75,18 +96,57 @@ class MoveResolver:
         for i, (nx, ny) in enumerate(nbrs):
             if is_mine[i] and is_free[i]:
                 self.landscape[nx, ny] += strn
+
+                # logging.debug(
+                #     (ms.turn, (move.x, move.y), (nx, ny), 'dodge mine and free')
+                # )
+
                 return nx, ny
 
-        is_enemy = [ms.owned[nx, ny] for (nx, ny) in nbrs]
+        is_enemy = [ms.enemy[nx, ny] for (nx, ny) in nbrs]
 
         for i, (nx, ny) in enumerate(nbrs):
-            if is_enemy[i]:
+            if is_enemy[i] and is_free[i]:
                 self.landscape[nx, ny] += strn
+
+                # logging.debug(
+                #     (ms.turn, (move.x, move.y), (nx, ny), 'dodge enemy')
+                # )
+
                 return nx, ny
 
-        nx, ny = np.random.choice(nbrs)
+        is_blank = np.array([ms.blank[nx, ny] for (nx, ny) in nbrs])
+        if is_blank.sum() > 0:
+            strn_arr = np.array([ms.strn[nx, ny] + self.landscape[nx, ny]
+                                 for (nx, ny) in nbrs])
+            strn_arr[np.where(is_blank == 0)] = 999
+            min_str = np.argmin(strn_arr)
+
+            nx, ny = nbrs[min_str]
+            if (self.landscape[nx, ny] + strn) <= 255:
+                self.landscape[nx, ny] += strn
+
+                # logging.debug(
+                #     (ms.turn, (move.x, move.y), (nx, ny), 'dodge weakest blank')
+                # )
+
+                return nx, ny
+
+        nbrs += [(move.x, move.y)]
+        strn_burn = np.array([strn + self.landscape[nx, ny] for (nx, ny) in nbrs])
+        min_burn = np.argmin(strn_burn)
+        nx, ny = nbrs[min_burn]
         self.landscape[nx, ny] += strn
+
+        # logging.debug(
+        #     (ms.turn, (move.x, move.y), (nx, ny), 'dodge lowest burn')
+        # )
+
         return nx, ny
+
+    def set_combat_patch(self, ms, x, y, nx, ny):
+        for nbrx, nbry in ms.nbrs[nx, ny]:
+            self.landscape[nbrx, nbry] += ms.strn[x, y]
 
     @staticmethod
     def nxny_to_cardinal(ms, x, y, nx, ny):

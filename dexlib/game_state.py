@@ -53,6 +53,7 @@ class GameState(GameMap):
 
         self.combat = (self.enemy) | (self.strn <= 1)
         self.in_combat = np.multiply(self.combat, self.dist_from_owned == 1)
+        self.unclaimed = np.multiply(self.blank, self.combat == 0)
 
     def _set_splashes(self):
         """Get splash damage possibilities. self.splash is a 3D
