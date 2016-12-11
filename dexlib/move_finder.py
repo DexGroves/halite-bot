@@ -18,6 +18,7 @@ class MoveFinder:
         self.roi_time = np.divide(ms.strn, np.maximum(1, ms.prod))
         roi_vals = self.roi_time[np.where(ms.dist_from_owned == 1)]
         self.roi_cutoff = np.percentile(roi_vals, 0.6)
+        # print(self.roi_cutoff, file=open("roic.txt", "a"))
 
         self.maxima = self.get_maxima(self.locality_value, ms)
 
@@ -49,7 +50,9 @@ class MoveFinder:
         # print(dpdt, file=open('values.txt', 'a'))
 
         if dpdt < 1e-4 and wait_ratio > 5 and \
-                self.roi_time[tx, ty] > self.roi_cutoff:
+                self.roi_time[tx, ty] > (np.min(self.roi_time) * 1.3) and \
+                np.sum(self.maxima) > 0:
+                #         self.roi_time[tx, ty] > self.roi_cutoff and \
             return self.get_global_target(x, y, ms)
 
         if wait_ratio < 8 and \
@@ -60,7 +63,7 @@ class MoveFinder:
     def get_global_target(self, x, y, ms):
         """Get the best target NOT on the border."""
         locality_here = np.divide(np.multiply(self.locality_value, self.maxima),
-                                  ms.dists[x, y, :, :])
+                                  ms.dists[x, y, :, :]**0.5)
         locality_here[np.nonzero(ms.owned)] = 0
         tx, ty = np.unravel_index(locality_here.argmax(), locality_here.shape)
         return tx, ty
@@ -77,15 +80,27 @@ class MoveFinder:
                 locality_value[x, y] = np.sum(map_value)
 
         np.savetxt("local.txt", locality_value)
-        locality_value = gaussian_filter(locality_value, 2, mode="wrap")
+        locality_value = gaussian_filter(locality_value, 5, mode="wrap")
         np.savetxt("localblur.txt", locality_value)
 
         return locality_value
 
+    # def get_locality_value(self, ms):
+    #     """Get the inherent value of squares on the map based on
+    #     their access to production.
+    #     """
+    #     roi_time = np.divide(ms.strn, np.maximum(1, ms.prod))
+
+    #     np.savetxt("local.txt", roi_time)
+    #     locality_value = gaussian_filter(1 / roi_time, 3, mode="wrap")
+    #     np.savetxt("localblur.txt", locality_value)
+
+    #     return locality_value
+
     def get_maxima(self, value, ms):
         """Get the local maxima of a value matrix where unowned."""
         data_max = maximum_filter(
-            np.multiply(value, 1 - ms.owned), 3, mode="wrap")
+            np.multiply(value, 1 - ms.owned), 5, mode="wrap")
 
         maxima = (value == data_max)
         maxima[np.nonzero(ms.owned)] = False

@@ -13,13 +13,12 @@ class BotAPI:
         ms.update()
         self.pf = PathFinder(ms)
         self.mf = MoveFinder(ms)
-        print('', file=open('moves.txt', 'w'))
+        print('turn x y tx ty', file=open('moves.txt', 'w'))
 
     def update(self, ms):
         """Trigger all start-of-turn calculations."""
         ms.update()
         self.mf.update(ms)
-        print("Turn ", ms.turn, " -----", file=open('moves.txt', 'a'))
 
     def get_moves(self, ms):
         """Find all moves!"""
@@ -27,7 +26,6 @@ class BotAPI:
         for x, y in ms.owned_locs:
             tx, ty = self.mf.get_target(x, y, ms)
             cardinal = self.pf.find_pref_cardinal(x, y, tx, ty, ms)
-            if cardinal != 0:
-                print(ms.strn[x, y], (x, y), (tx, ty), file=open('moves.txt', 'a'))
+            print(ms.turn, x, y, tx, ty, file=open('moves.txt', 'a'))
             moves.append(Move(x, y, cardinal))
         return moves
