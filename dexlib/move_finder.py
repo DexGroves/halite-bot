@@ -12,7 +12,7 @@ class MoveFinder:
         self.locality_value = self.get_locality_value(ms)
         self.maxima = self.get_maxima(self.locality_value, ms)
 
-        print(np.transpose(np.where(self.maxima)), file=open('values.txt', 'w'))
+        print('', file=open('values.txt', 'w'))
 
     def update(self, ms):
         self.roi_time = np.divide(ms.strn, np.maximum(1, ms.prod))
@@ -22,34 +22,42 @@ class MoveFinder:
 
         self.maxima = self.get_maxima(self.locality_value, ms)
 
-        print("Turn\t", ms.turn, file=open('values.txt', 'a'))
-        print(np.transpose(np.where(self.maxima)), file=open('values.txt', 'a'))
+        # print("Turn\t", ms.turn, file=open('values.txt', 'a'))
+        # print(np.transpose(np.where(self.maxima)), file=open('values.txt', 'a'))
 
     def get_target(self, x, y, ms):
-        # Simple. Take the block with the minimum time to pay itself back.
+        # Skip if you haven't waited at least 3 turns
         wait_ratio = ms.strn[x, y] / max(ms.prod[x, y], 0.001)
         if wait_ratio < 3:
             return x, y
 
+        # Calculate the ROI time for all border squares.
+        # This could be faster if the border square filter happened
+        # earlier in the computation.
         cap_time = np.maximum(0, ms.strn + (ms.combat * 80) - ms.strn[x, y]) / \
             max(0.01, ms.prod[x, y])
         arrival_time = ms.dists[x, y, :, :]
         recoup_time = np.divide(ms.prod_mu * ms.dists[x, y, :, :],
                                 np.maximum(ms.prod, 0.01))
         total_time = cap_time + arrival_time + recoup_time
-
         roi_targ = self.roi_time + total_time
 
         roi_targ = np.multiply(roi_targ, ms.dist_from_owned == 1)
         roi_targ[np.where(roi_targ == 0)] = np.inf
 
-        tx, ty = np.unravel_index(roi_targ.argmin(), roi_targ.shape)
+        # Calculate the combat square values
+        #r oi_targ[np.nonzero(ms.combat)] = 0
+        # comb_val = self.get_combat_values(x, y, ms)
 
-        dpdt = (ms.prod[tx, ty] / roi_targ.argmin()) / \
+        mv_val = 1 / roi_targ # + (0.001 * comb_val)
+
+        tx, ty = np.unravel_index(mv_val.argmax(), roi_targ.shape)
+
+        dpdt = (ms.prod[tx, ty] / roi_targ.min()) / \
             np.sum(ms.prod[np.nonzero(ms.owned)])
-        # print(dpdt, file=open('values.txt', 'a'))
+        print(dpdt, file=open('values.txt', 'a'))
 
-        if dpdt < 1e-4 and wait_ratio > 5 and \
+        if dpdt < 0.005 and wait_ratio > 5 and \
                 self.roi_time[tx, ty] > (np.min(self.roi_time) * 1.3) and \
                 np.sum(self.maxima) > 0:
                 #         self.roi_time[tx, ty] > self.roi_cutoff and \
@@ -59,6 +67,15 @@ class MoveFinder:
                 (cap_time[tx, ty] > ms.dists[x, y, tx, ty] or cap_time[tx, ty] > 5):
             return x, y  # Stay if we may as well not move
         return tx, ty  # Else goooo
+
+    def get_combat_values(self, x, y, ms):
+        val = np.zeros((ms.width, ms.height), dtype=int)
+        strn = ms.strn[x, y]
+
+        for cx, cy in np.transpose(np.nonzero(ms.combat)):
+            val[cx, cy] = np.sum([min(s, strn) for s in ms.splash[:, cx, cy]])
+
+        return val
 
     def get_global_target(self, x, y, ms):
         """Get the best target NOT on the border."""
@@ -85,6 +102,17 @@ class MoveFinder:
 
         return locality_value
 
+    def get_maxima(self, value, ms):
+        """Get the local maxima of a value matrix where unowned."""
+        data_max = maximum_filter(
+            np.multiply(value, 1 - ms.owned), 5, mode="wrap")
+
+        maxima = (value == data_max)
+        maxima[np.nonzero(ms.owned)] = False
+        maxima[np.where(ms.dist_from_owned < 2)] = False
+
+        return maxima
+
     # def get_locality_value(self, ms):
     #     """Get the inherent value of squares on the map based on
     #     their access to production.
@@ -96,14 +124,3 @@ class MoveFinder:
     #     np.savetxt("localblur.txt", locality_value)
 
     #     return locality_value
-
-    def get_maxima(self, value, ms):
-        """Get the local maxima of a value matrix where unowned."""
-        data_max = maximum_filter(
-            np.multiply(value, 1 - ms.owned), 5, mode="wrap")
-
-        maxima = (value == data_max)
-        maxima[np.nonzero(ms.owned)] = False
-        maxima[np.where(ms.dist_from_owned < 2)] = False
-
-        return maxima

@@ -2,8 +2,9 @@ import sys
 import numpy as np
 from collections import namedtuple
 from dexlib.nphlt import GameMap
-from dexlib.matrix_tools import get_distance_matrix, distance_from_owned
 from dexlib.dijkstra import ShortestPather
+from dexlib.matrix_tools import get_distance_matrix, distance_from_owned
+from dexlib.matrix_tools import roll_x, roll_y
 
 
 Move = namedtuple('Move', 'x y dir')
@@ -23,6 +24,7 @@ class GameState(GameMap):
     def update(self):
         self._set_id_matrices()
         self._set_distances()  # This is expensiveish
+        self._set_splashes()
         self._set_globals()
         self.turn += 1
 
@@ -40,12 +42,31 @@ class GameState(GameMap):
         self.combat = (self.enemy) | (self.strn <= 1)
 
     def _set_distances(self):
+        """Set self.dist_from_owned, a 2D array of the number of
+        moves required to reach the target block from _any_ owned.
+        """
         self.dist_from_owned = distance_from_owned(self.dists, self.owned)
         self.dist_from_owned[np.nonzero(self.owned)] = 0
 
         self.border_mat = self.dist_from_owned == 1
         self.border_idx = np.where(self.dist_from_owned == 1)
         self.border_locs = np.transpose(self.border_idx)
+
+    def _set_splashes(self):
+        """Get splash damage possibilities. self.splash is a 3D
+        array where the z-axis is splash on different axes,
+        (NESW, still). Total splash damage is:
+            [min(strn_attacker, axis) for axis in splash[x, y, :]]
+        """
+        enemy_strn = np.multiply(self.enemy, self.strn)
+        # Strictly this info is one turn out of date, = bad decisions
+        self.splash = np.stack([
+            enemy_strn,
+            roll_x(enemy_strn, 1),
+            roll_x(enemy_strn, -1),
+            roll_y(enemy_strn, 1),
+            roll_y(enemy_strn, -1),
+        ])
 
     def _set_globals(self):
         self.capacity = np.sum(self.prod[np.nonzero(self.owned)])
