@@ -74,7 +74,7 @@ class MoveFinder:
             np.sum(ms.prod[np.nonzero(ms.owned)])
 
         if dpdt < 0.005 and wait_ratio > 5 and \
-                self.roi_time[tx, ty] > (np.min(self.roi_time) * 1.3) and \
+                self.roi_time[tx, ty] > (np.min(self.roi_time[np.nonzero(ms.blank)]) * 1.3) and \
                 np.sum(self.maxima) > 0:
             return self.get_global_target(x, y, ms)
 
