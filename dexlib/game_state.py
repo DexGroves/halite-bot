@@ -22,6 +22,8 @@ class GameState(GameMap):
         self.nbrs = self._get_nbrs()
         self.turn = -1
 
+        self.prod_2 = self.prod ** 2  # Save recalculating this a lot later
+
     def update(self):
         self._set_id_matrices()
         self._set_distances()  # This is expensiveish
@@ -46,6 +48,9 @@ class GameState(GameMap):
         """
         self.dist_from_owned = distance_from_owned(self.dists, self.owned)
         self.dist_from_owned[np.nonzero(self.owned)] = 0
+
+        self.dist_from_brdr = distance_from_owned(self.dists, 1 - self.owned)
+        self.dist_from_brdr[np.nonzero(1 - self.owned)] = 0
 
         self.border_mat = self.dist_from_owned == 1
         self.border_idx = np.where(self.dist_from_owned == 1)

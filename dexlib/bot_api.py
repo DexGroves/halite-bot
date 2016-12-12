@@ -24,11 +24,6 @@ class BotAPI:
     def get_moves(self, ms):
         """Find all moves!"""
         mr = MoveResolver()
-
-        for x, y in ms.owned_locs:
-            qmove = self.mf.get_target(x, y, ms)
-            mr.add_move(qmove)
-
-        self.bo.improve_moves(mr, ms, self.mf)
-
+        self.mf.get_moves(ms, mr)
         return mr.process_moves(ms, self.pf)
+        # self.bo.improve_moves(mr, ms, self.mf)
