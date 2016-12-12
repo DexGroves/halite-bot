@@ -17,7 +17,7 @@ config = json.load(open(args.config, "r"))
 my_id, map_state = get_init()
 bot = BotAPI(map_state, config)
 
-send_init("DexBot")
+send_init(config['name'])
 
 
 while True:

@@ -45,8 +45,9 @@ class MoveFinder:
 
         map_skew = self.locality_value.max() / self.locality_value.mean()
         self.roi_cutoff = ((map_skew - 1) * self.roi_skew) + 1
-        self.roi_limit = (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) *
-                          self.roi_cutoff)
+        if np.sum(ms.unclaimed) > 0:
+            self.roi_limit = (np.min(self.roi_time[np.nonzero(ms.unclaimed)]) *
+                              self.roi_cutoff)
 
     def get_target(self, x, y, ms):
         if self.warzones[x, y] == 1:
@@ -89,7 +90,7 @@ class MoveFinder:
         roi_targ[np.where(roi_targ == 0)] = np.inf
         roi_targ[np.nonzero(ms.combat)] *= self.warmongery
 
-        str_bonus = max(1, ms.strn[x, y] / np.mean(ms.strn[(ms.border_idx)]))
+        str_bonus = min(10, max(1, ms.strn[x, y] / np.mean(ms.strn[(ms.border_idx)])))
         roi_targ[np.where(ms.dists[x, y] <= 2)] *= 1 / str_bonus
 
         tx, ty = np.unravel_index(roi_targ.argmin(), roi_targ.shape)
