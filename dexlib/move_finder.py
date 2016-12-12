@@ -64,7 +64,7 @@ class MoveFinder:
                 continue
 
             # Gradient for unclaimed border squares
-            t2a = ms.dists[x, y, :, :]
+            t2a = ms.dists[x, y, :, :] ** 2
             t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / max(0.01, ms.prod[x, y])
             troi = t2a + t2c
             gradient = np.divide(ms.prod_2, ms.strn + (ms.prod * troi))
@@ -101,7 +101,7 @@ class MoveFinder:
                 continue
 
             # Gradient for unclaimed border squares
-            t2a = ms.dists[x, y, :, :]
+            t2a = ms.dists[x, y, :, :] ** 2
             t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / max(0.01, ms.prod[x, y])
             troi = t2a + t2c
             gradient = np.divide(ms.prod_2, ms.strn + (ms.prod * troi))
