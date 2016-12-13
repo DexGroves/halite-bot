@@ -56,6 +56,9 @@ class MoveFinder:
         assigned_str = np.zeros_like(active_gradient)
         assigned_prod = np.zeros_like(active_gradient)
         assigned_prod.fill(0.0001)
+
+        t2r = np.divide(ms.strn, ms.prod)
+
         # Note: do combat here
         # Just move to the best location, but handle teamups here
         for x, y in locs:
@@ -66,28 +69,21 @@ class MoveFinder:
             # Gradient for unclaimed border squares
             t2a = ms.dists[x, y, :, :]
             t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / max(0.01, ms.prod[x, y])
-            troi = t2a + t2c
-            gradient = np.divide(ms.prod_2, ms.strn + (ms.prod * troi))
+
+            str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
+
+            gradient = np.divide(ms.prod, (t2a + t2c + t2r))
             gradient = np.multiply(gradient, open_borders)
 
             utilisation = np.divide(np.maximum(1, ms.strn / ms.strn[x, y]), t2a)
             utilisation = np.maximum(0.1, utilisation)
 
-            gradient *= utilisation
-
-            # Gradient for active border squares
-            # new_t2c = np.divide(np.maximum(0, (ms.strn - assigned_str) - ms.strn[x, y]),
-            #                     assigned_prod)
-            # new_t2c[np.where(new_t2c > t2a)] = np.inf
-            # new_t2c[np.where(active_set == 0)] = np.inf
-            # new_troi = new_t2c + t2a
-            # new_gradient = np.divide(ms.prod_2, ms.strn + (ms.prod * new_troi))
-            # delta_gradient = new_gradient
-            # gradient[active_set] = delta_gradient[np.nonzero(active_set)]
+            gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
+            gradient *= str_bonus    # Bonus for having leftover capacity
 
             tx, ty = np.unravel_index(gradient.argmax(), gradient.shape)
-            # if min(t2c[tx, ty], new_t2c[tx, ty]) > t2a[tx, ty]:
-            if t2c[tx, ty] > t2a[tx, ty]:
+
+            if t2c[tx, ty] > t2a[tx, ty]:  # Don't move if you don't have to
                 moves[(x, y)] = (QMove(x, y, x, y, 100, gradient[tx, ty]))
             else:
                 moves[(x, y)] = (QMove(x, y, tx, ty, 0, gradient[tx, ty]))
@@ -96,8 +92,7 @@ class MoveFinder:
             active_set[tx, ty] = 1
             open_borders[tx, ty] = 0
             active_gradient[tx, ty] = gradient[tx, ty]
-            active_k[tx, ty] = troi[tx, ty]
-            active_ttc[tx, ty] = t2c[tx, ty]
+            # active_ttc[tx, ty] = t2c[tx, ty]
             assigned_str[tx, ty] = ms.strn[x, y]
             assigned_prod[tx, ty] = ms.prod[x, y]
 
@@ -109,21 +104,25 @@ class MoveFinder:
             # Gradient for unclaimed border squares
             t2a = ms.dists[x, y, :, :]
             t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / max(0.01, ms.prod[x, y])
-            troi = t2a + t2c
-            gradient = np.divide(ms.prod_2, ms.strn + (ms.prod * troi))
+
+            str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
+
+            gradient = np.divide(ms.prod, (t2a + t2c + t2r))
             gradient = np.multiply(gradient, open_borders)
 
             utilisation = np.divide(np.maximum(1, ms.strn / ms.strn[x, y]), t2a)
             utilisation = np.maximum(0.1, utilisation)
 
+            gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
+            gradient *= str_bonus    # Bonus for having leftover capacity
+
             # Gradient for active border squares
-            new_t2c = np.divide(np.maximum(0, (ms.strn - assigned_str) - ms.strn[x, y]),
+            new_t2c = np.divide(np.maximum(1, (ms.strn - assigned_str) - ms.strn[x, y]),
                                 assigned_prod)
             new_t2c[np.where(new_t2c > t2a)] = np.inf
-            new_t2c[np.where(active_set == 0)] = np.inf
-            new_troi = new_t2c + t2a
-            new_gradient = np.divide(ms.prod_2, ms.strn + (ms.prod * new_troi))
-            delta_gradient = new_gradient
+            # new_t2c[np.where(active_set == 0)] = np.inf
+            new_gradient = np.divide(ms.prod, (t2a + new_t2c))
+            delta_gradient = new_gradient - gradient
             gradient[active_set] = delta_gradient[np.nonzero(active_set)]
 
             gradient *= utilisation
@@ -140,8 +139,7 @@ class MoveFinder:
                 active_set[tx, ty] = 1
                 open_borders[tx, ty] = 0
                 active_gradient[tx, ty] = gradient[tx, ty]
-                active_k[tx, ty] = troi[tx, ty]
-                active_ttc[tx, ty] = t2c[tx, ty]
+                # active_ttc[tx, ty] = t2c[tx, ty]
                 assigned_str[tx, ty] = ms.strn[x, y]
                 assigned_prod[tx, ty] = ms.prod[x, y]
 
