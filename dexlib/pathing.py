@@ -75,14 +75,19 @@ class PathFinder(object):
             else:
                 return (ynx, yny), (xnx, xny)
 
-        # If one direction is owned, move along it
-        if ms.owned[xnx, xny] and xdist > 0:
-            return (xnx, xny), (ynx, yny)
-        if ms.owned[ynx, yny] and ydist > 0:
-            return (ynx, yny), (xnx, xny)
-
         can_mv_x = self._can_occupy_safely(x, y, xnx, xny, ms) and xdist > 0
         can_mv_y = self._can_occupy_safely(x, y, ynx, yny, ms) and ydist > 0
+
+        # If one direction is owned, move along it
+        if ms.owned[xnx, xny] and xdist > 0 and can_mv_y:
+            return (xnx, xny), (ynx, yny)
+        if ms.owned[ynx, yny] and ydist > 0 and can_mv_x:
+            return (ynx, yny), (xnx, xny)
+
+        if ms.owned[xnx, xny] and xdist > 0:
+            return (xnx, xny), (None, None)
+        if ms.owned[ynx, yny] and ydist > 0:
+            return (ynx, yny), (None, None)
 
         # If both directions are possible, take the enemy, and then
         # the one that will pay for itself sooner.

@@ -1,8 +1,8 @@
 import operator
 import numpy as np
 from dexlib.game_state import Move
-# import logging
-# logging.basicConfig(filename='bo.info', filemode="w", level=logging.DEBUG)
+import logging
+logging.basicConfig(filename='bo.info', filemode="w", level=logging.DEBUG)
 
 
 class MoveResolver:
@@ -44,11 +44,13 @@ class MoveResolver:
 
                 cardinal = self.nxny_to_cardinal(ms, move.x, move.y, tx, ty)
                 output_moves.append(Move(move.x, move.y, cardinal))
+                # logging.debug((ms.turn, (move.x, move.y), (tx, ty), ms.strn[move.x, move.y], ms.strn[tx, ty]))
 
         for move in self.dodges:
             tx, ty = self.resolve_dodge(move, ms)
             cardinal = self.nxny_to_cardinal(ms, move.x, move.y, tx, ty)
             output_moves.append(Move(move.x, move.y, cardinal))
+            # logging.debug((ms.turn, (move.x, move.y), (tx, ty), ms.strn[move.x, move.y], ms.strn[tx, ty]))
 
         return output_moves
 

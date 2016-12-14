@@ -22,7 +22,7 @@ class MoveFinder:
         self.noncombat_wait = config['noncombat_wait']
         self.max_wait = config['max_wait']
 
-        self.globality = 1
+        self.globality = 0.0002
 
         self.min_dpdt = config['min_dpdt']
         self.roi_skew = config['roi_skew']
@@ -31,10 +31,10 @@ class MoveFinder:
 
         self.global_exponent = config['global_exponent']
 
-        self.locality_value = self.get_locality_value(ms)
+        self.set_base_locality(ms)
 
     def update(self, ms):
-        pass
+        self.set_locality(ms)
         # self.roi = np.divide(ms.strn + (ms.combat * self.assumed_combat),
         #                      np.maximum(1, ms.prod))
         # self.roi[np.nonzero(mine)] = np.inf
@@ -57,7 +57,7 @@ class MoveFinder:
         assigned_prod = np.zeros_like(active_gradient)
         assigned_prod.fill(0.0001)
 
-        t2r = np.divide(ms.strn, ms.prod)
+        t2r = np.divide(ms.strn, ms.prodfl)
 
         # Note: do combat here
         # Just move to the best location, but handle teamups here
@@ -68,7 +68,7 @@ class MoveFinder:
 
             # Gradient for unclaimed border squares
             t2a = ms.dists[x, y, :, :]
-            t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / max(0.01, ms.prod[x, y])
+            t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / ms.prodfl[x, y]
 
             str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
 
@@ -84,18 +84,24 @@ class MoveFinder:
 
             tx, ty = np.unravel_index(gradient.argmax(), gradient.shape)
 
-            if t2c[tx, ty] > t2a[tx, ty]:  # Don't move if you don't have to
+            if t2c[tx, ty] > t2a[tx, ty] and \
+                    (tx, ty) not in self.gateways:
                 moves[(x, y)] = (QMove(x, y, x, y, 100, gradient[tx, ty]))
+                logging.debug((ms.turn, (x, y), (tx, ty),
+                               gradient[26, 8], gradient[26, 30], 'waiting first'))
             else:
                 moves[(x, y)] = (QMove(x, y, tx, ty, 0, gradient[tx, ty]))
+                logging.debug((ms.turn, (x, y), (tx, ty),
+                               gradient[26, 8], gradient[26, 30], 'going first'))
 
             # Register everything for delta calculations
-            active_set[tx, ty] = 1
-            open_borders[tx, ty] = 0
-            active_gradient[tx, ty] = gradient[tx, ty]
-            # active_ttc[tx, ty] = t2c[tx, ty]
-            assigned_str[tx, ty] = ms.strn[x, y]
-            assigned_prod[tx, ty] = ms.prod[x, y]
+            if (tx, ty) not in self.gateways:
+                active_set[tx, ty] = 1
+                open_borders[tx, ty] = 0
+                active_gradient[tx, ty] = gradient[tx, ty]
+                # active_ttc[tx, ty] = t2c[tx, ty]
+                assigned_str[tx, ty] = ms.strn[x, y]
+                assigned_prod[tx, ty] = ms.prod[x, y]
 
         # Make a second pass and overwrite any made moves with better ones
         for x, y in locs:
@@ -104,7 +110,7 @@ class MoveFinder:
 
             # Gradient for unclaimed border squares
             t2a = ms.dists[x, y, :, :]
-            t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / max(0.01, ms.prod[x, y])
+            t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / ms.prodfl[x, y]
 
             str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
 
@@ -132,18 +138,22 @@ class MoveFinder:
 
             # Overwrite moves if better
             if moves[(x, y)].score < gradient[tx, ty]:
-                if min(t2c[tx, ty], new_t2c[tx, ty]) > t2a[tx, ty]:
+                if min(t2c[tx, ty], new_t2c[tx, ty]) > t2a[tx, ty] and \
+                        (tx, ty) not in self.gateways:
                     moves[(x, y)] = QMove(x, y, x, y, 100, gradient[tx, ty])
+                    logging.debug((ms.turn, (x, y), (tx, ty),
+                                   gradient[26, 8], gradient[26, 30], 'waiting second'))
                 else:
                     moves[(x, y)] = QMove(x, y, tx, ty, 0, gradient[tx, ty])
+                    logging.debug((ms.turn, (x, y), (tx, ty),
+                                   gradient[26, 8], gradient[26, 30], 'going second'))
 
-                # Register everything for delta calculations
-                active_set[tx, ty] = 1
-                open_borders[tx, ty] = 0
-                active_gradient[tx, ty] = gradient[tx, ty]
-                # active_ttc[tx, ty] = t2c[tx, ty]
-                assigned_str[tx, ty] = ms.strn[x, y]
-                assigned_prod[tx, ty] = ms.prod[x, y]
+                if (tx, ty) not in self.gateways:
+                    active_set[tx, ty] = 1
+                    open_borders[tx, ty] = 0
+                    active_gradient[tx, ty] = gradient[tx, ty]
+                    assigned_str[tx, ty] = ms.strn[x, y]
+                    assigned_prod[tx, ty] = ms.prod[x, y]
 
         # Assign moves
         for k, v in moves.items():
@@ -165,12 +175,31 @@ class MoveFinder:
         self.maxima = (locality_value == data_max)
         self.base_locality = locality_value
 
+    # def set_locality(self, ms):
+    #     """Find the border squares with the best access to production maxima
+    #     and boost them.
+    #     """
+    #     self.brdr_global = np.zeros_like(ms.prod, dtype=float)
+    #     self.gateways = []
+    #     maxima = copy(self.maxima)
+    #     maxima[np.nonzero(ms.owned)] = False
+    #     maxima[np.nonzero(ms.enemy)] = False
+
+    #     # probably a better numpy way to do this
+    #     for mx, my in np.transpose(np.nonzero(maxima)):
+    #         dists = [ms.str_to[mx, my, bx, by] for (bx, by) in ms.border_locs]
+    #         bestx, besty = ms.border_locs[np.argmin(dists)]
+    #         self.brdr_global[bestx, besty] += \
+    #             self.base_locality[mx, my] * np.sqrt(ms.capacity) * \
+    #             self.globality  # / np.min(dists)
+    #         self.gateways.append((bestx, besty))
+
     def set_locality(self, ms):
         """Find the border squares with the best access to production maxima
         and boost them.
         """
         self.brdr_global = np.zeros_like(ms.prod, dtype=float)
-
+        self.gateways = []
         maxima = copy(self.maxima)
         maxima[np.nonzero(ms.owned)] = False
         maxima[np.nonzero(ms.enemy)] = False
@@ -181,4 +210,6 @@ class MoveFinder:
             bestx, besty = ms.border_locs[np.argmin(dists)]
             self.brdr_global[bestx, besty] += \
                 self.base_locality[mx, my] * np.sqrt(ms.capacity) * \
-                self.globality / np.min(dists)
+                self.globality  # / np.min(dists)
+            self.gateways.append((bestx, besty))
+        np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
