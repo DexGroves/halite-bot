@@ -1,6 +1,6 @@
 import numpy as np
 from copy import copy
-from scipy.ndimage.filters import gaussian_filter, maximum_filter
+from scipy.ndimage.filters import gaussian_filter, maximum_filter, generic_filter
 from collections import namedtuple
 # from stats import percentileofscore
 import logging
@@ -22,7 +22,7 @@ class MoveFinder:
         self.noncombat_wait = config['noncombat_wait']
         self.max_wait = config['max_wait']
 
-        self.globality = 0.0002
+        self.globality = 0.000000000000001
 
         self.min_dpdt = config['min_dpdt']
         self.roi_skew = config['roi_skew']
@@ -80,7 +80,9 @@ class MoveFinder:
 
             gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
             gradient *= str_bonus    # Bonus for having leftover capacity
-            gradient += self.brdr_global
+
+            self.brdr_val = np.divide(self.brdr_global, ms.dists[x, y, :, :] ** 0.5)
+            gradient += self.brdr_val
 
             tx, ty = np.unravel_index(gradient.argmax(), gradient.shape)
 
@@ -122,7 +124,9 @@ class MoveFinder:
 
             gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
             gradient *= str_bonus    # Bonus for having leftover capacity
-            gradient += self.brdr_global
+
+            border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
+            gradient += border_infl
 
             # Gradient for active border squares
             new_t2c = np.divide(np.maximum(1, (ms.strn - assigned_str) - ms.strn[x, y]),
@@ -160,45 +164,30 @@ class MoveFinder:
             mr.add_move(v)
 
     def set_base_locality(self, ms):
-        """Get the inherent value of squares on the map based on
-        their access to production.
-        """
-        locality_value = np.zeros((ms.width, ms.height))
-        for x in range(ms.width):
-            for y in range(ms.height):
-                map_value = np.divide(ms.prod, ms.str_to[x, y, :, :])
-                map_value[x, y] = 0
-                locality_value[x, y] = np.sum(map_value)
+        size = (5, 5)
+        origin = (2, 2)
+        volume = size[0] * size[1]
+        arr_c = 5
 
-        data_max = maximum_filter(locality_value, 4, mode="wrap")
+        mu_strn = generic_filter(ms.strn, lambda a: a.mean(),
+                                 size=size, origin=origin, mode="wrap")
+        mu_prod = generic_filter(ms.prod, lambda a: a.mean(),
+                                 size=size, origin=origin, mode="wrap")
 
-        self.maxima = (locality_value == data_max)
-        self.base_locality = locality_value
+        self.Pg = volume * mu_prod
+        self.t2c = mu_prod - np.divide(arr_c * mu_strn, self.Pg)
+        self.base_locality = np.divide(mu_prod, mu_strn)
 
-    # def set_locality(self, ms):
-    #     """Find the border squares with the best access to production maxima
-    #     and boost them.
-    #     """
-    #     self.brdr_global = np.zeros_like(ms.prod, dtype=float)
-    #     self.gateways = []
-    #     maxima = copy(self.maxima)
-    #     maxima[np.nonzero(ms.owned)] = False
-    #     maxima[np.nonzero(ms.enemy)] = False
-
-    #     # probably a better numpy way to do this
-    #     for mx, my in np.transpose(np.nonzero(maxima)):
-    #         dists = [ms.str_to[mx, my, bx, by] for (bx, by) in ms.border_locs]
-    #         bestx, besty = ms.border_locs[np.argmin(dists)]
-    #         self.brdr_global[bestx, besty] += \
-    #             self.base_locality[mx, my] * np.sqrt(ms.capacity) * \
-    #             self.globality  # / np.min(dists)
-    #         self.gateways.append((bestx, besty))
+        data_max = maximum_filter(self.base_locality, 5, mode="wrap")
+        self.maxima = (self.base_locality == data_max)
 
     def set_locality(self, ms):
         """Find the border squares with the best access to production maxima
         and boost them.
         """
-        self.brdr_global = np.zeros_like(ms.prod, dtype=float)
+        self.brdr_global_num = np.zeros_like(ms.prod, dtype=float)
+        self.brdr_global_denom = np.zeros_like(ms.prod, dtype=float)
+
         self.gateways = []
         maxima = copy(self.maxima)
         maxima[np.nonzero(ms.owned)] = False
@@ -208,8 +197,49 @@ class MoveFinder:
         for mx, my in np.transpose(np.nonzero(maxima)):
             dists = [ms.str_to[mx, my, bx, by] for (bx, by) in ms.border_locs]
             bestx, besty = ms.border_locs[np.argmin(dists)]
-            self.brdr_global[bestx, besty] += \
-                self.base_locality[mx, my] * np.sqrt(ms.capacity) * \
-                self.globality  # / np.min(dists)
+            self.brdr_global_num[bestx, besty] += \
+                self.base_locality[bestx, besty] * self.globality # * c
+            self.brdr_global_denom[bestx, besty] = min(
+                self.brdr_global_denom[bestx, besty], min(dists))
             self.gateways.append((bestx, besty))
-        np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
+
+        self.brdr_global = np.divide(self.brdr_global_num, self.brdr_global_denom)
+        #  np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
+
+
+
+#     def set_base_locality(self, ms):
+#         """Get the inherent value of squares on the map based on
+#         their access to production.
+#         """
+#         locality_value = np.zeros((ms.width, ms.height))
+#         for x in range(ms.width):
+#             for y in range(ms.height):
+#                 map_value = np.divide(ms.prod, ms.str_to[x, y, :, :])
+#                 map_value[x, y] = 0
+#                 locality_value[x, y] = np.sum(map_value)
+#
+#         data_max = maximum_filter(locality_value, 4, mode="wrap")
+#
+#         self.maxima = (locality_value == data_max)
+#         self.base_locality = locality_value
+#
+#     def set_locality(self, ms):
+#         """Find the border squares with the best access to production maxima
+#         and boost them.
+#         """
+#         self.brdr_global = np.zeros_like(ms.prod, dtype=float)
+#         self.gateways = []
+#         maxima = copy(self.maxima)
+#         maxima[np.nonzero(ms.owned)] = False
+#         maxima[np.nonzero(ms.enemy)] = False
+#
+#         # probably a better numpy way to do this
+#         for mx, my in np.transpose(np.nonzero(maxima)):
+#             dists = [ms.str_to[mx, my, bx, by] for (bx, by) in ms.border_locs]
+#             bestx, besty = ms.border_locs[np.argmin(dists)]
+#             self.brdr_global[bestx, besty] += \
+#                 self.base_locality[mx, my] * np.sqrt(ms.capacity) * \
+#                 self.globality  # / np.min(dists)
+#             self.gateways.append((bestx, besty))
+#         #  np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)

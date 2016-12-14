@@ -19,6 +19,7 @@ class GameState(GameMap):
         # self.dists_inv = 1 / self.dists  # Faster to mult by this
 
         self.str_to = ShortestPather(self.strn).get_dist_matrix()
+        self.str_to = np.maximum(0.001, self.str_to)
         self.nbrs = self._get_nbrs()
         self.turn = -1
 
