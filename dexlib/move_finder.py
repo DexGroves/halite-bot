@@ -22,7 +22,7 @@ class MoveFinder:
         self.noncombat_wait = config['noncombat_wait']
         self.max_wait = config['max_wait']
 
-        self.globality = 0.000000000000001
+        self.globality = 0.0
 
         self.min_dpdt = config['min_dpdt']
         self.roi_skew = config['roi_skew']
@@ -70,19 +70,18 @@ class MoveFinder:
             t2a = ms.dists[x, y, :, :]
             t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / ms.prodfl[x, y]
 
-            str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
-
             gradient = np.divide(ms.prod, (t2a + t2c + t2r))
             gradient = np.multiply(gradient, open_borders)
 
+            str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
             utilisation = np.divide(np.maximum(1, ms.strn / ms.strn[x, y]), t2a)
             utilisation = np.maximum(0.1, utilisation)
 
             gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
             gradient *= str_bonus    # Bonus for having leftover capacity
 
-            self.brdr_val = np.divide(self.brdr_global, ms.dists[x, y, :, :] ** 0.5)
-            gradient += self.brdr_val
+            border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
+            gradient += border_infl
 
             tx, ty = np.unravel_index(gradient.argmax(), gradient.shape)
 
@@ -90,11 +89,11 @@ class MoveFinder:
                     (tx, ty) not in self.gateways:
                 moves[(x, y)] = (QMove(x, y, x, y, 100, gradient[tx, ty]))
                 logging.debug((ms.turn, (x, y), (tx, ty),
-                               gradient[26, 8], gradient[26, 30], 'waiting first'))
+                               gradient[tx, ty], active_gradient[tx, ty], 'waiting first'))
             else:
                 moves[(x, y)] = (QMove(x, y, tx, ty, 0, gradient[tx, ty]))
                 logging.debug((ms.turn, (x, y), (tx, ty),
-                               gradient[26, 8], gradient[26, 30], 'going first'))
+                               gradient[tx, ty], active_gradient[tx, ty], 'going first'))
 
             # Register everything for delta calculations
             if (tx, ty) not in self.gateways:
@@ -114,22 +113,15 @@ class MoveFinder:
             t2a = ms.dists[x, y, :, :]
             t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / ms.prodfl[x, y]
 
-            str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
-
             gradient = np.divide(ms.prod, (t2a + t2c + t2r))
             gradient = np.multiply(gradient, open_borders)
 
+            str_bonus = np.maximum(1, ms.strn / ms.strn[x, y]) ** 0.5
             utilisation = np.divide(np.maximum(1, ms.strn / ms.strn[x, y]), t2a)
             utilisation = np.maximum(0.1, utilisation)
 
-            gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
-            gradient *= str_bonus    # Bonus for having leftover capacity
-
-            border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
-            gradient += border_infl
-
             # Gradient for active border squares
-            new_t2c = np.divide(np.maximum(1, (ms.strn - assigned_str) - ms.strn[x, y]),
+            new_t2c = np.divide(np.maximum(0, (ms.strn - assigned_str) - ms.strn[x, y]),
                                 assigned_prod)
             new_t2c[np.where(new_t2c > t2a)] = np.inf
             # new_t2c[np.where(active_set == 0)] = np.inf
@@ -137,7 +129,15 @@ class MoveFinder:
             delta_gradient = new_gradient - gradient
             gradient[active_set] = delta_gradient[np.nonzero(active_set)]
 
-            gradient *= utilisation
+            gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
+            gradient *= str_bonus    # Bonus for having leftover capacity
+
+            border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
+            gradient += border_infl
+
+            ex, ey = moves[(x, y)].tx, moves[(x, y)].ty
+            gradient[ex, ey] = active_gradient[ex, ey]
+
             tx, ty = np.unravel_index(gradient.argmax(), gradient.shape)
 
             # Overwrite moves if better
@@ -146,11 +146,11 @@ class MoveFinder:
                         (tx, ty) not in self.gateways:
                     moves[(x, y)] = QMove(x, y, x, y, 100, gradient[tx, ty])
                     logging.debug((ms.turn, (x, y), (tx, ty),
-                                   gradient[26, 8], gradient[26, 30], 'waiting second'))
+                                   gradient[tx, ty], active_gradient[tx, ty], 'waiting second'))
                 else:
                     moves[(x, y)] = QMove(x, y, tx, ty, 0, gradient[tx, ty])
                     logging.debug((ms.turn, (x, y), (tx, ty),
-                                   gradient[26, 8], gradient[26, 30], 'going second'))
+                                   gradient[tx, ty], active_gradient[tx, ty], 'going second'))
 
                 if (tx, ty) not in self.gateways:
                     active_set[tx, ty] = 1
@@ -187,6 +187,7 @@ class MoveFinder:
         """
         self.brdr_global_num = np.zeros_like(ms.prod, dtype=float)
         self.brdr_global_denom = np.zeros_like(ms.prod, dtype=float)
+        self.brdr_global_denom.fill(np.inf)
 
         self.gateways = []
         maxima = copy(self.maxima)
@@ -204,6 +205,7 @@ class MoveFinder:
             self.gateways.append((bestx, besty))
 
         self.brdr_global = np.divide(self.brdr_global_num, self.brdr_global_denom)
+        self.brdr_global = np.zeros_like(self.brdr_global)
         #  np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
 
 
