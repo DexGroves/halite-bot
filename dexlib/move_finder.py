@@ -43,15 +43,13 @@ class MoveFinder:
     def get_moves(self, ms, mr):
         moves = {}
 
-        locs = ms.owned_locs
         wait_ratio = np.divide(ms.strn, np.maximum(ms.prod, 0.001))
         open_borders = copy(ms.border_mat)
 
-        # active_set = np.zeros_like(ms.owned)
-        # active_gradient = np.zeros_like(ms.owned, dtype=float)
-        # assigned_str = np.zeros_like(active_gradient)
-        # assigned_prod = np.zeros_like(active_gradient)
-        # assigned_prod.fill(0.0001)
+        active_gradient = np.zeros_like(ms.owned, dtype=float)
+        assigned_str = np.zeros_like(active_gradient)
+        assigned_prod = np.zeros_like(active_gradient)
+        assigned_prod.fill(0.0001)
 
         t2r = np.divide(ms.strn, ms.prodfl)
 
@@ -68,90 +66,70 @@ class MoveFinder:
             gradient = np.multiply(gradient, open_borders)
 
             # str_bonus = np.maximum(1, ms.strn[x, y] / np.maximum(1, ms.strn)) ** 0.5
-            utilisation = np.divide(np.minimum(1, ms.strn / ms.strn[x, y]), t2a)
-            utilisation = np.minimum(self.min_util, utilisation)
-
-            gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
+            # utilisation = np.divide(np.minimum(1, ms.strn / ms.strn[x, y]), t2a)
+            # utilisation = np.minimum(self.min_util, utilisation)
+            # gradient *= 1utilisation  # Penalty for not being able to hit 0.1 util.
             # gradient *= str_bonus    # Bonus for having leftover capacity
 
-            border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
-            gradient += border_infl
+            # border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
+            # gradient += border_infl
 
             # Assuming order is gucci here
             ret[i, :] = gradient[ms.border_idx].flatten()
 
+        np.savetxt("ret.txt", ret)
+
         for i in range(len(Cs)):
-            # Should also wait if movement unnecessary in this spot
             ci, bi = np.unravel_index(ret.argmax(), ret.shape)
             cx, cy = Cs[ci]
             tx, ty = Bs[bi]
+            moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
+
+            active_gradient[tx, ty] = ret[ci, bi]
+            assigned_str[tx, ty] = ms.strn[cx, cy]
+            assigned_prod[tx, ty] = ms.prodfl[cx, cy]
+
             ret[ci, :] = 0
             ret[:, bi] = 0
-            # moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
-            t2c = np.maximum(0, ms.strn[tx, ty] - ms.strn[cx, cy]) / \
-                ms.prodfl[cx, cy]
-            t2a = ms.dists[cx, cy, tx, ty]
-            if t2c > t2a:
-                moves[(cx, cy)] = (QMove(cx, cy, cx, cy, 100, ret[ci, bi]))
-            else:
+
+        # Make a second pass and overwrite any made moves with better ones
+        for i, (x, y) in enumerate(Cs):
+            # Gradient for unclaimed border squares
+            t2a = ms.dists[x, y, :, :]
+            t2c = np.divide(np.maximum(0, (ms.strn - assigned_str) - ms.strn[x, y]),
+                            assigned_prod)
+
+            gradient = np.divide(ms.prod, (t2a + t2c + t2r))
+
+            # str_bonus = np.maximum(1, ms.strn[x, y] / np.maximum(1, ms.strn)) ** 0.5
+            # utilisation = np.divide(np.minimum(1, ms.strn / ms.strn[x, y]), t2a)
+            # utilisation = np.minimum(self.min_util, utilisation)
+            # gradient *= 1utilisation  # Penalty for not being able to hit 0.1 util.
+            # gradient *= str_bonus    # Bonus for having leftover capacity
+
+            # border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
+            # gradient += border_infl
+
+            gradient = gradient - active_gradient
+            gradient = np.multiply(gradient, active_gradient > 0)
+            if (x, y) in moves.keys():
+                m = moves[(x, y)]
+                gradient[m.tx, m.ty] = 0
+
+            # Assuming order is gucci here
+            ret[i, :] = gradient[ms.border_idx].flatten()
+
+        np.savetxt("gret.txt", ret)
+
+        for i in range(len(Cs)):
+            ci, bi = np.unravel_index(ret.argmax(), ret.shape)
+            cx, cy = Cs[ci]
+            tx, ty = Bs[bi]
+            if (cx, cy) not in moves.keys() or \
+                    ret[ci, bi] > moves[(cx, cy)].score:
+                ret[:, bi] = 0
                 moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
-
-        np.savetxt("ret.txt", ret)
-
-        # # Make a second pass and overwrite any made moves with better ones
-        # for x, y in locs:
-        #     if wait_ratio[x, y] < self.noncombat_wait:
-        #         continue
-
-        #     # Gradient for unclaimed border squares
-        #     t2a = ms.dists[x, y, :, :]
-        #     t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / ms.prodfl[x, y]
-
-        #     gradient = np.divide(ms.prod, (t2a + t2c + t2r))
-        #     gradient = np.multiply(gradient, open_borders)
-
-        #     str_bonus = np.maximum(1, ms.strn[x, y] / np.maximum(1, ms.strn)) ** 0.5
-        #     utilisation = np.divide(np.maximum(1, ms.strn / ms.strn[x, y]), t2a)
-        #     utilisation = np.minimum(self.min_util, utilisation)
-
-        #     # Gradient for active border squares
-        #     new_t2c = np.divide(np.maximum(1, (ms.strn - assigned_str) - ms.strn[x, y]),
-        #                         assigned_prod)
-        #     new_t2c[np.where(new_t2c > t2a)] = np.inf
-        #     # new_t2c[np.where(active_set == 0)] = np.inf
-        #     new_gradient = np.divide(ms.prod, (t2a + new_t2c + t2r))
-        #     delta_gradient = new_gradient - active_gradient
-        #     gradient[active_set] = delta_gradient[np.nonzero(active_set)]
-
-        #     gradient *= utilisation  # Penalty for not being able to hit 0.1 util.
-        #     gradient *= str_bonus    # Bonus for having leftover capacity
-
-        #     border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
-        #     gradient += border_infl
-
-        #     ex, ey = moves[(x, y)].tx, moves[(x, y)].ty
-        #     gradient[ex, ey] = active_gradient[ex, ey]
-
-        #     tx, ty = np.unravel_index(gradient.argmax(), gradient.shape)
-
-        #     # Overwrite moves if better
-        #     if moves[(x, y)].score < gradient[tx, ty]:
-        #         if min(t2c[tx, ty], new_t2c[tx, ty]) > t2a[tx, ty] and \
-        #                 (tx, ty) not in self.gateways:
-        #             moves[(x, y)] = QMove(x, y, x, y, 100, gradient[tx, ty])
-        #             logging.debug((ms.turn, ms.strn[x, y], (x, y), (tx, ty),
-        #                            gradient[tx, ty], active_gradient[tx, ty], 'waiting second'))
-        #         else:
-        #             moves[(x, y)] = QMove(x, y, tx, ty, 0, gradient[tx, ty])
-        #             logging.debug((ms.turn, ms.strn[x, y], (x, y), (tx, ty),
-        #                            gradient[tx, ty], active_gradient[tx, ty], 'going second'))
-
-        #         # if (tx, ty) not in self.gateways:
-        #         active_set[tx, ty] = 1
-        #         open_borders[tx, ty] = 0
-        #         active_gradient[tx, ty] = new_gradient[tx, ty]
-        #         assigned_str[tx, ty] = ms.strn[x, y]
-        #         assigned_prod[tx, ty] = ms.prod[x, y]
+            ret[ci, :] = 0
 
         # Assign moves
         for k, v in moves.items():
