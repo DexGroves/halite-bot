@@ -85,9 +85,16 @@ class MoveFinder:
             ci, bi = np.unravel_index(ret.argmax(), ret.shape)
             cx, cy = Cs[ci]
             tx, ty = Bs[bi]
-            moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
             ret[ci, :] = 0
             ret[:, bi] = 0
+            # moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
+            t2c = np.maximum(0, ms.strn[tx, ty] - ms.strn[cx, cy]) / \
+                ms.prodfl[cx, cy]
+            t2a = ms.dists[cx, cy, tx, ty]
+            if t2c > t2a:
+                moves[(cx, cy)] = (QMove(cx, cy, cx, cy, 100, ret[ci, bi]))
+            else:
+                moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
 
         np.savetxt("ret.txt", ret)
 
