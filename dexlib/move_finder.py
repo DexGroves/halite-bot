@@ -42,42 +42,40 @@ class MoveFinder:
 
     def get_moves(self, ms, mr):
         moves = {}
-
         wait_ratio = np.divide(ms.strn, np.maximum(ms.prod, 0.001))
-        open_borders = copy(ms.border_mat)
 
-        active_gradient = np.zeros_like(ms.owned, dtype=float)
-        assigned_str = np.zeros_like(active_gradient)
-        assigned_prod = np.zeros_like(active_gradient)
-        assigned_prod.fill(0.0001)
-
-        t2r = np.divide(ms.strn, ms.prodfl)
-
-        Cs = [loc for loc in ms.owned_locs if wait_ratio[loc[0], loc[1]] >= self.noncombat_wait]
+        Cs = [loc for loc in ms.owned_locs
+              if wait_ratio[loc[0], loc[1]] >= self.noncombat_wait]
         Bs = ms.border_locs
+
+        cstrn = np.fromiter((ms.strn[x, y] for (x, y) in Cs), int)
+        cprod = np.fromiter((ms.prodfl[x, y] for (x, y) in Cs), float)
+        bstrn = np.fromiter((ms.strn[bx, by] for (bx, by) in Bs), int)
+        bprod = np.fromiter((ms.prodfl[bx, by] for (bx, by) in Bs), float)
+
+        available = np.ones((len(Cs), len(Bs)), dtype=bool)
         ret = np.zeros((len(Cs), len(Bs)))
+        t2c = np.zeros((len(Cs), len(Bs)))
+        t2a = np.zeros((len(Cs), len(Bs)))
+        t2r = np.divide(bstrn, bprod)
 
+        assign_grad = np.zeros(len(Bs))
+        assign_str = np.zeros(len(Bs))
+        assign_prod = np.zeros(len(Bs))
+        assign_prod = np.zeros(len(Bs))
+        assign_prod.fill(0.0001)
+        # t2a = [ms.dists[x, y, a, b] for (x, y) in Cs for (a, b) in Bs]
+
+        # First pass
         for i, (x, y) in enumerate(Cs):
-            # Gradient for unclaimed border squares
-            t2a = ms.dists[x, y, :, :]
-            t2c = np.maximum(0, ms.strn - ms.strn[x, y]) / ms.prodfl[x, y]
-
-            gradient = np.divide(ms.prod, (t2a + t2c + t2r))
-            gradient = np.multiply(gradient, open_borders)
-
-            # str_bonus = np.maximum(1, ms.strn[x, y] / np.maximum(1, ms.strn)) ** 0.5
-            # utilisation = np.divide(np.minimum(1, ms.strn / ms.strn[x, y]), t2a)
-            # utilisation = np.minimum(self.min_util, utilisation)
-            # gradient *= 1utilisation  # Penalty for not being able to hit 0.1 util.
-            # gradient *= str_bonus    # Bonus for having leftover capacity
-
-            # border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
-            # gradient += border_infl
-
-            # Assuming order is gucci here
-            ret[i, :] = gradient[ms.border_idx].flatten()
-
-        np.savetxt("ret.txt", ret)
+            t2a[i, ] = ms.dists[x, y, :, :][ms.border_idx].flatten()
+            t2c[i, ] = np.maximum(0, bstrn - cstrn[i]) / cprod[i]
+            ret[i, :] = np.divide(bprod, (np.maximum(t2a[i, :], t2c[i, :]) + t2r))
+        np.savetxt("cstrn%i.txt" % ms.turn, cstrn)
+        np.savetxt("bstrn%i.txt" % ms.turn, bstrn)
+        np.savetxt("ret%i.txt" % ms.turn, ret)
+        np.savetxt("brod%i.txt" % ms.turn, bprod)
+        np.savetxt("t2c%i.txt" % ms.turn, np.maximum(t2a, t2c) + t2r)
 
         for i in range(len(Cs)):
             ci, bi = np.unravel_index(ret.argmax(), ret.shape)
@@ -85,51 +83,38 @@ class MoveFinder:
             tx, ty = Bs[bi]
             moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
 
-            active_gradient[tx, ty] = ret[ci, bi]
-            assigned_str[tx, ty] = ms.strn[cx, cy]
-            assigned_prod[tx, ty] = ms.prodfl[cx, cy]
+            assign_grad[bi] = ret[ci, bi]
+            assign_str[bi] = cstrn[ci]
+            assign_prod[bi] = cprod[ci]
+            available[ci, bi] = False  # Mark as impossible for teamups
 
             ret[ci, :] = 0
             ret[:, bi] = 0
 
-        # Make a second pass and overwrite any made moves with better ones
+        # Second pass for teamups
+        nt2c = np.zeros((len(Cs), len(Bs)))
         for i, (x, y) in enumerate(Cs):
-            # Gradient for unclaimed border squares
-            t2a = ms.dists[x, y, :, :]
-            t2c = np.divide(np.maximum(0, (ms.strn - assigned_str) - ms.strn[x, y]),
-                            assigned_prod)
+            nt2c[i, ] = np.maximum(0, bstrn - cstrn[i] - assign_str) / assign_prod
+            ret[i, :] = np.multiply(
+                np.divide(bprod, (np.maximum(t2a[i, :], nt2c[i, :]) + t2r)) - assign_grad,
+                available[i, :]
+            )
 
-            gradient = np.divide(ms.prod, (t2a + t2c + t2r))
-
-            # str_bonus = np.maximum(1, ms.strn[x, y] / np.maximum(1, ms.strn)) ** 0.5
-            # utilisation = np.divide(np.minimum(1, ms.strn / ms.strn[x, y]), t2a)
-            # utilisation = np.minimum(self.min_util, utilisation)
-            # gradient *= 1utilisation  # Penalty for not being able to hit 0.1 util.
-            # gradient *= str_bonus    # Bonus for having leftover capacity
-
-            # border_infl = np.divide(self.brdr_global, ms.dists[x, y, :, :])
-            # gradient += border_infl
-
-            gradient = gradient - active_gradient
-            gradient = np.multiply(gradient, active_gradient > 0)
-            if (x, y) in moves.keys():
-                m = moves[(x, y)]
-                gradient[m.tx, m.ty] = 0
-
-            # Assuming order is gucci here
-            ret[i, :] = gradient[ms.border_idx].flatten()
-
-        np.savetxt("gret.txt", ret)
+        np.savetxt("ag%i.txt" % ms.turn, assign_grad)
+        np.savetxt("ap%i.txt" % ms.turn, assign_prod)
+        np.savetxt("gpre%i.txt" % ms.turn, np.divide(bprod, (np.maximum(t2a, nt2c) + t2r)))
+        np.savetxt("gret%i.txt" % ms.turn, ret)
+        np.savetxt("gt2c%i.txt" % ms.turn, np.maximum(t2a, nt2c) + t2r)
 
         for i in range(len(Cs)):
             ci, bi = np.unravel_index(ret.argmax(), ret.shape)
             cx, cy = Cs[ci]
             tx, ty = Bs[bi]
-            if (cx, cy) not in moves.keys() or \
-                    ret[ci, bi] > moves[(cx, cy)].score:
-                ret[:, bi] = 0
-                moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
             ret[ci, :] = 0
+
+            if (cx, cy) not in moves.keys() or ret[ci, bi] > moves[(cx, cy)].score:
+                moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
+                ret[:, bi] = 0
 
         # Assign moves
         for k, v in moves.items():
