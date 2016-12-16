@@ -24,6 +24,9 @@ class MoveFinder:
 
         self.globality = 0# 1
         self.min_util = 0.2
+        self.mr_range = 3
+        self.mr_k = 0.81
+        self.mr_c = 0.2
 
         self.min_dpdt = config['min_dpdt']
         self.roi_skew = config['roi_skew']
@@ -36,6 +39,7 @@ class MoveFinder:
 
     def update(self, ms):
         self.set_locality(ms)
+        self.set_midrange_value(ms)
         # self.roi = np.divide(ms.strn + (ms.combat * self.assumed_combat),
         #                      np.maximum(1, ms.prod))
         # self.roi[np.nonzero(mine)] = np.inf
@@ -64,13 +68,15 @@ class MoveFinder:
         assign_prod = np.zeros(len(Bs))
         assign_prod = np.zeros(len(Bs))
         assign_prod.fill(0.0001)
+
+        bonus = self.mrv[ms.border_idx]
         # t2a = [ms.dists[x, y, a, b] for (x, y) in Cs for (a, b) in Bs]
 
         # First pass
         for i, (x, y) in enumerate(Cs):
             t2a[i, ] = ms.dists[x, y, :, :][ms.border_idx].flatten()
             t2c[i, ] = np.maximum(0, bstrn - cstrn[i]) / cprod[i]
-            ret[i, :] = np.divide(bprod, (np.maximum(t2a[i, :], t2c[i, :]) + t2r))
+            ret[i, :] = np.divide(bprod, (np.maximum(t2a[i, :], t2c[i, :]) + t2r)) + bonus
         np.savetxt("cstrn%i.txt" % ms.turn, cstrn)
         np.savetxt("bstrn%i.txt" % ms.turn, bstrn)
         np.savetxt("ret%i.txt" % ms.turn, ret)
@@ -96,7 +102,7 @@ class MoveFinder:
         for i, (x, y) in enumerate(Cs):
             nt2c[i, ] = np.maximum(0, bstrn - cstrn[i] - assign_str) / assign_prod
             ret[i, :] = np.multiply(
-                np.divide(bprod, (np.maximum(t2a[i, :], nt2c[i, :]) + t2r)) - assign_grad,
+                np.divide(bprod, (np.maximum(t2a[i, :], nt2c[i, :]) + t2r)) - assign_grad + bonus,
                 available[i, :]
             )
 
@@ -165,6 +171,31 @@ class MoveFinder:
         # self.brdr_global = np.zeros_like(self.brdr_global)
         np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
 
+    def set_midrange_value(self, ms):
+        self.Vk = np.zeros((ms.width, ms.height, self.mr_range))
+        self.mrv = np.zeros((ms.width, ms.height))
+
+        self.Vk[:, :, 0] = np.divide(ms.prod ** 2, ms.strn)
+        self.Vk[:, :, 0][np.where(ms.unclaimed == 0)] = 0
+        # self.mrv += self.Vk[:, :, 0]
+
+        for k in range(1, self.mr_range):
+            self.Vk[:, :, k] = max_in_plus(self.Vk[:, :, k - 1])
+            self.mrv += self.mr_k * self.Vk[:, :, 0]
+
+        self.mrv *= self.mr_c
+        np.savetxt("mrv.txt", self.mrv)
+
+
+plus_arr = np.array(
+    [[False, True, False],
+     [True, False, True],
+     [False, True, False]]
+)
+
+
+def max_in_plus(a):
+    return maximum_filter(a, footprint=plus_arr, origin=(1, 1), mode='wrap')
 
 
 #     def set_base_locality(self, ms):
