@@ -58,6 +58,7 @@ class MoveFinder:
         ret = np.zeros((len(Cs), len(Bs)))
         t2c = np.zeros((len(Cs), len(Bs)))
         t2a = np.zeros((len(Cs), len(Bs)))
+        t2rd = np.zeros((len(Cs), len(Bs)))
         t2r = np.divide(bstrn, bprod)
 
         assign_grad = np.zeros(len(Bs))
@@ -71,7 +72,11 @@ class MoveFinder:
         for i, (x, y) in enumerate(Cs):
             t2a[i, ] = ms.dists[x, y, :, :][ms.border_idx].flatten()
             t2c[i, ] = np.maximum(0, bstrn - cstrn[i]) / cprod[i]
-            ret[i, :] = np.divide(bprod, (np.maximum(t2a[i, :], t2c[i, :]) + t2r))
+            t2rd[i, ] = np.divide(ms.prod_mu * t2a[i, ], bprod)
+            ret[i, :] = np.divide(
+                bprod,
+                (np.maximum(t2a[i, :], t2c[i, :]) + t2r + t2rd[i, :])
+            )
         # np.savetxt("cstrn%i.txt" % ms.turn, cstrn)
         # np.savetxt("bstrn%i.txt" % ms.turn, bstrn)
         # np.savetxt("ret%i.txt" % ms.turn, ret)
@@ -97,7 +102,10 @@ class MoveFinder:
         for i, (x, y) in enumerate(Cs):
             nt2c[i, ] = np.maximum(0, bstrn - cstrn[i] - assign_str) / assign_prod
             ret[i, :] = np.multiply(
-                np.divide(bprod, (np.maximum(t2a[i, :], nt2c[i, :]) + t2r)) - assign_grad,
+                np.divide(
+                    bprod,
+                    (np.maximum(t2a[i, :], nt2c[i, :]) + t2r + t2rd[i, :])
+                    ) - assign_grad,
                 available[i, :]
             )
 
