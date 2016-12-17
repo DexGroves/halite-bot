@@ -92,30 +92,30 @@ class MoveFinder:
             ret[ci, :] = 0
             ret[:, bi] = 0
 
-        # # Second pass for teamups
-        # nt2c = np.zeros((len(Cs), len(Bs)))
-        # for i, (x, y) in enumerate(Cs):
-        #     nt2c[i, ] = np.maximum(0, bstrn - cstrn[i] - assign_str) / assign_prod
-        #     ret[i, :] = np.multiply(
-        #         np.divide(bprod, (np.maximum(t2a[i, :], nt2c[i, :]) + t2r)) - assign_grad,
-        #         available[i, :]
-        #     )
+        # Second pass for teamups
+        nt2c = np.zeros((len(Cs), len(Bs)))
+        for i, (x, y) in enumerate(Cs):
+            nt2c[i, ] = np.maximum(0, bstrn - cstrn[i] - assign_str) / assign_prod
+            ret[i, :] = np.multiply(
+                np.divide(bprod, (np.maximum(t2a[i, :], nt2c[i, :]) + t2r)) - assign_grad,
+                available[i, :]
+            )
 
-        # # np.savetxt("ag%i.txt" % ms.turn, assign_grad)
-        # # np.savetxt("ap%i.txt" % ms.turn, assign_prod)
-        # # np.savetxt("gpre%i.txt" % ms.turn, np.divide(bprod, (np.maximum(t2a, nt2c) + t2r)))
-        # # np.savetxt("gret%i.txt" % ms.turn, ret)
-        # # np.savetxt("gt2c%i.txt" % ms.turn, np.maximum(t2a, nt2c) + t2r)
+        # np.savetxt("ag%i.txt" % ms.turn, assign_grad)
+        # np.savetxt("ap%i.txt" % ms.turn, assign_prod)
+        # np.savetxt("gpre%i.txt" % ms.turn, np.divide(bprod, (np.maximum(t2a, nt2c) + t2r)))
+        # np.savetxt("gret%i.txt" % ms.turn, ret)
+        # np.savetxt("gt2c%i.txt" % ms.turn, np.maximum(t2a, nt2c) + t2r)
 
-        # for i in range(len(Cs)):
-        #     ci, bi = np.unravel_index(ret.argmax(), ret.shape)
-        #     cx, cy = Cs[ci]
-        #     tx, ty = Bs[bi]
-        #     ret[ci, :] = 0
+        for i in range(len(Cs)):
+            ci, bi = np.unravel_index(ret.argmax(), ret.shape)
+            cx, cy = Cs[ci]
+            tx, ty = Bs[bi]
+            ret[ci, :] = 0
 
-        #     if (cx, cy) not in moves.keys() or ret[ci, bi] > moves[(cx, cy)].score:
-        #         moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
-        #         ret[:, bi] = 0
+            if (cx, cy) not in moves.keys() or ret[ci, bi] > moves[(cx, cy)].score:
+                moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
+                ret[:, bi] = 0
 
         # Assign moves
         for k, v in moves.items():
