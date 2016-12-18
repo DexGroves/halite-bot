@@ -40,11 +40,15 @@ class MoveFinder:
                 moves[(x, y)] = QMove(x, y, x, y, 2, 0)
                 continue
 
-            t2a = ms.dists[x, y, :, :]
+            str_bonus = np.sqrt(np.maximum(1, ms.strn[x, y] / ms.strnc))
+            t2a = ms.dists[x, y, :, :] ** 2
             t2a[x, y] = 1
             t2c = np.divide(np.maximum(0, ms.strn - ms.strn[x, y]),
                             max(0.01, ms.prod[x, y]))
-            value_dist = np.divide(self.value, t2a + t2c + t2r)
+            value_dist = np.divide(
+                np.multiply(str_bonus, self.value),
+                t2a + t2c + t2r
+            )
             tx, ty = np.unravel_index(value_dist.argmax(), value_dist.shape)
 
             moves[(x, y)] = QMove(x, y, tx, ty, 1, value_dist[tx, ty])
