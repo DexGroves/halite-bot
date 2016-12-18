@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 from collections import namedtuple
+from scipy.ndimage.filters import maximum_filter
 from dexlib.nphlt import GameMap
 from dexlib.dijkstra import ShortestPather
 from dexlib.matrix_tools import get_distance_matrix, distance_from_owned
@@ -29,6 +30,7 @@ class GameState(GameMap):
     def update(self):
         self._set_id_matrices()
         self._set_distances()  # This is expensiveish
+        self._set_combat()
         self._set_splashes()
         self._set_globals()
         self.turn += 1
@@ -60,9 +62,23 @@ class GameState(GameMap):
         self.border_idx = np.where(self.dist_from_owned == 1)
         self.border_locs = np.transpose(self.border_idx)
 
+    def _set_combat(self):
         self.combat = (self.enemy) | (np.multiply(self.owned == 0, self.strn <= 1))
         self.in_combat = np.multiply(self.combat, self.dist_from_owned == 1)
         self.unclaimed = np.multiply(self.blank, self.combat == 0)
+
+        self.unclaimed_border = np.multiply(self.border_mat, self.unclaimed)
+
+        self.unclaimed_border_idx = np.where(self.unclaimed_border)
+        self.in_combat_idx = np.where(self.in_combat)
+        self.unclaimed_border_locs = np.transpose(self.unclaimed_border_idx)
+        self.in_combat_locs = np.transpose(self.in_combat_idx)
+
+        self.warzones = self._get_warzones(self.in_combat)
+        self.owned_combat_locs = [loc for loc in self.owned_locs
+                                  if self.warzones[loc[0], loc[1]] == 1]
+        self.owned_noncombat_locs = [loc for loc in self.owned_locs
+                                     if self.warzones[loc[0], loc[1]] == 0]
 
     def _set_splashes(self):
         """Get splash damage possibilities. self.splash is a 3D
@@ -106,6 +122,9 @@ class GameState(GameMap):
                                 (x, (y + 1) % self.height),
                                 (x, (y - 1) % self.height)]
         return nbrs
+
+    def _get_warzones(self, combat_area):
+        return maximum_filter(combat_area, 2, mode="wrap")
 
 
 def send_string(s):

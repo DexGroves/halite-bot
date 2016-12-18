@@ -1,7 +1,5 @@
 import numpy as np
-from copy import copy
-from scipy.ndimage.filters import gaussian_filter, maximum_filter, generic_filter
-from collections import namedtuple
+from scipy.ndimage.filters import gaussian_filter, maximum_filter
 # from stats import percentileofscore
 import logging
 logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
@@ -27,19 +25,17 @@ class MoveFinder:
     """Find moves for pieces to make!"""
 
     def __init__(self, ms, config):
-        self.warmongery = config['warmongery']
-        self.assumed_combat = config['assumed_combat']
-        self.dist_lim = config['dist_lim']
-
         self.combat_wait = config['combat_wait']
         self.noncombat_wait = config['noncombat_wait']
         self.max_wait = config['max_wait']
 
-        self.globality = 0# 1
+        self.globality = 0  # 1
         self.min_util = 0.2
         self.mr_range = 15
         self.mr_k = 0.81
-        self.mr_c = 0.000005
+        self.mr_c = 1
+
+        self.assumed_combat = 80
 
         self.min_dpdt = config['min_dpdt']
         self.roi_skew = config['roi_skew']
@@ -53,23 +49,60 @@ class MoveFinder:
     def update(self, ms):
         self.set_locality(ms)
         self.set_midrange_value(ms)
-        # self.roi = np.divide(ms.strn + (ms.combat * self.assumed_combat),
-        #                      np.maximum(1, ms.prod))
-        # self.roi[np.nonzero(mine)] = np.inf
+
+    def get_combat_moves(self, ms, mr):
+        moves = {(x, y): QMove(x, y, x, y, 1000, 0)
+                 for (x, y) in ms.owned_combat_locs}
+
+        for x, y in ms.owned_combat_locs:
+            if ms.strn[x, y] / ms.prodfl[x, y] <= self.noncombat_wait:
+                continue
+
+            comb_val = self.get_combat_values(x, y, ms)
+            if comb_val.max() == 0:
+                continue
+
+            tx, ty = np.unravel_index(comb_val.argmax(), comb_val.shape)
+
+            moves[(x, y)] = QMove(x, y, tx, ty, 0, comb_val.max())
+
+        # Assign moves
+        for k, v in moves.items():
+            mr.add_move(v)
+
+    def get_combat_values(self, x, y, ms):
+        val = np.zeros((ms.width, ms.height), dtype=int)
+        strn = ms.strn[x, y]
+        local_area = np.multiply(ms.warzones, ms.dists[x, y, :, :] < 3)
+
+        for cx, cy in np.transpose(np.nonzero(local_area)):
+            val[cx, cy] = np.sum([min(s, strn) for s in ms.splash[:, cx, cy]])
+            val[cx, cy] += np.sum([p for i, p in enumerate(ms.prod_deny[:, cx, cy])
+                                   if strn >= ms.splash[i, cx, cy]])
+        return val
 
     def get_moves(self, ms, mr):
         moves = {(x, y): QMove(x, y, x, y, 1000, 0)
-                 for (x, y) in ms.owned_locs}
+                 for (x, y) in ms.owned_noncombat_locs}
         wait_ratio = np.divide(ms.strn, np.maximum(ms.prod, 0.001))
 
-        Cs = [loc for loc in ms.owned_locs
+        Cs = [loc for loc in ms.owned_noncombat_locs
               if wait_ratio[loc[0], loc[1]] >= self.noncombat_wait]
-        Bs = ms.border_locs
+        if len(ms.in_combat_locs) == 0:
+            Bs = ms.unclaimed_border_locs
+        else:
+            Bs = np.vstack([ms.unclaimed_border_locs, ms.in_combat_locs])
+
+        in_combat = np.ones(len(Bs), dtype=bool)
+        in_combat[0:len(ms.unclaimed_border_locs)] = False
 
         cstrn = np.fromiter((ms.strn[x, y] for (x, y) in Cs), int)
         cprod = np.fromiter((ms.prodfl[x, y] for (x, y) in Cs), float)
         bstrn = np.fromiter((ms.strn[bx, by] for (bx, by) in Bs), int)
         bprod = np.fromiter((ms.prodfl[bx, by] for (bx, by) in Bs), float)
+
+        bstrn[in_combat] = np.maximum(self.assumed_combat,
+                                      bstrn[in_combat])
 
         available = np.ones((len(Cs), len(Bs)), dtype=bool)
         ret = np.zeros((len(Cs), len(Bs)))

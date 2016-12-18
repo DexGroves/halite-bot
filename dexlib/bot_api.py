@@ -25,5 +25,6 @@ class BotAPI:
         """Find all moves!"""
         mr = MoveResolver()
         self.mf.get_moves(ms, mr)
+        self.mf.get_combat_moves(ms, mr)
         return mr.process_moves(ms, self.pf)
         # self.bo.improve_moves(mr, ms, self.mf)
