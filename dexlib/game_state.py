@@ -25,7 +25,7 @@ class GameState(GameMap):
         self.turn = -1
 
         self.prod_2 = self.prod ** 2  # Save recalculating this a lot later
-        self.prodfl = np.maximum(0.001, self.prod)
+        self.prodfl = np.maximum(1, self.prod)
 
     def update(self):
         self._set_id_matrices()
