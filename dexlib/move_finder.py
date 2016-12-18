@@ -7,7 +7,16 @@ import logging
 logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
-QMove = namedtuple('Move', 'x y tx ty priority score')
+# QMove = namedtuple('Move', 'x y tx ty priority score')
+
+class QMove:
+    def __init__(self, x, y, tx, ty, priority, score):
+        self.x = x
+        self.y = y
+        self.tx = tx
+        self.ty = ty
+        self.priority = priority
+        self.score = score
 
 
 class MoveFinder:
@@ -45,7 +54,8 @@ class MoveFinder:
         # self.roi[np.nonzero(mine)] = np.inf
 
     def get_moves(self, ms, mr):
-        moves = {}
+        moves = {(x, y): QMove(x, y, x, y, 1000, 0)
+                 for (x, y) in ms.owned_locs}
         wait_ratio = np.divide(ms.strn, np.maximum(ms.prod, 0.001))
 
         Cs = [loc for loc in ms.owned_locs
@@ -61,8 +71,10 @@ class MoveFinder:
         ret = np.zeros((len(Cs), len(Bs)))
         t2c = np.zeros((len(Cs), len(Bs)))
         t2a = np.zeros((len(Cs), len(Bs)))
+        t2rd = np.zeros((len(Cs), len(Bs)))
         t2r = np.divide(bstrn, bprod)
 
+        assign_id = np.zeros(len(Bs), dtype=int)
         assign_grad = np.zeros(len(Bs))
         assign_str = np.zeros(len(Bs))
         assign_prod = np.zeros(len(Bs))
@@ -76,19 +88,30 @@ class MoveFinder:
         for i, (x, y) in enumerate(Cs):
             t2a[i, ] = ms.dists[x, y, :, :][ms.border_idx].flatten()
             t2c[i, ] = np.maximum(0, bstrn - cstrn[i]) / cprod[i]
-            ret[i, :] = np.divide(bprod, (np.maximum(t2a[i, :], t2c[i, :]) + t2r)) + bonus
-        np.savetxt("cstrn%i.txt" % ms.turn, cstrn)
-        np.savetxt("bstrn%i.txt" % ms.turn, bstrn)
-        np.savetxt("ret%i.txt" % ms.turn, ret)
-        np.savetxt("brod%i.txt" % ms.turn, bprod)
-        np.savetxt("t2c%i.txt" % ms.turn, np.maximum(t2a, t2c) + t2r)
+            t2rd[i, ] = np.divide(ms.prod_mu * t2a[i, ], bprod)
+            ret[i, :] = np.divide(
+                bprod,
+                (np.maximum(t2a[i, :], t2c[i, :]) + t2r + t2rd[i, :])
+            )
+        # np.savetxt("mats/cstrn%i.txt" % ms.turn, cstrn)
+        # np.savetxt("mats/bstrn%i.txt" % ms.turn, bstrn)
+        np.savetxt("mats/ret%i.txt" % ms.turn, ret)
+        # np.savetxt("mats/brod%i.txt" % ms.turn, bprod)
+        # np.savetxt("mats/t2c%i.txt" % ms.turn, np.maximum(t2a, t2c) + t2r)
 
         for i in range(len(Cs)):
             ci, bi = np.unravel_index(ret.argmax(), ret.shape)
+            if ret[ci, bi] == 0:
+                break
+
             cx, cy = Cs[ci]
             tx, ty = Bs[bi]
             moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
 
+            # if ms.turn > 130:
+            #     logging.debug(((cx, cy), (tx, ty), ret[ci, bi], t2a[ci, bi]))
+
+            assign_id[bi] = ci
             assign_grad[bi] = ret[ci, bi]
             assign_str[bi] = cstrn[ci]
             assign_prod[bi] = cprod[ci]
@@ -102,74 +125,96 @@ class MoveFinder:
         for i, (x, y) in enumerate(Cs):
             nt2c[i, ] = np.maximum(0, bstrn - cstrn[i] - assign_str) / assign_prod
             ret[i, :] = np.multiply(
-                np.divide(bprod, (np.maximum(t2a[i, :], nt2c[i, :]) + t2r)) - assign_grad + bonus,
+                np.divide(
+                    bprod,
+                    (np.maximum(t2a[i, :], nt2c[i, :]) + t2r + t2rd[i, :])
+                ) - assign_grad,
                 available[i, :]
             )
 
-        np.savetxt("ag%i.txt" % ms.turn, assign_grad)
-        np.savetxt("ap%i.txt" % ms.turn, assign_prod)
-        np.savetxt("gpre%i.txt" % ms.turn, np.divide(bprod, (np.maximum(t2a, nt2c) + t2r)))
-        np.savetxt("gret%i.txt" % ms.turn, ret)
-        np.savetxt("gt2c%i.txt" % ms.turn, np.maximum(t2a, nt2c) + t2r)
+        # np.savetxt("mats/ag%i.txt" % ms.turn, assign_grad)
+        # np.savetxt("mats/ap%i.txt" % ms.turn, assign_prod)
+        # np.savetxt("mats/gpre%i.txt" % ms.turn, np.divide(bprod, (np.maximum(t2a, nt2c) + t2r)))
+        # np.savetxt("mats/gret%i.txt" % ms.turn, ret)
+        # np.savetxt("mats/gt2c%i.txt" % ms.turn, np.maximum(t2a, nt2c) + t2r)
 
         for i in range(len(Cs)):
+            # Can I solve better with argpartition?
             ci, bi = np.unravel_index(ret.argmax(), ret.shape)
+            if ret[ci, bi] == 0:
+                break
             cx, cy = Cs[ci]
             tx, ty = Bs[bi]
-            ret[ci, :] = 0
+            # logging.debug((ms.turn, ret[ci, bi], moves[cx, cy].score))
 
-            if (cx, cy) not in moves.keys() or ret[ci, bi] > moves[(cx, cy)].score:
+            if ret[ci, bi] > moves[(cx, cy)].score:
                 moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
+
+                hi = assign_id[bi]
+                hx, hy = Cs[hi]
+
+                ret[hi, :] = 0  # The helpee can't reassign
+                if t2a[hi, bi] == 1 and t2a[ci, bi] == 1:
+                    moves[(hx, hy)].priority = -2
+                    moves[(cx, cy)].priority = -2
+
+                logging.debug((ms.turn, (cx, cy), (hx, hy), (tx, ty),
+                               ret[ci, bi], t2a[ci, bi]))
+
                 ret[:, bi] = 0
+
+            ret[ci, :] = 0
 
         # Assign moves
         for k, v in moves.items():
             mr.add_move(v)
 
     def set_base_locality(self, ms):
-        size = (5, 5)
-        origin = (2, 2)
-        volume = size[0] * size[1]
-        arr_c = 5
+        pass
+        # size = (5, 5)
+        # origin = (2, 2)
+        # volume = size[0] * size[1]
+        # arr_c = 5
 
-        mu_strn = generic_filter(ms.strn, lambda a: a.mean(),
-                                 size=size, origin=origin, mode="wrap")
-        mu_prod = generic_filter(ms.prod, lambda a: a.mean(),
-                                 size=size, origin=origin, mode="wrap")
+        # mu_strn = generic_filter(ms.strn, lambda a: a.mean(),
+        #                          size=size, origin=origin, mode="wrap")
+        # mu_prod = generic_filter(ms.prod, lambda a: a.mean(),
+        #                          size=size, origin=origin, mode="wrap")
 
-        self.Pg = volume * mu_prod
-        self.t2c = mu_prod - np.divide(arr_c * mu_strn, self.Pg)
-        self.base_locality = np.divide(mu_prod, mu_strn)
+        # self.Pg = volume * mu_prod
+        # self.t2c = mu_prod - np.divide(arr_c * mu_strn, self.Pg)
+        # self.base_locality = np.divide(mu_prod, mu_strn)
 
-        data_max = maximum_filter(self.base_locality, 5, mode="wrap")
-        self.maxima = (self.base_locality == data_max)
+        # data_max = maximum_filter(self.base_locality, 5, mode="wrap")
+        # self.maxima = (self.base_locality == data_max)
 
     def set_locality(self, ms):
         """Find the border squares with the best access to production maxima
         and boost them.
         """
-        self.brdr_global_num = np.zeros_like(ms.prod, dtype=float)
-        self.brdr_global_denom = np.zeros_like(ms.prod, dtype=float)
-        self.brdr_global_denom.fill(np.inf)
+        pass
+        # self.brdr_global_num = np.zeros_like(ms.prod, dtype=float)
+        # self.brdr_global_denom = np.zeros_like(ms.prod, dtype=float)
+        # self.brdr_global_denom.fill(np.inf)
 
-        self.gateways = []
-        maxima = copy(self.maxima)
-        maxima[np.nonzero(ms.owned)] = False
-        maxima[np.nonzero(ms.enemy)] = False
+        # self.gateways = []
+        # maxima = copy(self.maxima)
+        # maxima[np.nonzero(ms.owned)] = False
+        # maxima[np.nonzero(ms.enemy)] = False
 
-        # probably a better numpy way to do this
-        for mx, my in np.transpose(np.nonzero(maxima)):
-            dists = [ms.str_to[mx, my, bx, by] for (bx, by) in ms.border_locs]
-            bestx, besty = ms.border_locs[np.argmin(dists)]
-            self.brdr_global_num[bestx, besty] += \
-                self.base_locality[bestx, besty] * self.globality * ms.capacity  # * c
-            self.brdr_global_denom[bestx, besty] = min(
-                self.brdr_global_denom[bestx, besty], min(dists))
-            self.gateways.append((bestx, besty))
+        # # probably a better numpy way to do this
+        # for mx, my in np.transpose(np.nonzero(maxima)):
+        #     dists = [ms.str_to[mx, my, bx, by] for (bx, by) in ms.border_locs]
+        #     bestx, besty = ms.border_locs[np.argmin(dists)]
+        #     self.brdr_global_num[bestx, besty] += \
+        #         self.base_locality[bestx, besty] * self.globality * ms.capacity  # * c
+        #     self.brdr_global_denom[bestx, besty] = min(
+        #         self.brdr_global_denom[bestx, besty], min(dists))
+        #     self.gateways.append((bestx, besty))
 
-        self.brdr_global = np.divide(self.brdr_global_num, self.brdr_global_denom)
-        # self.brdr_global = np.zeros_like(self.brdr_global)
-        np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
+        # self.brdr_global = np.divide(self.brdr_global_num, self.brdr_global_denom)
+        # # self.brdr_global = np.zeros_like(self.brdr_global)
+        # # np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
 
     def set_midrange_value(self, ms):
         self.Vk = np.zeros((ms.width, ms.height, self.mr_range))
@@ -232,4 +277,4 @@ def max_in_plus(a):
 #                 self.base_locality[mx, my] * np.sqrt(ms.capacity) * \
 #                 self.globality  # / np.min(dists)
 #             self.gateways.append((bestx, besty))
-#         #  np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
+         # np.savetxt("mats/mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
