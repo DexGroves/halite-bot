@@ -18,6 +18,10 @@ class QMove:
         self.priority = priority
         self.score = score
 
+    def __repr__(self):
+        repr_ = [self.x, self.y, self.tx, self.ty, self.priority, self.score]
+        return '\t'.join([str(x) for x in repr_])
+
 
 class MoveFinder:
     """Find moves for pieces to make!"""
@@ -33,9 +37,9 @@ class MoveFinder:
 
         self.globality = 0# 1
         self.min_util = 0.2
-        self.mr_range = 3
+        self.mr_range = 15
         self.mr_k = 0.81
-        self.mr_c = 0.2
+        self.mr_c = 0.000005
 
         self.min_dpdt = config['min_dpdt']
         self.roi_skew = config['roi_skew']
@@ -79,12 +83,16 @@ class MoveFinder:
         assign_str = np.zeros(len(Bs))
         assign_prod = np.zeros(len(Bs))
         assign_prod = np.zeros(len(Bs))
+        assign_id.fill(-1)
         assign_prod.fill(0.0001)
+
+        c_issued = np.zeros(len(Cs), dtype=bool)
+        b_taken = np.zeros(len(Bs), dtype=bool)
 
         bonus = self.mrv[ms.border_idx]
         # t2a = [ms.dists[x, y, a, b] for (x, y) in Cs for (a, b) in Bs]
 
-        # First pass
+        # First pass ##########################################################
         for i, (x, y) in enumerate(Cs):
             t2a[i, ] = ms.dists[x, y, :, :][ms.border_idx].flatten()
             t2c[i, ] = np.maximum(0, bstrn - cstrn[i]) / cprod[i]
@@ -92,10 +100,10 @@ class MoveFinder:
             ret[i, :] = np.divide(
                 bprod,
                 (np.maximum(t2a[i, :], t2c[i, :]) + t2r + t2rd[i, :])
-            )
+            ) + bonus
         # np.savetxt("mats/cstrn%i.txt" % ms.turn, cstrn)
         # np.savetxt("mats/bstrn%i.txt" % ms.turn, bstrn)
-        np.savetxt("mats/ret%i.txt" % ms.turn, ret)
+        # np.savetxt("mats/ret%i.txt" % ms.turn, ret)
         # np.savetxt("mats/brod%i.txt" % ms.turn, bprod)
         # np.savetxt("mats/t2c%i.txt" % ms.turn, np.maximum(t2a, t2c) + t2r)
 
@@ -108,10 +116,12 @@ class MoveFinder:
             tx, ty = Bs[bi]
             moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
 
+            c_issued[ci] = True
+            if cstrn[ci] >= bstrn[bi]:
+                b_taken[bi] = True
             # if ms.turn > 130:
             #     logging.debug(((cx, cy), (tx, ty), ret[ci, bi], t2a[ci, bi]))
 
-            assign_id[bi] = ci
             assign_grad[bi] = ret[ci, bi]
             assign_str[bi] = cstrn[ci]
             assign_prod[bi] = cprod[ci]
@@ -119,8 +129,66 @@ class MoveFinder:
 
             ret[ci, :] = 0
             ret[:, bi] = 0
+            # if assign_id[bi] == -1:
+            #     ret[:, bi] = bonus[bi]
+            assign_id[bi] = ci
 
-        # Second pass for teamups
+        # Second pass over unassigned cells and new borders ###################
+        if len(Cs) == 1:
+            nCs = []
+        else:
+            nCs = [loc for (i, loc) in enumerate(Cs) if not c_issued[i]]
+
+        new_borders = np.zeros_like(ms.border_mat, dtype=bool)
+        for bi in range(len(Bs)):
+            if b_taken[bi]:
+                bx, by = Bs[bi]
+                for (nx, ny) in ms.nbrs[bx, by]:
+                    new_borders[nx, ny] = True
+
+        new_borders = np.multiply(new_borders, ms.owned == 0)
+        new_borders[ms.border_idx] = False
+        nB_idx = np.nonzero(new_borders)
+        nBs = np.transpose(nB_idx)
+
+        cstrn_sec = np.fromiter((ms.strn[x, y] for (x, y) in nCs), int)
+        cprod_sec = np.fromiter((ms.prodfl[x, y] for (x, y) in nCs), float)
+        bstrn_sec = np.fromiter((ms.strn[bx, by] for (bx, by) in nBs), int)
+        bprod_sec = np.fromiter((ms.prodfl[bx, by] for (bx, by) in nBs), float)
+
+        ret_sec = np.zeros((len(nCs), len(nBs)))
+        t2c_sec = np.zeros((len(nCs), len(nBs)))
+        t2a_sec = np.zeros((len(nCs), len(nBs)))
+        t2rd_sec = np.zeros((len(nCs), len(nBs)))
+        t2r_sec = np.divide(bstrn_sec, bprod_sec)
+
+        bonus_sec = self.mrv[nB_idx]
+
+        for i, (x, y) in enumerate(nCs):
+            t2a_sec[i, ] = ms.dists[x, y, :, :][nB_idx].flatten()
+            t2c_sec[i, ] = np.maximum(0, bstrn_sec - cstrn_sec[i]) / cprod_sec[i]
+            t2rd_sec[i, ] = np.divide(ms.prod_mu * t2a_sec[i, ], bprod_sec)
+            ret_sec[i, :] = np.divide(
+                bprod_sec,
+                (np.maximum(t2a_sec[i, :], t2c_sec[i, :]) + t2r_sec + t2rd_sec[i, :])
+            ) + bonus_sec
+
+        for i in range(len(nCs)):
+            if ret_sec.shape[0] == 0 or ret_sec.shape[1] == 0:
+                break
+
+            ci, bi = np.unravel_index(ret_sec.argmax(), ret_sec.shape)
+            if ret_sec[ci, bi] == 0:
+                break
+
+            cx, cy = nCs[ci]
+            tx, ty = nBs[bi]
+            moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret_sec[ci, bi]))
+
+            ret_sec[ci, :] = 0
+            ret_sec[:, bi] = 0
+
+        # Third pass for teamups ##############################################
         nt2c = np.zeros((len(Cs), len(Bs)))
         for i, (x, y) in enumerate(Cs):
             nt2c[i, ] = np.maximum(0, bstrn - cstrn[i] - assign_str) / assign_prod
@@ -128,7 +196,7 @@ class MoveFinder:
                 np.divide(
                     bprod,
                     (np.maximum(t2a[i, :], nt2c[i, :]) + t2r + t2rd[i, :])
-                ) - assign_grad,
+                ) - assign_grad + bonus,
                 available[i, :]
             )
 
@@ -136,6 +204,7 @@ class MoveFinder:
         # np.savetxt("mats/ap%i.txt" % ms.turn, assign_prod)
         # np.savetxt("mats/gpre%i.txt" % ms.turn, np.divide(bprod, (np.maximum(t2a, nt2c) + t2r)))
         # np.savetxt("mats/gret%i.txt" % ms.turn, ret)
+        # np.savetxt("mats/Cs%i.txt" % ms.turn, Cs)
         # np.savetxt("mats/gt2c%i.txt" % ms.turn, np.maximum(t2a, nt2c) + t2r)
 
         for i in range(len(Cs)):
@@ -147,19 +216,21 @@ class MoveFinder:
             tx, ty = Bs[bi]
             # logging.debug((ms.turn, ret[ci, bi], moves[cx, cy].score))
 
+            # Note: not handling people getting reassigned in earlier loop here
+            # Can probably do this with ret[hi, :] == 0
             if ret[ci, bi] > moves[(cx, cy)].score:
-                moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
-
                 hi = assign_id[bi]
                 hx, hy = Cs[hi]
 
-                ret[hi, :] = 0  # The helpee can't reassign
                 if t2a[hi, bi] == 1 and t2a[ci, bi] == 1:
-                    moves[(hx, hy)].priority = -2
-                    moves[(cx, cy)].priority = -2
+                    moves[(cx, cy)] = (QMove(cx, cy, tx, ty, -2, ret[ci, bi]))
+                    moves[(hx, hy)] = (QMove(hx, hy, tx, ty, -2, ret[ci, bi]))
+                else:
+                    moves[(cx, cy)] = (QMove(cx, cy, tx, ty, 0, ret[ci, bi]))
 
-                logging.debug((ms.turn, (cx, cy), (hx, hy), (tx, ty),
-                               ret[ci, bi], t2a[ci, bi]))
+                ret[hi, :] = 0  # The helpee can't reassign
+                # logging.debug((ms.turn, (cx, cy), (hx, hy), (tx, ty),
+                #                ret[ci, bi], t2a[ci, bi]))
 
                 ret[:, bi] = 0
 
@@ -217,17 +288,21 @@ class MoveFinder:
         # # np.savetxt("mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
 
     def set_midrange_value(self, ms):
-        self.Vk = np.zeros((ms.width, ms.height, self.mr_range))
-        self.mrv = np.zeros((ms.width, ms.height))
+        # self.Vk = np.zeros((ms.width, ms.height, self.mr_range))
+        # self.mrv = np.zeros((ms.width, ms.height))
 
-        self.Vk[:, :, 0] = np.divide(ms.prod ** 2, ms.strn)
-        self.Vk[:, :, 0][np.where(ms.unclaimed == 0)] = 0
-        # self.mrv += self.Vk[:, :, 0]
+        # self.Vk[:, :, 0] = np.divide(ms.prod ** 2, ms.strn)
+        # self.Vk[:, :, 0][np.where(ms.unclaimed == 0)] = 0
+        # # self.mrv += self.Vk[:, :, 0]
 
-        for k in range(1, self.mr_range):
-            self.Vk[:, :, k] = max_in_plus(self.Vk[:, :, k - 1])
-            self.mrv += self.mr_k * self.Vk[:, :, 0]
+        # for k in range(1, self.mr_range):
+        #     self.Vk[:, :, k] = max_in_plus(self.Vk[:, :, k - 1])
+        #     self.mrv += self.mr_k * self.Vk[:, :, 0]
 
+        # self.mrv *= self.mr_c
+        self.mrv = gaussian_filter(np.divide(ms.prod ** 2, ms.strnc),
+                                   self.mr_range,
+                                   mode="wrap")
         self.mrv *= self.mr_c
         np.savetxt("mrv.txt", self.mrv)
 
@@ -277,4 +352,4 @@ def max_in_plus(a):
 #                 self.base_locality[mx, my] * np.sqrt(ms.capacity) * \
 #                 self.globality  # / np.min(dists)
 #             self.gateways.append((bestx, besty))
-         # np.savetxt("mats/mats/brdr_global%i.txt" % ms.turn, self.brdr_global)
+#         np.savetxt("mats/mats/brdr_global%i.txt" % ms.turn, self.brdr_global)

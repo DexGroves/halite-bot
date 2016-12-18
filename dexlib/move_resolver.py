@@ -28,7 +28,8 @@ class MoveResolver:
 
         priorities = sorted(self.moves.keys())
         for priority in priorities:
-            self.moves[priority].sort(key=operator.attrgetter('score'))
+            self.moves[priority].sort(key=operator.attrgetter('score'),
+                                      reverse=True)
 
             for move in self.moves[priority]:
                 if move.x is None:
@@ -67,7 +68,9 @@ class MoveResolver:
             self.landscape[fx, fy] += strn
             if ms.combat[fx, fy]:
                 self.set_combat_patch(ms, move.x, move.y, fx, fy)
-
+                np.savetxt("mscombat.txt", ms.combat)
+                np.savetxt("msenemy.txt", ms.enemy)
+                np.savetxt("msstrn.txt", ms.strn)
             # logging.debug(
             #     (ms.turn, (move.x, move.y), (fx, fy), 'first card')
             # )
@@ -80,7 +83,9 @@ class MoveResolver:
             self.landscape[sx, sy] += strn
             if ms.combat[sx, sy]:
                 self.set_combat_patch(ms, move.x, move.y, sx, sy)
-
+                np.savetxt("mscombat.txt", ms.combat)
+                np.savetxt("msenemy.txt", ms.enemy)
+                np.savetxt("msstrn.txt", ms.strn)
             # logging.debug(
             #     (ms.turn, (move.x, move.y), (sx, sy), 'second card')
             # )
