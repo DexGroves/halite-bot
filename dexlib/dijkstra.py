@@ -2,9 +2,12 @@
 
 
 import itertools
+import networkx as nex
 import numpy as np
 from scipy.sparse import dok_matrix
 from scipy.sparse.csgraph import dijkstra
+import logging
+logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
 class ShortestPather:
@@ -48,8 +51,53 @@ class ShortestPather:
         """Return a dictionary of the neighbours and cost of x, y."""
         neighbours = [((x + 1) % self.w, y), ((x - 1) % self.w, y),
                       (x, (y + 1) % self.h), (x, (y - 1) % self.h)]
-        # The strn of the to-block and the prod of the from-block
         return {(nx, ny): costs[nx, ny] for (nx, ny) in neighbours}
+
+    def get_vertex(self, x, y):
+        """Return the index of vertices containing the pt x, y."""
+        return (x * self.h) + y
+
+
+class InternalPather:
+
+    def __init__(self, ms):
+        self.w, self.h = ms.prod.shape
+        self.vertices = list(itertools.product(range(self.w), range(self.h)))
+        self.nbrs = {v: self.get_nbrs(v) for v in range(len(self.vertices))}
+
+        self.G = nex.Graph()
+        self.G.add_nodes_from(self.vertices)
+
+        self.cache = {}
+
+    def update(self, ms):
+        # Faster to do incremental but this probably isn't slow
+        self.G.remove_edges_from(self.G.edges())
+
+        for x, y in ms.owned_locs:
+            vi = self.get_vertex(x, y)
+            for ni in self.nbrs[vi]:
+                self.G.add_edge(vi, ni)
+
+    def get_path_and_len(self, x, y, tx, ty):
+        vo = self.get_vertex(x, y)
+        vd = self.get_vertex(tx, ty)
+
+        # logging.debug(('getpath', x, y, tx, ty, self.cache))
+        if (vo, vd) not in self.cache:
+            sp = nex.shortest_path(self.G, source=vo, target=vd)
+            self.cache[(vo, vd)] = self.vertices[sp[1]], len(sp)
+
+            # logging.debug(sp)
+            # logging.debug([self.vertices[s] for s in sp])
+        return self.cache[(vo, vd)]
+
+    def get_nbrs(self, v):
+        """Return a dictionary of the neighbours and cost of x, y."""
+        x, y = self.vertices[v]
+        neighbours = [((x + 1) % self.w, y), ((x - 1) % self.w, y),
+                      (x, (y + 1) % self.h), (x, (y - 1) % self.h)]
+        return [self.get_vertex(nx, ny) for (nx, ny) in neighbours]
 
     def get_vertex(self, x, y):
         """Return the index of vertices containing the pt x, y."""

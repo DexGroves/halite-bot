@@ -54,8 +54,8 @@ class MoveFinder:
             )
             terroir_dist = np.divide(
                 terroir_mask,
-                self.bs2o + (t2a * 5) + 10
-            )
+                self.bs2o + (t2a * 2) + 100
+            ) * 10
             heur_dist = value_dist + terroir_dist
             tx, ty = np.unravel_index(heur_dist.argmax(), value_dist.shape)
             mx, my = self.map[(tx, ty)]
