@@ -51,7 +51,7 @@ class MoveFinder:
             value_dist = np.divide(
                 np.multiply(str_bonus, self.value),
                 (t2a ** 2) + t2c + t2r
-            ) * 0
+            )
             terroir_dist = np.divide(
                 terroir_mask,
                 self.bs2o + (t2a * 5) + 10
@@ -61,11 +61,6 @@ class MoveFinder:
             mx, my = self.map[(tx, ty)]
             moves[(x, y)] = QMove(x, y, mx, my, 1, value_dist[tx, ty])
             logging.debug((ms.turn, (x, y), (tx, ty), (mx, my)))
-            # np.savetxt("value.txt", self.value)
-            # np.savetxt("valuedist.txt", value_dist)
-            #  np.savetxt("vcn.txt", np.maximum(0, ms.strn - ms.strn[x, y]))
-            # np.savetxt("vcd.txt", max(0.01, ms.prodfl[x, y]))
-            # np.savetxt("vc.txt", t2c)
 
         for k, v in moves.items():
             mr.add_move(v)
