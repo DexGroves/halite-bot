@@ -2,7 +2,7 @@
 
 
 import numpy as np
-import dexbot.matrix_roller as mr
+import refbot.matrix_roller as mr
 
 
 class MapState(object):
@@ -14,6 +14,8 @@ class MapState(object):
 
         self._set_production(game_map)
         self.update(game_map)
+
+        self.turn = 0
 
     def update(self, game_map):
         self._set_map_parameters(game_map)

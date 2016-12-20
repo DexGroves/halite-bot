@@ -1,0 +1,20 @@
+{
+    "roi_boost": 2,
+
+    "warmongery": 0.2,
+    "assumed_combat": 40,
+    "dist_lim": 1,
+
+    "combat_wait": 1,
+    "noncombat_wait": 3,
+    "max_wait": 8,
+
+    "min_dpdt": 0.005,
+    "roi_skew": 2,
+
+    "blur_sigma": 5,
+
+    "global_exponent": 0.5,
+
+    "name": "DexBot"
+}

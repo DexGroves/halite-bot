@@ -48,7 +48,7 @@ for (nopp in seq(2, 3, 1)) {
   }
 }
 
-dc <- run_playoff(500,  44, 10000, 20, 2, "dexbot.config")
+dc <- run_playoff(100,  44, 20000, 30, 1, "")
 # dexbot.config is the best for HU on all map sizes it seems
 
 

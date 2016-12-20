@@ -1,30 +1,28 @@
-import json
-import timeit
 import argparse
-from halitesrc.hlt import *
-from halitesrc.networking import *
-from dexbot.dexbot import DexBot
-from dexbot.get_config import get_config
+import json
+from dexlib.bot_api import BotAPI
+from dexlib.game_state import send_init, send_frame, get_init
+
 
 parser = argparse.ArgumentParser(description='Dexbot!')
 parser.add_argument('config', type=str, default="choose",
                     help='Config file location', nargs='?')
 args = parser.parse_args()
-
-my_id, game_map = getInit()
-
 if args.config == "choose":
-    config_filename = get_config(game_map)
-else:
-    config_filename = args.config
+    args.config = "configs/dexbot.config"
 
-config = json.load(open(config_filename, "r"))
-db = DexBot(my_id, game_map, config)
+config = json.load(open(args.config, "r"))
 
-sendInit(config['name'])
+
+my_id, map_state = get_init()
+bot = BotAPI(map_state, config)
+
+send_init(config['name'])
+
+
 while True:
-    start_time = timeit.default_timer()
-    game_map = getFrame()
-    db.update(game_map)
-    moves = db.move(start_time)
-    sendFrame(moves)
+    map_state.get_frame()
+    bot.update(map_state)
+    moves = bot.get_moves(map_state)
+
+    send_frame(moves)

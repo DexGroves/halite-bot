@@ -4,46 +4,31 @@ library("stringr")
 library("foreach")
 library("doMC")
 
-epm_range =               seq(0.7, 1.3, length.out = 100)
-bsm_range =               seq(-0.02, -0.2, length.out = 100)
-esm_range =               seq(-0.002, -0.2, length.out = 100)
-eprox_range =             seq(0.05, 0.25, length.out = 100)
-bprox_range =             seq(0.5, 1.5, length.out = 100)
-splash_range =            seq(0.001, 0.05, length.out = 100)
-stay_val_range =          seq(0.8, 1.5, length.out = 100)
-max_edge_str_range =      seq(300, 400, length.out = 100)
-max_stay_strn_range =     seq(25, 75, length.out = 100)
-falloff_range =           seq(1.8, 2.2, length.out = 100)
-border_cutoff_range =     seq(45, 65, length.out = 100)
-stay_border_bonus_range = seq(0, 0.1, length.out = 100)
-min_wait_turns_range =    seq(2,7)
-
-earlygame_max_t_range =      seq(12,48)
-earlygame_order_range =      seq(4,7)
-earlygame_max_area_range =   seq(4,16)
-earlygame_decay_range =      c(TRUE, FALSE)
-earlygame_all_border_range = c(TRUE, FALSE)
+roi_boost_range = seq(0.5, 3.0, length.out = 100)
+warmongery_range = seq(0.2, 2, length.out = 100)
+assumed_combat_range = seq(0, 120, length.out = 100)
+dist_lim_range = seq(1, 4, length.out = 100)
+combat_wait_range = seq(0.5, 3.5, length.out = 100)
+noncombat_wait_range = seq(1.5, 6.5, length.out = 100)
+max_wait_range = seq(5.5, 9.5, length.out = 100)
+min_dpdt_range = seq(0.001, 0.01, length.out = 100)
+roi_skew_range = seq(1.2, 3.5, length.out = 100)
+blur_sigma_range = seq(2, 8, length.out = 100)
+global_exponent_range = seq(0.2, 1.2, length.out = 100)
 
 sample_new_config <- function(N = 1) {
   list(
-    epm =           sample(epm_range, N, TRUE),
-    bsm =           sample(bsm_range, N, TRUE),
-    esm =           sample(esm_range, N, TRUE),
-    eprox =         sample(eprox_range, N, TRUE),
-    bprox =         sample(bprox_range, N, TRUE),
-    splash =        sample(splash_range, N, TRUE),
-    stay_val =      sample(stay_val_range, N, TRUE),
-    max_edge_str =  sample(max_edge_str_range, N, TRUE),
-    max_stay_strn = sample(max_stay_strn_range, N, TRUE),
-    falloff =       sample(falloff_range, N, TRUE),
-    border_cutoff = sample(border_cutoff_range, N, TRUE),
-    stay_border_bonus = sample(stay_border_bonus_range, N, TRUE),
-    earlygame_max_t = sample(earlygame_max_t_range, N, TRUE),
-    earlygame_order = sample(earlygame_order_range, N, TRUE),
-    earlygame_max_area = sample(earlygame_max_area_range, N, TRUE),
-    earlygame_decay = sample(earlygame_decay_range, N, TRUE),
-    earlygame_all_border = sample(earlygame_all_border_range, N, TRUE),
-    min_wait_turns = sample(min_wait_turns_range, N, TRUE),
+    roi_boost = sample(roi_boost_range, N, TRUE),
+    warmongery = sample(warmongery_range, N, TRUE),
+    assumed_combat = sample(assumed_combat_range, N, TRUE),
+    dist_lim = sample(dist_lim_range, N, TRUE),
+    combat_wait = sample(combat_wait_range, N, TRUE),
+    noncombat_wait = sample(noncombat_wait_range, N, TRUE),
+    max_wait = sample(max_wait_range, N, TRUE),
+    min_dpdt = sample(min_dpdt_range, N, TRUE),
+    roi_skew = sample(roi_skew_range, N, TRUE),
+    blur_sigma = sample(blur_sigma_range, N, TRUE),
+    global_exponent = sample(global_exponent_range, N, TRUE),
     name = paste0("DexBot_", seq(N))
   )
 }
@@ -61,10 +46,10 @@ build_call <- function(dim, configs) {
 
 # 11s per conf-core
 nplayers <- 4
-nrounds <- 5
-ngame_r1 <- 18
-dim <- 20
-ncore <- 36
+nrounds <- 4
+ngame_r1 <- 24
+dim <- 40
+ncore <- 48
 
 nconfs <- nplayers ^ nrounds
 
@@ -113,22 +98,12 @@ for (round in seq(nrounds-1)) {
   configs <- configs[configs$agg_placement == 1, ]
 }
 })
-test <- readRDS(configs, file="confs.RDS")
-#            epm        bsm    esm      eprox     bprox     splash  stay_val max_edge_str max_stay_strn  falloff border_cutoff stay_border_bonus
-# 138  1.1787879 -0.1563636 -0.150 0.08232323 0.9141414 0.04604040 1.1818182     356.5657      44.69697 1.973737      48.63636       0.053535354
-# 286  1.1666667 -0.1290909 -0.032 0.25000000 0.6414141 0.01386869 0.8777778     319.1919      59.84848 1.929293      46.41414       0.067676768
-# 746  0.7181818 -0.1436364 -0.196 0.09646465 0.9242424 0.01535354 1.1606061     328.2828      65.40404 2.070707      64.59596       0.060606061
-# 1022 0.9060606 -0.1054545 -0.062 0.17121212 0.8838384 0.02277778 0.8141414     387.8788      64.89899 1.981818      57.32323       0.005050505
-#      earlygame_max_t earlygame_order earlygame_max_area earlygame_decay earlygame_all_border min_wait_turns        name ave_placement agg_placement
-# 138               19               5                  8           FALSE                FALSE              2  DexBot_138      2.319444             1
-# 286               32               7                  9           FALSE                FALSE              4  DexBot_286      2.173611             1
-# 746               44               4                 13            TRUE                FALSE              3  DexBot_746      2.347222             1
-# 1022              16               5                 10           FALSE                FALSE              5 DexBot_1022      2.326389             1
-
+# test <- readRDS(configs, file="confs.RDS")
+# test <- test[test$agg_placement == 1, ]
+# configs <- test
 this_confs <- configs
-
 call <- build_call(dim, as.character(this_confs$name))
-results <- foreach(i = seq(4000), .combine = rbind) %dopar% {
+results <- foreach(i = seq(1000), .combine = rbind) %dopar% {
   cat(".")
   system(call, intern = TRUE) %>%
     tail(nplayers) %>%
@@ -138,9 +113,10 @@ results <- foreach(i = seq(4000), .combine = rbind) %dopar% {
 apply(results, 2, mean)
 system("rm *.hlt")
 res <- apply(results, 2, mean)
-configs <- configs[1:4]
-configs["ave_placement", ] <- res
-configs["agg_placement", ] <- sapply(seq(nplayers),
+configs <- configs[1:4, ]
+configs[, "ave_placement"] <- res
+configs[, "agg_placement"] <- sapply(seq(nplayers),
                                    function(x) which(order(res) == x))
 
 }
+# dexbot_157
