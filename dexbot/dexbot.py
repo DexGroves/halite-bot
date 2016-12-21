@@ -77,28 +77,14 @@ class DexBot(object):
         mq.order_locs_by_strength(self.appraiser)
 
         for i, (x, y) in enumerate(mq.rem_locs):
-            # Handle timeout
-            # check_time = i % self.time_chk_freq == 1
-            check_time = False  # I don't give a fuck
-
-            if check_time:
-                elapsed = timeit.default_timer() - start_time
-            if check_time and elapsed > self.max_time:
-                # Panic mode, everything stays!
-                mq.moves[mq.nmoved:] = [Move(Location(x, y), 0)
-                                        for (x, y) in mq.rem_locs[i:]]
-                break
-
             (nx, ny), move_value = self.appraiser.get_best_target(self.map_state, x, y)
             # stay_value = self.appraiser.get_stay_value(x, y)
 
             if self.map_state.strn[x, y] <= (self.map_state.prod[x, y] * self.min_wait):
-                mq.pend_move(x, y, x, y)
-            # if # stay_value > move_value or \
+                mq.pend_move(x, y, x, y, 0)
 
             else:
-                # direction = self.pathfinder.find_path(x, y, nx, ny, self.map_state)
-                mq.pend_move(x, y, nx, ny)
+                mq.pend_move(x, y, nx, ny, move_value)
 
         self.turn += 1
 

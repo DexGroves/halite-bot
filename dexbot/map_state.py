@@ -11,6 +11,7 @@ class MapState(object):
         self.width = game_map.width
         self.height = game_map.height
         self.my_id = my_id
+        self.nbrs = self._get_nbrs()
 
         self._set_production(game_map)
         self.update(game_map)
@@ -246,6 +247,16 @@ class MapState(object):
         #     self.danger_close = np.minimum(self.danger_close, 1)
         #     self.danger_close = np.multiply(self.danger_close, self.blank)
         #     self.danger_close = np.multiply(self.danger_close, self.strn > 80)
+
+    def _get_nbrs(self):
+        nbrs = {}
+        for x in range(self.width):
+            for y in range(self.height):
+                nbrs[(x, y)] = [((x + 1) % self.width, y),
+                                ((x - 1) % self.width, y),
+                                (x, (y + 1) % self.height),
+                                (x, (y - 1) % self.height)]
+        return nbrs
 
 
 class CardinalityError(ValueError):
