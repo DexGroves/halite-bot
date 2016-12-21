@@ -112,6 +112,7 @@ class GameState(GameMap):
     def _set_globals(self):
         self.capacity = np.sum(self.prod[np.nonzero(self.owned)])
         self.size = np.sum(self.owned)
+        self.size_frac = self.size / (self.width * self.height)
         self.prod_mu = self.capacity / self.size
 
     def _get_nbrs(self):

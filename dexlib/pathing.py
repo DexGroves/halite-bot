@@ -1,7 +1,7 @@
 import numpy as np
 from dexlib.dijkstra import InternalPather
-import logging
-logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
+# import logging
+# logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
 class PathFinder(object):
@@ -13,7 +13,8 @@ class PathFinder(object):
         self.ip = InternalPather(ms)
 
     def update(self, ms):
-        self.ip.update(ms)
+        if ms.size_frac <= 0.2:
+            self.ip.update(ms)
 
     def find_pref_cardinal(self, x, y, nx, ny, ms):
         """Return the naive best way to go without a backup."""
@@ -66,6 +67,9 @@ class PathFinder(object):
         return 0  # Still!
 
     def find_pref_next(self, x, y, tx, ty, ms):
+        if ms.size_frac > 0.2:
+            return self.find_pref_next_naive(x, y, tx, ty, ms)
+
         if ms.dists[x, y, tx, ty] == 1:
             return self.find_pref_next_naive(x, y, tx, ty, ms)
 
@@ -80,10 +84,11 @@ class PathFinder(object):
 
         best_is = np.argsort(plens)
 
-        return_ = Ns[best_is[0]], Ns[best_is[1]]
+        if plens[best_is[0]] == 99999:
+            return self.find_pref_next_naive(x, y, tx, ty, ms)
 
         # logging.info((ms.turn, (x, y), plens, return_))
-        return return_
+        return Ns[best_is[0]], Ns[best_is[1]]
 
     def find_pref_next_naive(self, x, y, nx, ny, ms):
         """Return two target x,y tuples in order of preference.

@@ -6,8 +6,8 @@ import networkx as nex
 import numpy as np
 from scipy.sparse import dok_matrix
 from scipy.sparse.csgraph import dijkstra
-import logging
-logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
+# import logging
+# logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
 class ShortestPather:
@@ -69,6 +69,7 @@ class InternalPather:
         self.G.add_nodes_from(self.vertices)
 
         self.cache = {}
+        # pickle.dump(file=open('argh.pk', 'wb'), obj=self.vertices)
 
     def update(self, ms):
         # Faster to do incremental but this probably isn't slow
@@ -85,9 +86,11 @@ class InternalPather:
 
         # logging.debug(('getpath', x, y, tx, ty, self.cache))
         if (vo, vd) not in self.cache:
-            sp = nex.shortest_path(self.G, source=vo, target=vd)
-            self.cache[(vo, vd)] = self.vertices[sp[1]], len(sp)
-
+            try:
+                sp = nex.shortest_path(self.G, source=vo, target=vd)
+                self.cache[(vo, vd)] = self.vertices[sp[1]], len(sp)
+            except:
+                self.cache[(vo, vd)] = (tx, ty), 99999
             # logging.debug(sp)
             # logging.debug([self.vertices[s] for s in sp])
         return self.cache[(vo, vd)]

@@ -1,8 +1,8 @@
 import operator
 import numpy as np
 from dexlib.game_state import Move
-import logging
-logging.basicConfig(filename='bo.info', filemode="w", level=logging.DEBUG)
+# import logging
+# logging.basicConfig(filename='bo.info', filemode="w", level=logging.DEBUG)
 
 
 class MoveResolver:
@@ -68,9 +68,9 @@ class MoveResolver:
             self.landscape[fx, fy] += strn
             if ms.combat[fx, fy]:
                 self.set_combat_patch(ms, move.x, move.y, fx, fy)
-                np.savetxt("mscombat.txt", ms.combat)
-                np.savetxt("msenemy.txt", ms.enemy)
-                np.savetxt("msstrn.txt", ms.strn)
+                # np.savetxt("mscombat.txt", ms.combat)
+                # np.savetxt("msenemy.txt", ms.enemy)
+                # np.savetxt("msstrn.txt", ms.strn)
             # logging.debug(
             #     (ms.turn, (move.x, move.y), (fx, fy), 'first card')
             # )
@@ -83,9 +83,9 @@ class MoveResolver:
             self.landscape[sx, sy] += strn
             if ms.combat[sx, sy]:
                 self.set_combat_patch(ms, move.x, move.y, sx, sy)
-                np.savetxt("mscombat.txt", ms.combat)
-                np.savetxt("msenemy.txt", ms.enemy)
-                np.savetxt("msstrn.txt", ms.strn)
+                # np.savetxt("mscombat.txt", ms.combat)
+                # np.savetxt("msenemy.txt", ms.enemy)
+                # np.savetxt("msstrn.txt", ms.strn)
             # logging.debug(
             #     (ms.turn, (move.x, move.y), (sx, sy), 'second card')
             # )
