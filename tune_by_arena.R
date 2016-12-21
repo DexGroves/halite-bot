@@ -4,31 +4,25 @@ library("stringr")
 library("foreach")
 library("doMC")
 
-roi_boost_range = seq(0.5, 3.0, length.out = 100)
-warmongery_range = seq(0.2, 2, length.out = 100)
-assumed_combat_range = seq(0, 120, length.out = 100)
-dist_lim_range = seq(1, 4, length.out = 100)
-combat_wait_range = seq(0.5, 3.5, length.out = 100)
-noncombat_wait_range = seq(1.5, 6.5, length.out = 100)
-max_wait_range = seq(5.5, 9.5, length.out = 100)
-min_dpdt_range = seq(0.001, 0.01, length.out = 100)
-roi_skew_range = seq(1.2, 3.5, length.out = 100)
-blur_sigma_range = seq(2, 8, length.out = 100)
-global_exponent_range = seq(0.2, 1.2, length.out = 100)
+assumed_cstrn_range = c(5, 10, 25, 80)
+wait_ratio_range = c(3, 5, 7)
+value_t2a_exp_range = c(1.5, 2, 2.5)
+terr_multi_range = c(5, 10, 15, 25)
+terr_t2a_multi_range = c(1, 2, 5)
+terr_intercept_range = c(50, 100, 250)
+enemy_multi_range = c(1, 1.3, 1.8)
+danger_close_multi_range = c(3.0, 6.5, 10.0)
 
 sample_new_config <- function(N = 1) {
   list(
-    roi_boost = sample(roi_boost_range, N, TRUE),
-    warmongery = sample(warmongery_range, N, TRUE),
-    assumed_combat = sample(assumed_combat_range, N, TRUE),
-    dist_lim = sample(dist_lim_range, N, TRUE),
-    combat_wait = sample(combat_wait_range, N, TRUE),
-    noncombat_wait = sample(noncombat_wait_range, N, TRUE),
-    max_wait = sample(max_wait_range, N, TRUE),
-    min_dpdt = sample(min_dpdt_range, N, TRUE),
-    roi_skew = sample(roi_skew_range, N, TRUE),
-    blur_sigma = sample(blur_sigma_range, N, TRUE),
-    global_exponent = sample(global_exponent_range, N, TRUE),
+    assumed_cstrn = sample(assumed_cstrn_range, N, TRUE),
+    wait_ratio = sample(wait_ratio_range, N, TRUE),
+    value_t2a_exp = sample(value_t2a_exp_range, N, TRUE),
+    terr_multi = sample(terr_multi_range, N, TRUE),
+    terr_t2a_multi = sample(terr_t2a_multi_range, N, TRUE),
+    terr_intercept = sample(terr_intercept_range, N, TRUE),
+    enemy_multi = sample(enemy_multi_range, N, TRUE),
+    danger_close_multi = sample(danger_close_multi_range, N, TRUE),
     name = paste0("DexBot_", seq(N))
   )
 }
