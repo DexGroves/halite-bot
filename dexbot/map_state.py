@@ -101,8 +101,9 @@ class MapState(object):
         elif (dx, dy) == (-1, 0):
             return 4
         else:
-            print(repr((x, y)) + '\t' + repr((nx, ny)) + '\t' + repr((dx, dy)) + repr((self.width, self.height)))
-            raise CardinalityError
+            # print(repr((x, y)) + '\t' + repr((nx, ny)) + '\t' + repr((dx, dy)) + repr((self.width, self.height)))
+            # raise CardinalityError
+            return 0
 
     def get_neighbours(self, x, y):
         return [self.cardinal_to_nxny(x, y, cardinal) for cardinal in [1, 2, 3, 4]]

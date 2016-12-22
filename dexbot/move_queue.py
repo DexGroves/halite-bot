@@ -165,7 +165,7 @@ class MoveResolver(MoveQueue):
         if (self.landscape[fx, fy] + strn) <= max(strn, 255):
             # Can move safely, so do it
             self.landscape[fx, fy] += strn
-            if ms.combat[fx, fy]:
+            if ms.enemy_2brd[x, y]:
                 self.set_combat_patch(ms, x, y, fx, fy)
             return fx, fy
 
@@ -173,7 +173,7 @@ class MoveResolver(MoveQueue):
                 (self.landscape[sx, sy] + strn) <= max(strn, 255):
             # Maybe our second cardinal is better
             self.landscape[sx, sy] += strn
-            if ms.combat[sx, sy]:
+            if ms.enemy_2brd[x, y]:
                 self.set_combat_patch(ms, x, y, sx, sy)
             return sx, sy
 
@@ -248,7 +248,7 @@ class MoveResolver(MoveQueue):
 
     def set_combat_patch(self, ms, x, y, nx, ny):
         for nbrx, nbry in ms.nbrs[nx, ny]:
-            self.landscape[nbrx, nbry] += ms.strn[x, y]
+            self.landscape[nbrx, nbry] += ms.strn[x, y] - 1
 
     def write_moves(self, ms):
         """Actually make the move objects and get on with it."""
@@ -282,9 +282,10 @@ class MoveResolver(MoveQueue):
         elif (dx, dy) == (-1, 0):
             return 4
         else:
-            print(repr((x, y)) + '\t' + repr((nx, ny)) + '\t' + repr((dx, dy)) +
-                  repr((ms.width, ms.height)))
-            raise CardinalityError
+            return 0
+            # print(repr((x, y)) + '\t' + repr((nx, ny)) + '\t' + repr((dx, dy)) +
+            #       repr((ms.width, ms.height)))
+            # raise CardinalityError
 
 
 class CardinalityError(ValueError):
