@@ -97,7 +97,7 @@ class ImprovedGameMap(GameMap):
 
         # self.border = self.plus_filter(self.enemy + self.blank, max) * self.owned
         # Unowned border cells
-        self.ubrdr = self.plus_filter(self.owned) - self.owned
+        self.ubrdr = self.plus_filter(self.owned, max) - self.owned
 
         # Owned prod and strn
         self.ostrn = self.strn * self.owned
