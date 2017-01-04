@@ -13,6 +13,9 @@ playoff:
 run:
 	./scripts/runGame.sh
 
+solo:
+	halite -d "30 30" "python3 MyBot.py"
+
 rj:
 	halite -d "25 25" "python3 MyBotBattleMode1.py" "python3 MyBot.py"
 

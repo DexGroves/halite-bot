@@ -83,9 +83,12 @@ class ImprovedGameMap(GameMap):
         super().__init__()
         self.dists = self.get_distances(self.width, self.height)
         self.nbrs = self.get_neighbours(self.width, self.height)
+        self.turn = -1
 
     def update(self):
         """Derive everything that changes per frame."""
+        self.turn += 1
+
         self.owned = self.owners == self.my_id
         self.blank = self.owners == 0
         self.enemy = np.ones_like(self.owned) - self.owned - self.blank

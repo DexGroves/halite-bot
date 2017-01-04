@@ -1,7 +1,4 @@
 def find_path(x, y, nx, ny, gm):
-    if gm.strn[x, y] <= (gm.prod[x, y] * 5):  # Min wait is here
-        return 0
-
     dist_north = (y - ny) % gm.height
     dist_east = (nx - x) % gm.width
     dist_south = (ny - y) % gm.height
