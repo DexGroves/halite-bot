@@ -1,6 +1,7 @@
 import numpy as np
 import dexlib.nphlt as hlt
 import logging
+from dexlib.find_path import find_path
 
 
 logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
@@ -56,14 +57,7 @@ class BorderEvaluator:
                 continue
             else:
                 sel_cs = m_assign[mi]
-                logging.debug(m_assign)
-                logging.debug(m_values)
-                logging.debug(sel_cs)
-                logging.debug((m_assign[:, sel_cs]))
-                logging.debug((m_assign[:, sel_cs].shape))
-                logging.debug((m_assign[:, sel_cs].max(axis=1)))
-                logging.debug(np.nonzero(m_assign[:, sel_cs].max(axis=1).flatten()))
-                # Can do better than a   max here!
+                # Can do better than a max here!
                 m_values[np.nonzero(m_assign[:, sel_cs].max(axis=1).flatten())] = 0
 
                 moveset.append((Bs[mi], m_assign[mi]))
@@ -73,11 +67,12 @@ class BorderEvaluator:
             for ax, ay in [Cs[i[0]] for i in np.nonzero(assignment)]:
                 if self.motile[ax, ay]:
                     self.moves[(ax, ay)] = (mx, my)
+                logging.debug((mx, my, s))
 
     def dump_moves(self, gm):
         moves = []
         for (ax, ay), (mx, my) in self.moves.items():
-            dir_ = gm.path_towards(ax, ay, mx, my)
+            dir_ = find_path(ax, ay, mx, my, gm)
             moves.append(hlt.Move(ax, ay, dir_))
         return moves
 
