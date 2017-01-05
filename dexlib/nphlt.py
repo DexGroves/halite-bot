@@ -98,11 +98,10 @@ class ImprovedGameMap(GameMap):
         self.enemy = np.ones_like(self.owned) - self.owned - self.blank
 
         self.splash_dmg = self.plus_filter(self.strn * self.enemy, sum)
-        self.heuristic = self.prod / np.maximum(1, self.strn)
-        self.heuristic += self.splash_dmg
-        self.heuristic[self.owned] = -1
+        # self.heuristic = self.prod / np.maximum(1, self.strn)
+        # self.heuristic += self.splash_dmg
+        # self.heuristic[self.owned] = -1
 
-        # self.border = self.plus_filter(self.enemy + self.blank, max) * self.owned
         # Unowned border cells
         self.ubrdr = self.plus_filter(self.owned, max) - self.owned
 
@@ -116,6 +115,10 @@ class ImprovedGameMap(GameMap):
 
         self.owned_locs = np.transpose(np.nonzero(self.owned))
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
+
+        # Node-importance that I just made up
+        self.node_impt = np.maximum(0, 3 - self.square_filter(self.owned, sum)) * \
+            self.ubrdr
 
     def path_towards(self, x, y, tx, ty):
         """For an owned cell at x, y, and a target cell at tx, ty,
@@ -182,5 +185,17 @@ class ImprovedGameMap(GameMap):
         footprint = np.array([[0, 1, 0],
                               [1, 1, 1],
                               [0, 1, 0]])
+        proc = generic_filter(X, f, footprint=footprint, mode='wrap')
+        return proc
+
+    @staticmethod
+    def square_filter(X, f):
+        """Scans a square-shaped filter over the input matrix X, applies
+        the reducer function f and returns a new matrix with the same
+        dimensions of X containing the reduced values.
+        """
+        footprint = np.array([[1, 1, 1],
+                              [1, 1, 1],
+                              [1, 1, 1]])
         proc = generic_filter(X, f, footprint=footprint, mode='wrap')
         return proc

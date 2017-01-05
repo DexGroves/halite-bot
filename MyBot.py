@@ -102,7 +102,7 @@ class MoveMaker:
         Sig_prod = (gm.prod * gm.owned).sum()
 
         cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
-            self.glob_k * Sig_prod * self.global_value
+            self.glob_k * Sig_prod * self.global_value * gm.node_impt
 
         return cell_value
 
