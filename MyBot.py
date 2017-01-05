@@ -106,6 +106,7 @@ class MoveMaker:
         for x in range(gm.width):
             for y in range(gm.height):
                 self.global_value[x, y] = np.divide(gm.prodc, gm.str_to[x, y]).sum()
+        np.savetxt("globval.txt", self.global_value)
 
     def get_cell_value(self, gm):
         # Sig_prod = (gm.prod * gm.owned).sum()
