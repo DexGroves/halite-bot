@@ -13,6 +13,7 @@ import sys
 import numpy as np
 from collections import namedtuple
 from scipy.ndimage.filters import generic_filter
+from dexlib.dijkstra import ShortestPather
 
 
 Move = namedtuple('Move', 'x y dir')
@@ -84,6 +85,9 @@ class ImprovedGameMap(GameMap):
         self.dists = self.get_distances(self.width, self.height)
         self.nbrs = self.get_neighbours(self.width, self.height)
         self.turn = -1
+
+        self.str_to = ShortestPather(self.strn).get_dist_matrix()
+        self.str_to = np.maximum(self.strn, self.str_to)
 
     def update(self):
         """Derive everything that changes per frame."""

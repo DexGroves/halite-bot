@@ -12,8 +12,10 @@ class MoveMaker:
     Values are taken for each x, y, s, where s is the degree to which
     to hunt for teamups.
     """
-    def __init__(self, maxd):
+    def __init__(self, gm, maxd, glob_k):
         self.maxd = maxd
+        self.glob_k = glob_k
+        self.set_global_value(gm)
 
     def update(self, gm):
         # Masking like this isn't _quite_ right
@@ -21,7 +23,8 @@ class MoveMaker:
         strn_avail = gm.ostrn * self.motile
 
         t2r = gm.strnc / gm.prodc    # Can relax this later
-        cell_value = gm.prod.copy()  # Can improve this later
+        # cell_value = gm.prod.copy()  # Can improve this later
+        cell_value = self.get_cell_value(gm)
 
         Bs = [(x, y, s) for (x, y) in gm.ubrdr_locs
               for s in range(1, self.maxd)]
@@ -89,15 +92,31 @@ class MoveMaker:
             moves.append(hlt.Move(ax, ay, dir_))
         return moves
 
+    def set_global_value(self, gm):
+        self.global_value = np.zeros_like(gm.prod, dtype=float)
+        for x in range(gm.width):
+            for y in range(gm.height):
+                self.global_value[x, y] = np.divide(gm.prodc, gm.str_to[x, y]).sum()
+
+    def get_cell_value(self, gm):
+        Sig_prod = (gm.prod * gm.owned).sum()
+
+        cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
+            self.glob_k * Sig_prod * self.global_value
+
+        return cell_value
+
 
 game_map = hlt.ImprovedGameMap()
-bord_eval = MoveMaker(5)
-
 hlt.send_init("DexBotNeuer")
+game_map.get_frame()
+game_map.update()
+
+bord_eval = MoveMaker(game_map, 5, 1)
 
 
 while True:
-    game_map.get_frame()
     game_map.update()
     bord_eval.update(game_map)
     hlt.send_frame(bord_eval.dump_moves(game_map))
+    game_map.get_frame()
