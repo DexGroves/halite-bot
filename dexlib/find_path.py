@@ -21,12 +21,8 @@ def find_path(x, y, nx, ny, gm):
     xnx, xny = cardinal_to_nxny(x, y, xpref, gm)
     ynx, yny = cardinal_to_nxny(x, y, ypref, gm)
 
-    # Don't jitter from faraway activity. Be steadfast.
-    if (ydist > 0) and xdist > (5 * ydist):
-        ydist = 0
-    if (xdist > 0) and ydist > (5 * xdist):
-        xdist = 0
-
+    # If both cardinals are owned, prefer to move along the
+    # direction with lower production.
     if gm.owned[xnx, xny] and gm.owned[ynx, yny] and \
             ydist > 0 and xdist > 0:
         if gm.prod[xnx, xny] < gm.prod[ynx, yny]:
@@ -34,30 +30,39 @@ def find_path(x, y, nx, ny, gm):
         else:
             return ypref
 
-    if (x + y) % 2 == 0:
-        if xdist > 0 and gm.owned[xnx, xny] == 1:
+    # If one direction is owned, move along it
+    if gm.owned[xnx, xny] and xdist > 0:
+        return xpref
+    if gm.owned[ynx, yny] and ydist > 0:
+        return ypref
+
+    can_mv_x = can_occupy_safely(x, y, xnx, xny, gm) and xdist > 0
+    can_mv_y = can_occupy_safely(x, y, ynx, yny, gm) and ydist > 0
+
+    # If both directions are possible, take the enemy, and then
+    # the one that will pay for itself sooner.
+    # Really some smarter combat object should be forcing moves here.
+    if can_mv_x and can_mv_y:
+        if gm.enemy[xnx, xny]:
             return xpref
-        elif ydist > 0 and gm.owned[ynx, yny] == 1:
+        if gm.enemy[ynx, yny]:
             return ypref
 
-        if xdist > 0 and can_occupy_safely(x, y, xnx, xny, gm) == 1:
-            return xpref
-        elif ydist > 0 and can_occupy_safely(x, y, ynx, yny, gm) == 1:
-            return ypref
-        else:
-            return 0
-    else:
-        if ydist > 0 and gm.owned[ynx, yny]:
-            return ypref
-        elif xdist > 0 and gm.owned[xnx, xny]:
-            return xpref
+        x_roi = gm.prod[xnx, xny] / max(1, gm.strn[xnx, xny])
+        y_roi = gm.prod[ynx, yny] / max(1, gm.strn[ynx, yny])
 
-        if ydist > 0 and can_occupy_safely(x, y, ynx, yny, gm) == 1:
-            return ypref
-        elif xdist > 0 and can_occupy_safely(x, y, xnx, xny, gm) == 1:
+        if x_roi > y_roi:
             return xpref
         else:
-            return 0
+            return ypref
+
+    # Only cases left are when one or no directions are possible
+    if can_mv_x:
+        return xpref
+    elif can_mv_y:
+        return ypref
+
+    return 0  # Still!
 
 
 def can_occupy_safely(x, y, nx, ny, gm):

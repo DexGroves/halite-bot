@@ -19,8 +19,8 @@ class MoveMaker:
 
     def update(self, gm):
         # Masking like this isn't _quite_ right
-        self.motile = (gm.strnc >= gm.prodc * 5)
-        strn_avail = gm.ostrn * self.motile
+        motile = ((gm.strnc >= gm.prodc * 5) * gm.owned).astype(bool)
+        strn_avail = gm.ostrn * motile
 
         t2r = gm.strnc / gm.prodc    # Can relax this later
         # cell_value = gm.prod.copy()  # Can improve this later
@@ -34,7 +34,8 @@ class MoveMaker:
         m_support = np.zeros((len(Bs), len(Cs)), dtype=bool)
         m_values = np.zeros(len(Bs), dtype=float)
 
-        self.moved = np.zeros_like(gm.prod, dtype=bool)
+        moved = np.zeros_like(gm.prod, dtype=bool)
+        assigned = np.zeros_like(gm.prod, dtype=bool)
 
         # Calculate move values and assignments
         for i, (bx, by, s) in enumerate(Bs):
@@ -60,29 +61,37 @@ class MoveMaker:
 
         moveset = []
         for mi in m_sorter:
-            if m_values[mi] == 0:
+            bx, by, _ = Bs[mi]
+            if assigned[bx, by] or m_values[mi] == 0:
                 continue
             else:
                 # Can do better than a max here!
                 sel_cs = m_support[mi]
                 m_values[np.nonzero(m_support[:, sel_cs].max(axis=1).flatten())] = 0
                 moveset.append((Bs[mi], m_support[mi]))
+                assigned[bx, by] = True
 
         self.moves = {}
         for (mx, my, s), assignment in moveset:
             for ax, ay in Cs[assignment]:
-                if self.motile[ax, ay] and s == gm.dists[ax, ay, mx, my]:
+                moved[ax, ay] = True
+                if motile[ax, ay] and s == gm.dists[ax, ay, mx, my]:
                     self.moves[(ax, ay)] = (mx, my)
-                    self.moved[ax, ay] = True
-                    logging.debug(((mx, my, s), (ax, ay)))
+                    logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
+                    logging.debug(('brdr', (mx, my, s), (ax, ay)))
 
         # Get bulk moves now
-        to_move = self.motile - self.moved
+        # to_move = np.maximum(0, motile - moved)
+        to_move = motile.copy()
+        to_move[np.nonzero(moved)] = False
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
-            prox_value = np.divide(cell_value * gm.ubrdr, gm.dists[ax, ay])
+            # Whatever
+            prox_value = np.divide(cell_value * gm.ubrdr, gm.dists[ax, ay] + 10)
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
+            logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
+            logging.debug(('klub', (tx, ty, gm.dists[tx, ty, ax, ay]), (ax, ay)))
 
     def dump_moves(self, gm):
         # Need to force corner moves, don't forget
@@ -99,11 +108,10 @@ class MoveMaker:
                 self.global_value[x, y] = np.divide(gm.prodc, gm.str_to[x, y]).sum()
 
     def get_cell_value(self, gm):
-        Sig_prod = (gm.prod * gm.owned).sum()
-
-        cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
-            self.glob_k * Sig_prod * self.global_value * gm.node_impt
-
+        # Sig_prod = (gm.prod * gm.owned).sum()
+        # cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
+        #    self.glob_k * self.global_value * gm.node_impt
+        cell_value = self.global_value * gm.node_impt
         return cell_value
 
 
@@ -112,7 +120,7 @@ hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
-bord_eval = MoveMaker(game_map, 5, 1)
+bord_eval = MoveMaker(game_map, 5, 0.1)
 
 
 while True:

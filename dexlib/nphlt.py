@@ -93,7 +93,7 @@ class ImprovedGameMap(GameMap):
         """Derive everything that changes per frame."""
         self.turn += 1
 
-        self.owned = self.owners == self.my_id
+        self.owned = (self.owners == self.my_id).astype(int)
         self.blank = self.owners == 0
         self.enemy = np.ones_like(self.owned) - self.owned - self.blank
 
