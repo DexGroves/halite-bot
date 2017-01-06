@@ -15,6 +15,9 @@ from collections import namedtuple
 from scipy.ndimage.filters import generic_filter
 from dexlib.dijkstra import ShortestPather
 
+import logging
+
+logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 
 Move = namedtuple('Move', 'x y dir')
 
@@ -86,7 +89,8 @@ class ImprovedGameMap(GameMap):
         self.nbrs = self.get_neighbours(self.width, self.height)
         self.turn = -1
 
-        self.str_to = ShortestPather(self.strn).get_dist_matrix()
+        self.sp = ShortestPather(self.strn)
+        self.str_to = self.sp.get_dist_matrix()
         self.str_to = np.maximum(self.strn, self.str_to)
 
     def update(self):
@@ -117,25 +121,33 @@ class ImprovedGameMap(GameMap):
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
 
         # Node-importance that I just made up
-        self.node_impt = self.square_filter(self.owned, sum)
-        self.node_impt = (self.node_impt <= 2) * self.ubrdr
+        # self.node_impt = self.square_filter(self.owned, sum)
+        # self.node_impt = (self.node_impt <= 2) * self.ubrdr
         # self.node_impt = np.maximum(0, 2 - self.square_filter(self.owned, sum)) * \
         #     self.ubrdr
+        self.calc_bval()
 
-    def path_towards(self, x, y, tx, ty):
-        """For an owned cell at x, y, and a target cell at tx, ty,
-        return the cardinal direction to move along.
-        Moves along the shortest nonzero cardinal first.
-        """
-        dists = np.array([
-            (y - ty) % self.height,
-            (tx - x) % self.width,
-            (ty - y) % self.height,
-            (x - tx) % self.width
-        ])
-        dists[dists == 0] = BIGINT
-        distorder = np.argsort(dists)
-        return distorder[0] + 1
+    def calc_bval(self):
+        """Docstring this because it's complicated."""
+        Bis = self.ubrdr.flatten().nonzero()[0]
+        Uis = self.blank.flatten().nonzero()[0]
+        Uis = np.setdiff1d(Uis, Bis)  # Setdiff kinda slow, but O(n)ish
+        Uprod = self.prod.flatten()[Uis]
+
+        Bvals = np.zeros(len(Bis), dtype=float)
+        self.Mbval = np.zeros_like(self.prod, dtype=float)
+
+        D_BU = self.sp.path[Bis][:, Uis]
+        D_BU_argmin = D_BU.argmin(axis=0)  # Index of closest Bi per Ui
+
+        # Wish I had a clever matrix way to do this. Will come back.
+        for i, amin in enumerate(D_BU_argmin):
+            dist_bu = D_BU[amin, i]
+            Bvals[amin] += Uprod[i] / dist_bu
+
+        for i, Bi in enumerate(Bis):
+            bx, by = self.sp.vertices[Bi]
+            self.Mbval[bx, by] += Bvals[i]
 
     @staticmethod
     def get_distances(w, h):

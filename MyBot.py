@@ -107,22 +107,24 @@ class MoveMaker:
         return moves
 
     def set_global_value(self, gm):
-        self.global_value = np.zeros_like(gm.prod, dtype=float)
-        for x in range(gm.width):
-            for y in range(gm.height):
-                self.global_value[x, y] = np.divide(gm.prodc, gm.str_to[x, y]).sum()
+        pass
+        # self.global_value = np.zeros_like(gm.prod, dtype=float)
+        # for x in range(gm.width):
+        #     for y in range(gm.height):
+        #         self.global_value[x, y] = np.divide(gm.prodc, gm.str_to[x, y]).sum()
 
-        for i in range(3):
-            self.global_value = gm.plus_filter(self.global_value, max)
+        # for i in range(3):
+        #     self.global_value = gm.plus_filter(self.global_value, max)
 
-        np.savetxt("globval.txt", self.global_value)
-        np.savetxt("strn.txt", gm.strn)
+        # np.savetxt("globval.txt", self.global_value)
+        # np.savetxt("strn.txt", gm.strn)
 
     def get_cell_value(self, gm):
         # Sig_prod = (gm.prod * gm.owned).sum()
         # cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
         #    self.glob_k * self.global_value * gm.node_impt
-        cell_value = self.global_value * gm.node_impt
+        # cell_value = self.global_value * gm.node_impt
+        cell_value = gm.Mbval
         return cell_value
 
 
