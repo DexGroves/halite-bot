@@ -211,21 +211,22 @@ class Resolver:
                 pstrn_map[px2, py2] += istrn
             else:
                 output.append(Move(ax, ay, 0))
-                pstrn_map[ax, ay] += istrn
+                pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
 
         # Handle all the white squares getting the heck out of the way
         # Not iterating in any particular order!
         for (ax, ay) in off_moves.keys():
             istrn = gm.strn[ax, ay]
-            if (pstrn_map[ax, ay] + istrn) <= 255:
+            iprod = gm.prod[ax, ay]
+            if (pstrn_map[ax, ay] + istrn + iprod) <= 255:
                 output.append(Move(ax, ay, 0))
-                pstrn_map[ax, ay] += istrn
+                pstrn_map[ax, ay] += istrn + iprod
             else:  # Dodge this!
                 nbrs = gm.nbrs[ax, ay]
 
                 # Find somewhere to fit!
                 can_fit = np.array([
-                    gm.owned[nx, ny] and (gm.strn[nx, ny] + istrn) <= 255
+                    gm.owned[nx, ny] and (pstrn_map[nx, ny] + istrn) <= 255
                     for (nx, ny) in nbrs
                 ])
 
@@ -268,7 +269,7 @@ class Resolver:
                     for (nx, ny) in nbrs
                 ])
 
-                dir_ = owned_strn.argmax() + 1
+                dir_ = owned_strn.argmin() + 1
                 output.append(Move(ax, ay, dir_))
                 nx, ny = nbrs[owned_strn.argmax()]
                 pstrn_map[nx, ny] += istrn
