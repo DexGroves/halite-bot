@@ -131,8 +131,9 @@ class ImprovedGameMap(GameMap):
         """Docstring this because it's complicated."""
         Bis = self.ubrdr.flatten().nonzero()[0]
         Uis = self.blank.flatten().nonzero()[0]
-        Uis = np.setdiff1d(Uis, Bis)  # Setdiff kinda slow, but O(n)ish
+        # Uis = np.setdiff1d(Uis, Bis)  # Setdiff kinda slow, but O(n)ish
         Uprod = self.prod.flatten()[Uis]
+        Ustrn = self.strn.flatten()[Uis]
 
         Bvals = np.zeros(len(Bis), dtype=float)
         self.Mbval = np.zeros_like(self.prod, dtype=float)
@@ -142,7 +143,7 @@ class ImprovedGameMap(GameMap):
 
         # Wish I had a clever matrix way to do this. Will come back.
         for i, amin in enumerate(D_BU_argmin):
-            dist_bu = D_BU[amin, i]
+            dist_bu = D_BU[amin, i] + Ustrn[i]
             Bvals[amin] += Uprod[i] / dist_bu
 
         for i, Bi in enumerate(Bis):

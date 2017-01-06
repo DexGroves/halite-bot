@@ -95,7 +95,7 @@ class MoveMaker:
         for (mx, my, s), assignment in moveset:
             for ax, ay in Cs[assignment]:
                 moved[ax, ay] = True
-                if motile[ax, ay]: # and s == gm.dists[ax, ay, mx, my]:  # Need to think twice about this
+                if motile[ax, ay]:  # and s == gm.dists[ax, ay, mx, my]:
                     self.moves[(ax, ay)] = (mx, my)
                     # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
                     # logging.debug(('brdr', (mx, my, s), (ax, ay)))
@@ -143,7 +143,7 @@ class MoveMaker:
         local_value = gm.prodc * gm.ubrdr
         global_value = gm.Mbval
 
-        return local_value, global_value * self.glob_k
+        return local_value * 0, global_value * self.glob_k
 
 
 game_map = hlt.ImprovedGameMap()
