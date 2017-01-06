@@ -123,6 +123,12 @@ class ImprovedGameMap(GameMap):
         self.target_cells = self.enemy + (self.blank * (self.strn == 0))
         self.ubrdr_combat = self.ubrdr * self.target_cells
 
+        # Whether cells are stronger than their weakest neighbour
+        targets = self.strn * self.blank
+        targets[targets == 0] = 256
+        self.weakest_nbr = self.plus_filter(targets, min)
+        self.gte_nbr = self.ostrn > self.weakest_nbr
+
         self.calc_bval()
 
     def calc_bval(self):

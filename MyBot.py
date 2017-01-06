@@ -4,7 +4,7 @@ from dexlib.nphlt import Move
 import logging
 from dexlib.find_path import find_path, find_pref_next
 from scipy.ndimage import maximum_filter
-
+from scipy.ndimage.filters import gaussian_filter
 
 logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 
@@ -21,8 +21,16 @@ class Combatant:
         self.moved = np.zeros_like(gm.owned)
 
         com_Cs = gm.plus_filter(gm.ubrdr_combat, max) * gm.owned
-        close_Cs = maximum_filter(gm.ubrdr_combat, size=self.com_radius) * gm.owned
+
+        # Actually, I need a diamond filter!
+        # close_Cs = maximum_filter(gm.ubrdr_combat, size=self.com_radius) * gm.owned
+        # close_Cs -= com_Cs
+        # Lazymode
+        close_Cs = com_Cs.copy()
+        for i in range(self.com_radius):
+            close_Cs = np.maximum(close_Cs, gm.plus_filter(close_Cs, max))
         close_Cs -= com_Cs
+        close_Cs *= gm.owned
 
         self.decide_melee_moves(gm, np.transpose(np.nonzero(com_Cs)))
         self.decide_close_moves(gm, np.transpose(np.nonzero(close_Cs)), com_Cs)
@@ -39,6 +47,7 @@ class Combatant:
 
             self.moves[(cx, cy)] = nbrs[np.argmax(scores)]
             self.moved[cx, cy] = True
+            logging.debug(((cx, cy), 'Melee!'))
 
     def decide_close_moves(self, gm, locs, com_Cs):
         for cx, cy in locs:
@@ -50,6 +59,7 @@ class Combatant:
 
             self.moves[(cx, cy)] = tx, ty
             self.moved[cx, cy] = True
+            logging.debug(((cx, cy), 'Moving to combat!', (tx, ty)))
 
     def dump_moves(self, gm):
         # Can replace some of this with explicit directions
@@ -73,6 +83,7 @@ class MoveMaker:
     def decide_noncombat_moves(self, gm, moved):
         # Masking like this isn't _quite_ right
         motile = ((gm.strnc >= gm.prodc * 5) * gm.owned).astype(bool)
+        motile[np.nonzero(gm.gte_nbr)] = True
         motile[np.nonzero(moved)] = False
         strn_avail = gm.ostrn * motile
 
@@ -119,7 +130,6 @@ class MoveMaker:
         m_values *= -1  # Too lazy to worry about reverse iterating
         m_sorter = np.argsort(m_values)
 
-        logging.debug('TURN ------------' + str(gm.turn))
         moveset = []
         # for mi in m_sorter:
         #     logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
@@ -144,6 +154,7 @@ class MoveMaker:
             for ax, ay in Cs[assignment]:
                 if motile[ax, ay]:  # and s == gm.dists[ax, ay, mx, my]:
                     self.moves[(ax, ay)] = (mx, my)
+                    logging.debug(((ax, ay), 'moving on assignment'))
                 moved[ax, ay] = True
                 # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
                 # logging.debug(('brdr', (mx, my, s), (ax, ay)))
@@ -158,6 +169,7 @@ class MoveMaker:
             prox_value = np.divide(Vglob, gm.dists[ax, ay] + self.bulk_mvmt_off)
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
+            logging.debug(((ax, ay), 'moving from bulk'))
             # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
             # logging.debug(('klub', (tx, ty, gm.dists[tx, ty, ax, ay]), (ax, ay)))
 
@@ -166,7 +178,8 @@ class MoveMaker:
         return self.moves
 
     def get_cell_value(self, gm):
-        local_value = gm.prodc * gm.ubrdr
+        # local_value = gm.prodc * gm.ubrdr
+        local_value = gaussian_filter(gm.prodc, 2, mode='wrap') * gm.ubrdr
         global_value = gm.Mbval
 
         return local_value, global_value * self.glob_k
@@ -206,21 +219,29 @@ class Resolver:
             if (istrn + pstrn_map[px1, py1]) <= 255:
                 output.append(Move(ax, ay, d1))
                 pstrn_map[px1, py1] += istrn
+                logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
             elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255:
                 output.append(Move(ax, ay, d2))
                 pstrn_map[px2, py2] += istrn
+                logging.debug(((ax, ay), 'to', (d2), 'secpick'))
             else:
                 output.append(Move(ax, ay, 0))
                 pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
+                logging.debug(((ax, ay), 'to', (0), 'dodgeroo'))
 
         # Handle all the white squares getting the heck out of the way
         # Not iterating in any particular order!
         for (ax, ay) in off_moves.keys():
             istrn = gm.strn[ax, ay]
             iprod = gm.prod[ax, ay]
-            if (pstrn_map[ax, ay] + istrn + iprod) <= 255:
+            if pstrn_map[ax, ay] == 0:
                 output.append(Move(ax, ay, 0))
                 pstrn_map[ax, ay] += istrn + iprod
+
+            elif (pstrn_map[ax, ay] + istrn + iprod) <= 255:
+                output.append(Move(ax, ay, 0))
+                pstrn_map[ax, ay] += istrn + iprod
+
             else:  # Dodge this!
                 nbrs = gm.nbrs[ax, ay]
 
@@ -288,12 +309,13 @@ hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
-bord_eval = MoveMaker(game_map, 10, 0.2)
+bord_eval = MoveMaker(game_map, 10, 0.1)
 combatant = Combatant(8)
 resolver = Resolver(game_map)
 
 
 while True:
+    logging.debug('TURN ------------' + str(game_map.turn))
     game_map.update()
 
     moved = combatant.decide_combat_moves(game_map)
