@@ -1,7 +1,8 @@
 import numpy as np
 import dexlib.nphlt as hlt
+from dexlib.nphlt import Move
 import logging
-from dexlib.find_path import find_path
+from dexlib.find_path import find_path, find_pref_next
 from scipy.ndimage import maximum_filter
 
 
@@ -52,11 +53,7 @@ class Combatant:
 
     def dump_moves(self, gm):
         # Can replace some of this with explicit directions
-        moves = []
-        for (ax, ay), (mx, my) in self.moves.items():
-            dir_ = find_path(ax, ay, mx, my, gm)
-            moves.append(hlt.Move(ax, ay, dir_))
-        return moves
+        return self.moves
 
 
 class MoveMaker:
@@ -69,7 +66,6 @@ class MoveMaker:
         self.glob_k = glob_k
         self.bulk_mvmt_off = 10
         self.glob_invest_cap = 1.8
-        self.set_global_value(gm)
 
         # print(' '.join(['locmin', 'locmax', 'globmin', 'globmax']),
         #       file=open("vals.txt", "w"))
@@ -149,8 +145,8 @@ class MoveMaker:
                 if motile[ax, ay]:  # and s == gm.dists[ax, ay, mx, my]:
                     self.moves[(ax, ay)] = (mx, my)
                 moved[ax, ay] = True
-                    # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
-                    # logging.debug(('brdr', (mx, my, s), (ax, ay)))
+                # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
+                # logging.debug(('brdr', (mx, my, s), (ax, ay)))
 
         # Get bulk moves now
         # to_move = np.maximum(0, motile - moved)
@@ -167,35 +163,123 @@ class MoveMaker:
 
     def dump_moves(self, gm):
         # Need to force corner moves, don't forget
-        moves = []
-        for (ax, ay), (mx, my) in self.moves.items():
-            dir_ = find_path(ax, ay, mx, my, gm)
-            moves.append(hlt.Move(ax, ay, dir_))
-        return moves
-
-    def set_global_value(self, gm):
-        pass
-        # self.global_value = np.zeros_like(gm.prod, dtype=float)
-        # for x in range(gm.width):
-        #     for y in range(gm.height):
-        #         self.global_value[x, y] = np.divide(gm.prodc, gm.str_to[x, y]).sum()
-
-        # for i in range(3):
-        #     self.global_value = gm.plus_filter(self.global_value, max)
-
-        # np.savetxt("globval.txt", self.global_value)
-        # np.savetxt("strn.txt", gm.strn)
+        return self.moves
 
     def get_cell_value(self, gm):
-        # Sig_prod = (gm.prod * gm.owned).sum()
-        # cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
-        #    self.glob_k * self.global_value * gm.node_impt
-        # cell_value = self.global_value * gm.node_impt
-        # local_value = np.divide(gm.prodc ** 2, gm.strnc) * gm.ubrdr
         local_value = gm.prodc * gm.ubrdr
         global_value = gm.Mbval
 
         return local_value, global_value * self.glob_k
+
+
+class Resolver:
+    """Handle str cap avoiding, patch mechanics, etc."""
+
+    def __init__(self, gm):
+        ox, oy = gm.owned_locs[0]
+        self.parity = (ox + oy + gm.turn) % 2
+
+    def resolve(self, moves, gm):
+        # I don't do anything about over-growing the cap, but can I even.
+        output = []
+
+        self.set_implicit_stays(moves, gm)
+        pstrn_map = np.zeros_like(gm.strn)
+
+        on_moves = {(ax, ay): v for (ax, ay), v in moves.items()
+                    if (ax + ay + gm.turn) % 2 == self.parity}
+        off_moves = {(ax, ay): v for (ax, ay), v in moves.items()
+                     if (ax + ay + gm.turn) % 2 != self.parity}
+
+        # Handle all the black squares going where they need to be
+        on_origins = list(on_moves.keys())
+        on_targets = list(on_moves.values())
+        on_strns = [gm.strn[x, y] for (x, y) in on_origins]
+        str_sort = np.argsort(on_strns)
+
+        for i in str_sort[::-1]:
+            ax, ay = on_origins[i]
+            tx, ty = on_targets[i]
+            istrn = on_strns[i]
+
+            (px1, py1, d1), (px2, py2, d2) = find_pref_next(ax, ay, tx, ty, gm)
+            if (istrn + pstrn_map[px1, py1]) <= 255:
+                output.append(Move(ax, ay, d1))
+                pstrn_map[px1, py1] += istrn
+            elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255:
+                output.append(Move(ax, ay, d2))
+                pstrn_map[px2, py2] += istrn
+            else:
+                output.append(Move(ax, ay, 0))
+                pstrn_map[ax, ay] += istrn
+
+        # Handle all the white squares getting the heck out of the way
+        # Not iterating in any particular order!
+        for (ax, ay) in off_moves.keys():
+            istrn = gm.strn[ax, ay]
+            if (pstrn_map[ax, ay] + istrn) <= 255:
+                output.append(Move(ax, ay, 0))
+                pstrn_map[ax, ay] += istrn
+            else:  # Dodge this!
+                nbrs = gm.nbrs[ax, ay]
+
+                # Find somewhere to fit!
+                can_fit = np.array([
+                    gm.owned[nx, ny] and (gm.strn[nx, ny] + istrn) <= 255
+                    for (nx, ny) in nbrs
+                ])
+
+                if can_fit.max() > 0:
+                    dir_ = can_fit.argmax() + 1
+                    output.append(Move(ax, ay, dir_))
+                    nx, ny = nbrs[can_fit.argmax()]
+                    pstrn_map[nx, ny] += istrn
+                    continue
+
+                # Find an enemy to hit!
+                # Can technically lose to cap here since I skip checking pstrn
+                enemy_strn = np.array([
+                    gm.enemy[nx, ny] * gm.strn[nx, ny]
+                    for (nx, ny) in nbrs
+                ])
+                if enemy_strn.max() > 1:
+                    dir_ = enemy_strn.argmax() + 1
+                    output.append(Move(ax, ay, dir_))
+                    nx, ny = nbrs[enemy_strn.argmax()]
+                    pstrn_map[nx, ny] += istrn
+                    continue
+
+                # Find a blank square to damage!
+                blank_strn = np.array([
+                    gm.blank[nx, ny] * gm.strnc[nx, ny]
+                    for (nx, ny) in nbrs
+                ])
+
+                if blank_strn.max() > 0.5:
+                    dir_ = blank_strn.argmax() + 1
+                    output.append(Move(ax, ay, dir_))
+                    nx, ny = nbrs[blank_strn.argmax()]
+                    pstrn_map[nx, ny] += istrn
+                    continue
+
+                # Go to the weakest remaining square
+                owned_strn = np.array([
+                    gm.owned[nx, ny] * gm.strn[nx, ny]
+                    for (nx, ny) in nbrs
+                ])
+
+                dir_ = owned_strn.argmax() + 1
+                output.append(Move(ax, ay, dir_))
+                nx, ny = nbrs[owned_strn.argmax()]
+                pstrn_map[nx, ny] += istrn
+                continue
+
+        return output
+
+    def set_implicit_stays(self, moves, gm):
+        implicit_stays = set((x, y) for x, y in gm.owned_locs) - moves.keys()
+        for ix, iy in implicit_stays:
+            moves[(ix, iy)] = (ix, iy)
 
 
 game_map = hlt.ImprovedGameMap()
@@ -205,6 +289,7 @@ game_map.update()
 
 bord_eval = MoveMaker(game_map, 10, 0.2)
 combatant = Combatant(8)
+resolver = Resolver(game_map)
 
 
 while True:
@@ -215,9 +300,7 @@ while True:
 
     comb_moves = combatant.dump_moves(game_map)
     bord_moves = bord_eval.dump_moves(game_map)
+    resolved_moves = resolver.resolve({**comb_moves, **bord_moves}, game_map)
 
-    logging.debug(comb_moves)
-    logging.debug(bord_moves)
-
-    hlt.send_frame(comb_moves + bord_moves)
+    hlt.send_frame(resolved_moves)
     game_map.get_frame()
