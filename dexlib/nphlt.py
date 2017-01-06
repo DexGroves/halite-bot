@@ -117,8 +117,10 @@ class ImprovedGameMap(GameMap):
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
 
         # Node-importance that I just made up
-        self.node_impt = np.maximum(0, 3 - self.square_filter(self.owned, sum)) * \
-            self.ubrdr
+        self.node_impt = self.square_filter(self.owned, sum)
+        self.node_impt = (self.node_impt <= 2) * self.ubrdr
+        # self.node_impt = np.maximum(0, 2 - self.square_filter(self.owned, sum)) * \
+        #     self.ubrdr
 
     def path_towards(self, x, y, tx, ty):
         """For an owned cell at x, y, and a target cell at tx, ty,

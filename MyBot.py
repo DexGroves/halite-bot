@@ -15,6 +15,8 @@ class MoveMaker:
     def __init__(self, gm, maxd, glob_k):
         self.maxd = maxd
         self.glob_k = glob_k
+        self.bulk_mvmt_off = 10
+        self.brdr_mvmt_off = 10
         self.set_global_value(gm)
 
     def update(self, gm):
@@ -22,7 +24,7 @@ class MoveMaker:
         motile = ((gm.strnc >= gm.prodc * 5) * gm.owned).astype(bool)
         strn_avail = gm.ostrn * motile
 
-        t2r = gm.strnc / gm.prodc    # Can relax this later
+        # t2r = gm.strnc / gm.prodc    # Can relax this later
         # cell_value = gm.prod.copy()  # Can improve this later
         cell_value = self.get_cell_value(gm)
 
@@ -47,7 +49,8 @@ class MoveMaker:
 
             t2c = max(s, (bstrn - nbr_strn) / nbr_prod)
 
-            m_values[i] = cell_value[bx, by] / (t2r[bx, by] + t2c)
+            # m_values[i] = cell_value[bx, by] / (t2r[bx, by] + t2c)
+            m_values[i] = cell_value[bx, by] / (t2c + self.brdr_mvmt_off)
 
             assign_locs = np.transpose(assign_idx)
             assign_is = np.fromiter((loc_to_Cs[x, y] for (x, y) in assign_locs),
@@ -58,8 +61,10 @@ class MoveMaker:
         m_sorter = np.argsort(m_values)
 
         logging.debug('TURN ------------' + str(gm.turn))
-
         moveset = []
+        # for mi in m_sorter:
+        #     logging.debug((m_values[mi], Bs[mi]))
+
         for mi in m_sorter:
             bx, by, _ = Bs[mi]
             if assigned[bx, by] or m_values[mi] == 0:
@@ -87,7 +92,7 @@ class MoveMaker:
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
             # Whatever
-            prox_value = np.divide(cell_value * gm.ubrdr, gm.dists[ax, ay] + 10)
+            prox_value = np.divide(cell_value * gm.ubrdr, gm.dists[ax, ay] + self.bulk_mvmt_off)
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
             logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
@@ -106,7 +111,12 @@ class MoveMaker:
         for x in range(gm.width):
             for y in range(gm.height):
                 self.global_value[x, y] = np.divide(gm.prodc, gm.str_to[x, y]).sum()
+
+        for i in range(3):
+            self.global_value = gm.plus_filter(self.global_value, max)
+
         np.savetxt("globval.txt", self.global_value)
+        np.savetxt("strn.txt", gm.strn)
 
     def get_cell_value(self, gm):
         # Sig_prod = (gm.prod * gm.owned).sum()
