@@ -47,7 +47,9 @@ class Combatant:
 
             self.moves[(cx, cy)] = nbrs[np.argmax(scores)]
             self.moved[cx, cy] = True
-            logging.debug(((cx, cy), 'Melee!'))
+
+            nx, ny = nbrs[np.argmax(scores)]
+            logging.debug(((cx, cy), 'Melee!', scores, (nx, ny), gm.strn[nx, ny], gm.prod[nx, ny], gm.enemy[nx, ny], gm.blank[nx, ny]))
 
     def decide_close_moves(self, gm, locs, com_Cs):
         for cx, cy in locs:
@@ -77,8 +79,8 @@ class MoveMaker:
         self.bulk_mvmt_off = 10
         self.glob_invest_cap = 1.8
 
-        # print(' '.join(['locmin', 'locmax', 'globmin', 'globmax']),
-        #       file=open("vals.txt", "w"))
+        print(' '.join(['locmax', 'locmin', 'globmax', 'globmin']),
+              file=open("vals.txt", "w"))
 
     def decide_noncombat_moves(self, gm, moved):
         # Masking like this isn't _quite_ right
@@ -135,8 +137,8 @@ class MoveMaker:
         #     logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
 
         # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
-        # print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
-        #       file=open("vals.txt", "a"))
+        print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
+              file=open("vals.txt", "a"))
 
         for mi in m_sorter:
             bx, by, _ = Bs[mi]
@@ -309,6 +311,7 @@ hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
+# NOTE TO FUTURE DEX. Fix the lesser of two evils for dodging or staying.
 bord_eval = MoveMaker(game_map, 10, 0.1)
 combatant = Combatant(8)
 resolver = Resolver(game_map)

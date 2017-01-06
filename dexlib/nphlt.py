@@ -109,9 +109,13 @@ class ImprovedGameMap(GameMap):
         self.prodc = np.maximum(1, self.prod)
 
         self.splash_dmg = self.plus_filter(self.strn * self.enemy, sum)
+        self.splash_prod = self.plus_filter(self.prod * self.enemy * (self.strn == 0),
+                                            sum)
         self.combat_heur = self.splash_dmg + \
-            (self.prodc * self.blank) + \
-            (self.prodc * self.enemy * 2)
+            (self.prodc * self.blank * (self.strn == 0)) + \
+            (self.prodc * self.enemy * 2) + \
+            (self.enemy * 2) + (self.blank * (self.strn == 0)) + \
+            self.splash_prod
 
         # Unowned border cells
         self.ubrdr = self.plus_filter(self.owned, max) - self.owned
@@ -137,6 +141,7 @@ class ImprovedGameMap(GameMap):
         Uis = self.blank.flatten().nonzero()[0]
         Uprod = self.prod.flatten()[Uis]
         Ustrn = self.strn.flatten()[Uis]
+        Ustrn[Ustrn == 0] = 20  # Quick hack
 
         Bvals = np.zeros(len(Bis), dtype=float)
         self.Mbval = np.zeros_like(self.prod, dtype=float)
@@ -152,6 +157,8 @@ class ImprovedGameMap(GameMap):
         for i, Bi in enumerate(Bis):
             bx, by = self.sp.vertices[Bi]
             self.Mbval[bx, by] += Bvals[i]
+
+        np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
 
     @staticmethod
     def get_distances(w, h):
