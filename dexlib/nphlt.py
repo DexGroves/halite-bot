@@ -96,18 +96,9 @@ class ImprovedGameMap(GameMap):
     def update(self):
         """Derive everything that changes per frame."""
         self.turn += 1
-
         self.owned = (self.owners == self.my_id).astype(int)
         self.blank = self.owners == 0
         self.enemy = np.ones_like(self.owned) - self.owned - self.blank
-
-        self.splash_dmg = self.plus_filter(self.strn * self.enemy, sum)
-        # self.heuristic = self.prod / np.maximum(1, self.strn)
-        # self.heuristic += self.splash_dmg
-        # self.heuristic[self.owned] = -1
-
-        # Unowned border cells
-        self.ubrdr = self.plus_filter(self.owned, max) - self.owned
 
         # Owned prod and strn
         self.ostrn = self.strn * self.owned
@@ -117,21 +108,27 @@ class ImprovedGameMap(GameMap):
         self.strnc = np.maximum(1, self.strn)
         self.prodc = np.maximum(1, self.prod)
 
+        self.splash_dmg = self.plus_filter(self.strn * self.enemy, sum)
+        self.combat_heur = self.splash_dmg + \
+            (self.prodc * self.blank) + \
+            (self.prodc * self.enemy * 2)
+
+        # Unowned border cells
+        self.ubrdr = self.plus_filter(self.owned, max) - self.owned
+
         self.owned_locs = np.transpose(np.nonzero(self.owned))
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
 
-        # Node-importance that I just made up
-        # self.node_impt = self.square_filter(self.owned, sum)
-        # self.node_impt = (self.node_impt <= 2) * self.ubrdr
-        # self.node_impt = np.maximum(0, 2 - self.square_filter(self.owned, sum)) * \
-        #     self.ubrdr
+        # Combat cells
+        self.target_cells = self.enemy + (self.blank * (self.strn == 0))
+        self.ubrdr_combat = self.ubrdr * self.target_cells
+
         self.calc_bval()
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
         Bis = self.ubrdr.flatten().nonzero()[0]
         Uis = self.blank.flatten().nonzero()[0]
-        # Uis = np.setdiff1d(Uis, Bis)  # Setdiff kinda slow, but O(n)ish
         Uprod = self.prod.flatten()[Uis]
         Ustrn = self.strn.flatten()[Uis]
 

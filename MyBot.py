@@ -2,9 +2,61 @@ import numpy as np
 import dexlib.nphlt as hlt
 import logging
 from dexlib.find_path import find_path
+from scipy.ndimage import maximum_filter
 
 
 logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
+
+
+class Combatant:
+    """Handle all the moves for combat zones."""
+
+    def __init__(self, com_radius=8):
+        self.com_radius = com_radius
+        self.combat_wait = 4
+
+    def decide_combat_moves(self, gm):
+        self.moves = {}
+        self.moved = np.zeros_like(gm.owned)
+
+        com_Cs = gm.plus_filter(gm.ubrdr_combat, max) * gm.owned
+        close_Cs = maximum_filter(gm.ubrdr_combat, size=self.com_radius) * gm.owned
+        close_Cs -= com_Cs
+
+        self.decide_melee_moves(gm, np.transpose(np.nonzero(com_Cs)))
+        self.decide_close_moves(gm, np.transpose(np.nonzero(close_Cs)), com_Cs)
+
+        return self.moved
+
+    def decide_melee_moves(self, gm, locs):
+        for cx, cy in locs:
+            if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
+                continue
+
+            nbrs = gm.nbrs[(cx, cy)]
+            scores = [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
+
+            self.moves[(cx, cy)] = nbrs[np.argmax(scores)]
+            self.moved[cx, cy] = True
+
+    def decide_close_moves(self, gm, locs, com_Cs):
+        for cx, cy in locs:
+            if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
+                continue
+
+            dmat = np.divide(com_Cs, gm.dists[cx, cy])
+            tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
+
+            self.moves[(cx, cy)] = tx, ty
+            self.moved[cx, cy] = True
+
+    def dump_moves(self, gm):
+        # Can replace some of this with explicit directions
+        moves = []
+        for (ax, ay), (mx, my) in self.moves.items():
+            dir_ = find_path(ax, ay, mx, my, gm)
+            moves.append(hlt.Move(ax, ay, dir_))
+        return moves
 
 
 class MoveMaker:
@@ -16,16 +68,16 @@ class MoveMaker:
         self.maxd = maxd
         self.glob_k = glob_k
         self.bulk_mvmt_off = 10
-        self.brdr_mvmt_off = 10
         self.glob_invest_cap = 1.8
         self.set_global_value(gm)
 
-        print(' '.join(['locmin', 'locmax', 'globmin', 'globmax']),
-              file=open("vals.txt", "w"))
+        # print(' '.join(['locmin', 'locmax', 'globmin', 'globmax']),
+        #       file=open("vals.txt", "w"))
 
-    def update(self, gm):
+    def decide_noncombat_moves(self, gm, moved):
         # Masking like this isn't _quite_ right
         motile = ((gm.strnc >= gm.prodc * 5) * gm.owned).astype(bool)
+        motile[np.nonzero(moved)] = False
         strn_avail = gm.ostrn * motile
 
         t2r = gm.strnc / gm.prodc    # Can relax this later
@@ -40,7 +92,7 @@ class MoveMaker:
         mv_loc = np.zeros(len(Bs), dtype=float)
         mv_glob = np.zeros(len(Bs), dtype=float)
 
-        moved = np.zeros_like(gm.prod, dtype=bool)
+        # moved = np.zeros_like(gm.prod, dtype=bool)
         assigned = np.zeros_like(gm.prod, dtype=bool)
 
         # Calculate move values and assignments
@@ -77,8 +129,8 @@ class MoveMaker:
         #     logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
 
         # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
-        print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
-              file=open("vals.txt", "a"))
+        # print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
+        #       file=open("vals.txt", "a"))
 
         for mi in m_sorter:
             bx, by, _ = Bs[mi]
@@ -94,9 +146,9 @@ class MoveMaker:
         self.moves = {}
         for (mx, my, s), assignment in moveset:
             for ax, ay in Cs[assignment]:
-                moved[ax, ay] = True
                 if motile[ax, ay]:  # and s == gm.dists[ax, ay, mx, my]:
                     self.moves[(ax, ay)] = (mx, my)
+                moved[ax, ay] = True
                     # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
                     # logging.debug(('brdr', (mx, my, s), (ax, ay)))
 
@@ -143,7 +195,7 @@ class MoveMaker:
         local_value = gm.prodc * gm.ubrdr
         global_value = gm.Mbval
 
-        return local_value * 0, global_value * self.glob_k
+        return local_value, global_value * self.glob_k
 
 
 game_map = hlt.ImprovedGameMap()
@@ -152,10 +204,20 @@ game_map.get_frame()
 game_map.update()
 
 bord_eval = MoveMaker(game_map, 10, 0.2)
+combatant = Combatant(8)
 
 
 while True:
     game_map.update()
-    bord_eval.update(game_map)
-    hlt.send_frame(bord_eval.dump_moves(game_map))
+
+    moved = combatant.decide_combat_moves(game_map)
+    bord_eval.decide_noncombat_moves(game_map, moved)
+
+    comb_moves = combatant.dump_moves(game_map)
+    bord_moves = bord_eval.dump_moves(game_map)
+
+    logging.debug(comb_moves)
+    logging.debug(bord_moves)
+
+    hlt.send_frame(comb_moves + bord_moves)
     game_map.get_frame()
