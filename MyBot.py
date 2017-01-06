@@ -17,24 +17,28 @@ class MoveMaker:
         self.glob_k = glob_k
         self.bulk_mvmt_off = 10
         self.brdr_mvmt_off = 10
+        self.glob_invest_cap = 1.8
         self.set_global_value(gm)
+
+        print(' '.join(['locmin', 'locmax', 'globmin', 'globmax']),
+              file=open("vals.txt", "w"))
 
     def update(self, gm):
         # Masking like this isn't _quite_ right
         motile = ((gm.strnc >= gm.prodc * 5) * gm.owned).astype(bool)
         strn_avail = gm.ostrn * motile
 
-        # t2r = gm.strnc / gm.prodc    # Can relax this later
-        # cell_value = gm.prod.copy()  # Can improve this later
-        cell_value = self.get_cell_value(gm)
+        t2r = gm.strnc / gm.prodc    # Can relax this later
+        Vloc, Vglob = self.get_cell_value(gm)
 
         Bs = [(x, y, s) for (x, y) in gm.ubrdr_locs
-              for s in range(1, self.maxd)]
+              for s in range(1, min(gm.owned.sum(), self.maxd) + 1)]
         Cs = gm.owned_locs
         loc_to_Cs = {(x, y): i for i, (x, y) in enumerate(Cs)}
 
         m_support = np.zeros((len(Bs), len(Cs)), dtype=bool)
-        m_values = np.zeros(len(Bs), dtype=float)
+        mv_loc = np.zeros(len(Bs), dtype=float)
+        mv_glob = np.zeros(len(Bs), dtype=float)
 
         moved = np.zeros_like(gm.prod, dtype=bool)
         assigned = np.zeros_like(gm.prod, dtype=bool)
@@ -50,20 +54,31 @@ class MoveMaker:
             t2c = max(s, (bstrn - nbr_strn) / nbr_prod)
 
             # m_values[i] = cell_value[bx, by] / (t2r[bx, by] + t2c)
-            m_values[i] = cell_value[bx, by] / (t2c + self.brdr_mvmt_off)
+            # m_values[i] = cell_value[bx, by] / (t2c + self.brdr_mvmt_off)
+            mv_loc[i] = Vloc[bx, by] / (t2c + t2r[bx, by])
+            # mv_glob[i] = min(self.glob_invest_cap, nbr_strn / bstrn) * Vglob[bx, by]
+            mv_glob[i] = Vglob[bx, by]
+            if nbr_strn > bstrn:
+                # mv_glob[i] *= min(self.glob_invest_cap, nbr_strn / bstrn)
+                mv_glob[i] *= min(self.glob_invest_cap, np.sqrt(nbr_strn / bstrn))
 
             assign_locs = np.transpose(assign_idx)
             assign_is = np.fromiter((loc_to_Cs[x, y] for (x, y) in assign_locs),
                                     dtype=int)
             m_support[i, assign_is] = True
 
+        m_values = mv_loc + mv_glob
         m_values *= -1  # Too lazy to worry about reverse iterating
         m_sorter = np.argsort(m_values)
 
         logging.debug('TURN ------------' + str(gm.turn))
         moveset = []
         # for mi in m_sorter:
-        #     logging.debug((m_values[mi], Bs[mi]))
+        #     logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
+
+        # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
+        print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
+              file=open("vals.txt", "a"))
 
         for mi in m_sorter:
             bx, by, _ = Bs[mi]
@@ -80,7 +95,7 @@ class MoveMaker:
         for (mx, my, s), assignment in moveset:
             for ax, ay in Cs[assignment]:
                 moved[ax, ay] = True
-                if motile[ax, ay] and s == gm.dists[ax, ay, mx, my]:
+                if motile[ax, ay]: # and s == gm.dists[ax, ay, mx, my]:  # Need to think twice about this
                     self.moves[(ax, ay)] = (mx, my)
                     # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
                     # logging.debug(('brdr', (mx, my, s), (ax, ay)))
@@ -91,8 +106,8 @@ class MoveMaker:
         to_move[np.nonzero(moved)] = False
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
-            # Whatever
-            prox_value = np.divide(cell_value * gm.ubrdr, gm.dists[ax, ay] + self.bulk_mvmt_off)
+            # Whatever, revisit
+            prox_value = np.divide(Vglob, gm.dists[ax, ay] + self.bulk_mvmt_off)
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
             # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
@@ -124,10 +139,11 @@ class MoveMaker:
         # cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
         #    self.glob_k * self.global_value * gm.node_impt
         # cell_value = self.global_value * gm.node_impt
-        local_value = np.divide(gm.prodc ** 2, gm.strnc) * gm.ubrdr
+        # local_value = np.divide(gm.prodc ** 2, gm.strnc) * gm.ubrdr
+        local_value = gm.prodc * gm.ubrdr
         global_value = gm.Mbval
 
-        return local_value + global_value
+        return local_value, global_value * self.glob_k
 
 
 game_map = hlt.ImprovedGameMap()
@@ -135,7 +151,7 @@ hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
-bord_eval = MoveMaker(game_map, 10, 0.1)
+bord_eval = MoveMaker(game_map, 10, 0.2)
 
 
 while True:
