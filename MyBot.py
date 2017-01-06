@@ -82,8 +82,8 @@ class MoveMaker:
                 moved[ax, ay] = True
                 if motile[ax, ay] and s == gm.dists[ax, ay, mx, my]:
                     self.moves[(ax, ay)] = (mx, my)
-                    logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
-                    logging.debug(('brdr', (mx, my, s), (ax, ay)))
+                    # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
+                    # logging.debug(('brdr', (mx, my, s), (ax, ay)))
 
         # Get bulk moves now
         # to_move = np.maximum(0, motile - moved)
@@ -95,8 +95,8 @@ class MoveMaker:
             prox_value = np.divide(cell_value * gm.ubrdr, gm.dists[ax, ay] + self.bulk_mvmt_off)
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
-            logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
-            logging.debug(('klub', (tx, ty, gm.dists[tx, ty, ax, ay]), (ax, ay)))
+            # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
+            # logging.debug(('klub', (tx, ty, gm.dists[tx, ty, ax, ay]), (ax, ay)))
 
     def dump_moves(self, gm):
         # Need to force corner moves, don't forget
@@ -124,8 +124,10 @@ class MoveMaker:
         # cell_value = np.divide(gm.prodc ** 2, gm.strnc) + \
         #    self.glob_k * self.global_value * gm.node_impt
         # cell_value = self.global_value * gm.node_impt
-        cell_value = gm.Mbval
-        return cell_value
+        local_value = np.divide(gm.prodc ** 2, gm.strnc) * gm.ubrdr
+        global_value = gm.Mbval
+
+        return local_value + global_value
 
 
 game_map = hlt.ImprovedGameMap()
@@ -133,7 +135,7 @@ hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
-bord_eval = MoveMaker(game_map, 5, 0.1)
+bord_eval = MoveMaker(game_map, 10, 0.1)
 
 
 while True:
