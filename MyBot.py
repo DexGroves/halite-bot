@@ -131,8 +131,9 @@ class MoveMaker:
         bcutoff = np.percentile(m_values, 50)
 
         moveset = []
-        # for mi in m_sorter:
-        #     logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
+        for mi in m_sorter:
+            # if m_values[mi] > bcutoff:
+                logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
 
         # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
         # print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
@@ -166,7 +167,7 @@ class MoveMaker:
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
             # Whatever, revisit
-            prox_value = np.divide(Vglob, gm.dists[ax, ay] + self.bulk_mvmt_off)
+            prox_value = np.divide(Vloc + Vglob, gm.dists[ax, ay] + self.bulk_mvmt_off)
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
             # logging.debug(((ax, ay), 'moving from bulk'))
@@ -180,7 +181,7 @@ class MoveMaker:
     def get_cell_value(self, gm):
         # local_value = gm.prodc * gm.ubrdr
         local_value = gaussian_filter(gm.prodc, 2, mode='wrap') * gm.ubrdr
-        local_value = np.maximum(local_value, gm.prodc)
+        local_value = np.maximum(local_value, gm.prodc) * gm.ubrdr
         global_value = gm.Mbval
 
         return local_value, global_value * self.glob_k
@@ -192,7 +193,7 @@ game_map.get_frame()
 game_map.update()
 
 
-bord_eval = MoveMaker(game_map, 10, 0.5)
+bord_eval = MoveMaker(game_map, 10, 0.1)
 combatant = Combatant(12)
 resolver = Resolver(game_map)
 

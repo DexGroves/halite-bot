@@ -33,7 +33,7 @@ class ShortestPather:
 
             for nx, ny in nbrs:
                 targ_i = self.get_vertex(nx, ny)
-                dist[orig_i, targ_i] = strn[nx, ny] / (prod[x, y] + 2)  # Thin air 2
+                dist[orig_i, targ_i] = strn[nx, ny] / (prod[x, y] + 0.1)  # Thin air 2
 
         return dist
 

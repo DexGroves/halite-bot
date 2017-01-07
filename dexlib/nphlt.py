@@ -159,7 +159,7 @@ class ImprovedGameMap(GameMap):
 
         D_BU_min = D_BU.min(axis=0)
         for i, min_ in enumerate(D_BU_min):
-            dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i]
+            dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i] / Uprod[i]
             if dist_bu[0] < 150:
                 Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
             elif (Uprod[i] ** 2) / Ustrn[i] > 1.0:
