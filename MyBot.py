@@ -249,6 +249,13 @@ class Resolver:
                 pstrn_map[ax, ay] += istrn + iprod
 
             else:  # Dodge this!
+                # Check if it's better to just hang out
+                addable = 255 - pstrn_map[ax, ay] - istrn
+                if addable > istrn:
+                    output.append(Move(ax, ay, 0))
+                    pstrn_map[ax, ay] += istrn + iprod
+                    continue
+
                 nbrs = gm.nbrs[ax, ay]
 
                 # Find somewhere to fit!

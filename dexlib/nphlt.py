@@ -89,7 +89,7 @@ class ImprovedGameMap(GameMap):
         self.nbrs = self.get_neighbours(self.width, self.height)
         self.turn = -1
 
-        self.sp = ShortestPather(self.strn)
+        self.sp = ShortestPather(self.strn, self.prod)
         self.str_to = self.sp.get_dist_matrix()
         self.str_to = np.maximum(self.strn, self.str_to)
 
