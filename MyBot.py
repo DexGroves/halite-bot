@@ -49,7 +49,8 @@ class Combatant:
             self.moved[cx, cy] = True
 
             nx, ny = nbrs[np.argmax(scores)]
-            logging.debug(((cx, cy), 'Melee!', scores, (nx, ny), gm.strn[nx, ny], gm.prod[nx, ny], gm.enemy[nx, ny], gm.blank[nx, ny]))
+            # logging.debug(((cx, cy), 'Melee!', scores, (nx, ny),
+            # gm.strn[nx, ny], gm.prod[nx, ny], gm.enemy[nx, ny], gm.blank[nx, ny]))
 
     def decide_close_moves(self, gm, locs, com_Cs):
         for cx, cy in locs:
@@ -61,7 +62,7 @@ class Combatant:
 
             self.moves[(cx, cy)] = tx, ty
             self.moved[cx, cy] = True
-            logging.debug(((cx, cy), 'Moving to combat!', (tx, ty)))
+            # logging.debug(((cx, cy), 'Moving to combat!', (tx, ty)))
 
     def dump_moves(self, gm):
         # Can replace some of this with explicit directions
@@ -79,12 +80,12 @@ class MoveMaker:
         self.bulk_mvmt_off = 10
         self.glob_invest_cap = 1.8
 
-        print(' '.join(['locmax', 'locmin', 'globmax', 'globmin']),
-              file=open("vals.txt", "w"))
+        # print(' '.join(['locmax', 'locmin', 'globmax', 'globmin']),
+        #       file=open("vals.txt", "w"))
 
     def decide_noncombat_moves(self, gm, moved):
         # Masking like this isn't _quite_ right
-        motile = ((gm.strnc >= gm.prodc * 5) * gm.owned).astype(bool)
+        motile = ((gm.strnc >= gm.prodc * 4) * gm.owned).astype(bool)
         motile[np.nonzero(gm.gte_nbr)] = True
         motile[np.nonzero(moved)] = False
         strn_avail = gm.ostrn * motile
@@ -114,13 +115,9 @@ class MoveMaker:
 
             t2c = max(s, (bstrn - nbr_strn) / nbr_prod)
 
-            # m_values[i] = cell_value[bx, by] / (t2r[bx, by] + t2c)
-            # m_values[i] = cell_value[bx, by] / (t2c + self.brdr_mvmt_off)
             mv_loc[i] = Vloc[bx, by] / (t2c + t2r[bx, by])
-            # mv_glob[i] = min(self.glob_invest_cap, nbr_strn / bstrn) * Vglob[bx, by]
             mv_glob[i] = Vglob[bx, by]
             if nbr_strn > bstrn:
-                # mv_glob[i] *= min(self.glob_invest_cap, nbr_strn / bstrn)
                 mv_glob[i] *= min(self.glob_invest_cap, np.sqrt(nbr_strn / bstrn))
 
             assign_locs = np.transpose(assign_idx)
@@ -132,15 +129,15 @@ class MoveMaker:
         m_values *= -1  # Too lazy to worry about reverse iterating
         m_sorter = np.argsort(m_values)
         # bcutoff = np.median(m_values)
-        bcutoff = np.percentile(m_values, 100)
+        bcutoff = np.percentile(m_values, 50)
 
         moveset = []
-        for mi in m_sorter:
-            logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
+        # for mi in m_sorter:
+        #     logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
 
         # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
-        print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
-              file=open("vals.txt", "a"))
+        # print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
+        #       file=open("vals.txt", "a"))
 
         for mi in m_sorter:
             bx, by, _ = Bs[mi]
@@ -158,7 +155,7 @@ class MoveMaker:
             for ax, ay in Cs[assignment]:
                 if motile[ax, ay]:  # and s == gm.dists[ax, ay, mx, my]:
                     self.moves[(ax, ay)] = (mx, my)
-                    logging.debug(((ax, ay), 'moving on assignment'))
+                    # logging.debug(((ax, ay), 'moving on assignment'))
                 moved[ax, ay] = True
                 # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
                 # logging.debug(('brdr', (mx, my, s), (ax, ay)))
@@ -173,7 +170,7 @@ class MoveMaker:
             prox_value = np.divide(Vglob, gm.dists[ax, ay] + self.bulk_mvmt_off)
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
-            logging.debug(((ax, ay), 'moving from bulk'))
+            # logging.debug(((ax, ay), 'moving from bulk'))
             # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
             # logging.debug(('klub', (tx, ty, gm.dists[tx, ty, ax, ay]), (ax, ay)))
 
@@ -228,15 +225,15 @@ class Resolver:
             if (istrn + pstrn_map[px1, py1]) <= 255:
                 output.append(Move(ax, ay, d1))
                 pstrn_map[px1, py1] += istrn
-                logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
+                # logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
             elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255:
                 output.append(Move(ax, ay, d2))
                 pstrn_map[px2, py2] += istrn
-                logging.debug(((ax, ay), 'to', (d2), 'secpick'))
+                # logging.debug(((ax, ay), 'to', (d2), 'secpick'))
             else:
                 output.append(Move(ax, ay, 0))
                 pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
-                logging.debug(((ax, ay), 'to', (0), 'dodgeroo'))
+                # logging.debug(((ax, ay), 'to', (0), 'dodgeroo'))
 
         # Handle all the white squares getting the heck out of the way
         # Not iterating in any particular order!
@@ -319,7 +316,7 @@ game_map.get_frame()
 game_map.update()
 
 # NOTE TO FUTURE DEX. Fix the lesser of two evils for dodging or staying.
-bord_eval = MoveMaker(game_map, 10, 1.0)
+bord_eval = MoveMaker(game_map, 10, 0.5)
 combatant = Combatant(12)
 resolver = Resolver(game_map)
 

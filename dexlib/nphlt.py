@@ -137,7 +137,7 @@ class ImprovedGameMap(GameMap):
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
-        blank_valuable = self.blank * (((self.prodc ** 2) / self.strnc) > 1) * \
+        blank_valuable = self.blank * (((self.prodc ** 2) / self.strnc) > 0.4) * \
             (self.strn > 0)
         Bis = self.ubrdr.flatten().nonzero()[0]
         Uis = blank_valuable.flatten().nonzero()[0]
@@ -146,7 +146,6 @@ class ImprovedGameMap(GameMap):
         Ustrn[Ustrn == 0] = 20  # Quick hack
 
         Bvals = np.zeros(len(Bis), dtype=float)
-        NatB = np.zeros(len(Bis), dtype=float)
         self.Mbval = np.zeros_like(self.prod, dtype=float)
 
         D_BU = self.sp.path[Bis][:, Uis]
@@ -161,7 +160,10 @@ class ImprovedGameMap(GameMap):
         D_BU_min = D_BU.min(axis=0)
         for i, min_ in enumerate(D_BU_min):
             dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i]
-            Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
+            if dist_bu[0] < 150:
+                Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
+            elif (Uprod[i] ** 2) / Ustrn[i] > 1.0:
+                Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
 
         # Bvals /= np.sqrt(NatB)
 
@@ -169,7 +171,7 @@ class ImprovedGameMap(GameMap):
             bx, by = self.sp.vertices[Bi]
             self.Mbval[bx, by] += Bvals[i]
 
-        np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
+        # np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
 
     @staticmethod
     def get_distances(w, h):
