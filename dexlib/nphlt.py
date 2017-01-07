@@ -140,10 +140,10 @@ class ImprovedGameMap(GameMap):
         """Docstring this because it's complicated."""
         blank_cutoff = 0.4
         blank_value = ((self.prodc ** 2) / self.strnc) * (self.strn > 0)
-        blank_value = blank_value.flatten()[0]
+        blank_value = blank_value.flatten()
 
         Bis = self.ubrdr.flatten().nonzero()[0]
-        Uis = self.blank.flatten().nonzero()[0]
+        Uis = self.blank.flatten()[np.where(blank_value > blank_cutoff)].nonzero()[0]
 
         Uprod = self.prod.flatten()[Uis]
         Ustrn = self.strn.flatten()[Uis]

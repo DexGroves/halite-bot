@@ -129,9 +129,9 @@ class MoveMaker:
         bcutoff = np.percentile(m_values, 50)
 
         moveset = []
-        for mi in m_sorter:
-            # if m_values[mi] > bcutoff:
-                logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
+        # for mi in m_sorter:
+        #     # if m_values[mi] > bcutoff:
+        #         logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
 
         # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
         # print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
