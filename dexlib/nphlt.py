@@ -15,9 +15,9 @@ from collections import namedtuple
 from scipy.ndimage.filters import generic_filter
 from dexlib.dijkstra import ShortestPather
 
-import logging
+# import logging
 
-logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
+# logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 
 Move = namedtuple('Move', 'x y dir')
 
