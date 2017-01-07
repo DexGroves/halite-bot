@@ -46,6 +46,22 @@ class Resolver:
                 output.append(Move(ax, ay, d2))
                 pstrn_map[px2, py2] += istrn
                 # logging.debug(((ax, ay), 'to', (d2), 'secpick'))
+            elif gm.com_mat[ax, ay]:
+                nbrs = gm.nbrs[(ax, ay)]
+                scores = np.array([
+                    gm.combat_heur[nx, ny] * ((pstrn_map[nx, ny] + istrn) < 255)
+                    for (nx, ny) in nbrs
+                ])
+
+                if scores.max() > 0:
+                    nx, ny = nbrs[scores.argmax()]
+                    dir_ = self.nxny_to_cardinal(gm, ax, ay, nx, ny)
+                    output.append(Move(ax, ay, dir_))
+                    pstrn_map[nx, ny] += istrn + gm.prod[ax, ay]
+                else:
+                    output.append(Move(ax, ay, 0))
+                    pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
+
             else:
                 output.append(Move(ax, ay, 0))
                 pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
@@ -131,3 +147,28 @@ class Resolver:
         implicit_stays = set((x, y) for x, y in gm.owned_locs) - moves.keys()
         for ix, iy in implicit_stays:
             moves[(ix, iy)] = (ix, iy)
+
+    @staticmethod
+    def nxny_to_cardinal(gm, x, y, nx, ny):
+        dx, dy = (nx - x), (ny - y)
+        if dx == gm.width - 1:
+            dx = -1
+        if dx == -1 * (gm.width - 1):
+            dx = 1
+        if dy == gm.height - 1:
+            dy = -1
+        if dy == -1 * (gm.height - 1):
+            dy = 1
+
+        if (dx, dy) == (0, 0):
+            return 0
+        elif (dx, dy) == (0, -1):
+            return 1
+        elif (dx, dy) == (1, 0):
+            return 2
+        elif (dx, dy) == (0, 1):
+            return 3
+        elif (dx, dy) == (-1, 0):
+            return 4
+        else:
+            return 0

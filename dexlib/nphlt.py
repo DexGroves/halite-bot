@@ -126,6 +126,7 @@ class ImprovedGameMap(GameMap):
         # Combat cells
         self.target_cells = self.enemy + (self.blank * (self.strn == 0))
         self.ubrdr_combat = self.ubrdr * self.target_cells
+        self.com_mat = self.plus_filter(self.ubrdr_combat, max) * self.owned
 
         # Whether cells are stronger than their weakest neighbour
         targets = self.strn * self.blank
@@ -137,32 +138,32 @@ class ImprovedGameMap(GameMap):
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
-        blank_valuable = self.blank * (((self.prodc ** 2) / self.strnc) > 0.4) * \
-            (self.strn > 0)
+        blank_cutoff = 0.4
+        blank_value = ((self.prodc ** 2) / self.strnc) * (self.strn > 0)
+        blank_value = blank_value.flatten()[0]
+
         Bis = self.ubrdr.flatten().nonzero()[0]
-        Uis = blank_valuable.flatten().nonzero()[0]
+        Uis = self.blank.flatten().nonzero()[0]
+
         Uprod = self.prod.flatten()[Uis]
         Ustrn = self.strn.flatten()[Uis]
         Ustrn[Ustrn == 0] = 20  # Quick hack
+        Uvalue = (Uprod ** 2) / Ustrn
+
+        Bprod = self.prod.flatten()[Bis]
+        Bstrn = self.strn.flatten()[Bis]
+        Bstrn[Bstrn == 0] = 20  # Quick hack
+        Bvalue = (Bprod ** 2) / Bstrn
 
         Bvals = np.zeros(len(Bis), dtype=float)
         self.Mbval = np.zeros_like(self.prod, dtype=float)
 
         D_BU = self.sp.path[Bis][:, Uis]
-        # D_BU_argmin = D_BU.argmin(axis=0)  # Index of closest Bi per Ui
-
-        # Wish I had a clever matrix way to do this. Will come back.
-        # for i, amin in enumerate(D_BU_argmin):
-        #     dist_bu = D_BU[amin, i] + Ustrn[i]
-        #     Bvals[amin] += Uprod[i] / dist_bu
-        #     NatB[amin] += 1
 
         D_BU_min = D_BU.min(axis=0)
         for i, min_ in enumerate(D_BU_min):
             dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i] / Uprod[i]
-            if dist_bu[0] < 150:
-                Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
-            elif (Uprod[i] ** 2) / Ustrn[i] > 1.0:
+            if Uvalue[i] > Bvalue[np.where(D_BU[:, i] == min_)].min():
                 Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
 
         # Bvals /= np.sqrt(NatB)

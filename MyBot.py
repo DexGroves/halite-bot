@@ -19,20 +19,18 @@ class Combatant:
         self.moves = {}
         self.moved = np.zeros_like(gm.owned)
 
-        com_Cs = gm.plus_filter(gm.ubrdr_combat, max) * gm.owned
-
         # Actually, I need a diamond filter!
         # close_Cs = maximum_filter(gm.ubrdr_combat, size=self.com_radius) * gm.owned
         # close_Cs -= com_Cs
         # Lazymode
-        close_Cs = com_Cs.copy()
+        close_Cs = gm.com_mat.copy()
         for i in range(self.com_radius):
             close_Cs = np.maximum(close_Cs, gm.plus_filter(close_Cs, max))
-        close_Cs -= com_Cs
+        close_Cs -= gm.com_mat
         close_Cs *= gm.owned
 
-        self.decide_melee_moves(gm, np.transpose(np.nonzero(com_Cs)))
-        self.decide_close_moves(gm, np.transpose(np.nonzero(close_Cs)), com_Cs)
+        self.decide_melee_moves(gm, np.transpose(np.nonzero(gm.com_mat)))
+        self.decide_close_moves(gm, np.transpose(np.nonzero(close_Cs)), gm.com_mat)
 
         return self.moved
 
