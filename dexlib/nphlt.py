@@ -137,22 +137,33 @@ class ImprovedGameMap(GameMap):
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
+        blank_valuable = self.blank * (((self.prodc ** 2) / self.strnc) > 1) * \
+            (self.strn > 0)
         Bis = self.ubrdr.flatten().nonzero()[0]
-        Uis = self.blank.flatten().nonzero()[0]
+        Uis = blank_valuable.flatten().nonzero()[0]
         Uprod = self.prod.flatten()[Uis]
         Ustrn = self.strn.flatten()[Uis]
         Ustrn[Ustrn == 0] = 20  # Quick hack
 
         Bvals = np.zeros(len(Bis), dtype=float)
+        NatB = np.zeros(len(Bis), dtype=float)
         self.Mbval = np.zeros_like(self.prod, dtype=float)
 
         D_BU = self.sp.path[Bis][:, Uis]
-        D_BU_argmin = D_BU.argmin(axis=0)  # Index of closest Bi per Ui
+        # D_BU_argmin = D_BU.argmin(axis=0)  # Index of closest Bi per Ui
 
         # Wish I had a clever matrix way to do this. Will come back.
-        for i, amin in enumerate(D_BU_argmin):
-            dist_bu = D_BU[amin, i] + Ustrn[i]
-            Bvals[amin] += Uprod[i] / dist_bu
+        # for i, amin in enumerate(D_BU_argmin):
+        #     dist_bu = D_BU[amin, i] + Ustrn[i]
+        #     Bvals[amin] += Uprod[i] / dist_bu
+        #     NatB[amin] += 1
+
+        D_BU_min = D_BU.min(axis=0)
+        for i, min_ in enumerate(D_BU_min):
+            dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i]
+            Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
+
+        # Bvals /= np.sqrt(NatB)
 
         for i, Bi in enumerate(Bis):
             bx, by = self.sp.vertices[Bi]

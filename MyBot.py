@@ -131,10 +131,12 @@ class MoveMaker:
         m_values = mv_loc + mv_glob
         m_values *= -1  # Too lazy to worry about reverse iterating
         m_sorter = np.argsort(m_values)
+        # bcutoff = np.median(m_values)
+        bcutoff = np.percentile(m_values, 100)
 
         moveset = []
-        # for mi in m_sorter:
-        #     logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
+        for mi in m_sorter:
+            logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
 
         # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
         print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
@@ -142,7 +144,7 @@ class MoveMaker:
 
         for mi in m_sorter:
             bx, by, _ = Bs[mi]
-            if assigned[bx, by] or m_values[mi] == 0:
+            if assigned[bx, by] or m_values[mi] == 0 or m_values[mi] > bcutoff:
                 continue
             else:
                 # Can do better than a max here!
@@ -182,6 +184,7 @@ class MoveMaker:
     def get_cell_value(self, gm):
         # local_value = gm.prodc * gm.ubrdr
         local_value = gaussian_filter(gm.prodc, 2, mode='wrap') * gm.ubrdr
+        local_value = np.maximum(local_value, gm.prodc)
         global_value = gm.Mbval
 
         return local_value, global_value * self.glob_k
@@ -205,6 +208,10 @@ class Resolver:
                     if (ax + ay + gm.turn) % 2 == self.parity}
         off_moves = {(ax, ay): v for (ax, ay), v in moves.items()
                      if (ax + ay + gm.turn) % 2 != self.parity}
+
+        if gm.turn < 20:  # TEst hacks
+            on_moves = moves
+            off_moves = {}
 
         # Handle all the black squares going where they need to be
         on_origins = list(on_moves.keys())
@@ -312,8 +319,8 @@ game_map.get_frame()
 game_map.update()
 
 # NOTE TO FUTURE DEX. Fix the lesser of two evils for dodging or staying.
-bord_eval = MoveMaker(game_map, 10, 0.1)
-combatant = Combatant(8)
+bord_eval = MoveMaker(game_map, 10, 1.0)
+combatant = Combatant(12)
 resolver = Resolver(game_map)
 
 
