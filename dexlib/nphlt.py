@@ -93,6 +93,8 @@ class ImprovedGameMap(GameMap):
         self.str_to = self.sp.get_dist_matrix()
         self.str_to = np.maximum(self.strn, self.str_to)
 
+        self.original_strn = self.strn.copy()
+
     def update(self):
         """Derive everything that changes per frame."""
         self.turn += 1
@@ -138,39 +140,39 @@ class ImprovedGameMap(GameMap):
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
-        blank_cutoff = 0.4
-        blank_value = ((self.prodc ** 2) / self.strnc) * (self.strn > 0)
-        blank_value = blank_value.flatten()
-
+        blank_valuable = self.blank * (((self.prodc ** 2) / self.strnc) > 0.0) * \
+            (self.strn > 0)
         Bis = self.ubrdr.flatten().nonzero()[0]
-        Uis = self.blank.flatten()[np.where(blank_value > blank_cutoff)].nonzero()[0]
-
+        Uis = blank_valuable.flatten().nonzero()[0]
         Uprod = self.prod.flatten()[Uis]
         Ustrn = self.strn.flatten()[Uis]
         Ustrn[Ustrn == 0] = 20  # Quick hack
-        Uvalue = (Uprod ** 2) / Ustrn
-
-        Bprod = self.prod.flatten()[Bis]
-        Bstrn = self.strn.flatten()[Bis]
-        Bstrn[Bstrn == 0] = 20  # Quick hack
-        Bvalue = (Bprod ** 2) / Bstrn
 
         Bvals = np.zeros(len(Bis), dtype=float)
         self.Mbval = np.zeros_like(self.prod, dtype=float)
 
         D_BU = self.sp.path[Bis][:, Uis]
+        # D_BU_argmin = D_BU.argmin(axis=0)  # Index of closest Bi per Ui
+
+        # Wish I had a clever matrix way to do this. Will come back.
+        # for i, amin in enumerate(D_BU_argmin):
+        #     dist_bu = D_BU[amin, i] + Ustrn[i]
+        #     Bvals[amin] += Uprod[i] / dist_bu
+        #     NatB[amin] += 1
 
         D_BU_min = D_BU.min(axis=0)
         for i, min_ in enumerate(D_BU_min):
-            dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i] / Uprod[i]
-            if Uvalue[i] > Bvalue[np.where(D_BU[:, i] == min_)].min():
-                Bvals[np.where(D_BU[:, i] == min_)] += Uprod[i] / dist_bu
+            dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i] / Uprod[i] + 1
+
+            Bvals[np.where(D_BU[:, i] == min_)] += ((Uprod[i] ** 2) / Ustrn[i]) / dist_bu
 
         # Bvals /= np.sqrt(NatB)
 
         for i, Bi in enumerate(Bis):
             bx, by = self.sp.vertices[Bi]
             self.Mbval[bx, by] += Bvals[i]
+
+        # np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
 
         # np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
 

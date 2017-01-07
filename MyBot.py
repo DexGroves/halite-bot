@@ -76,101 +76,51 @@ class MoveMaker:
         self.glob_k = glob_k
         self.bulk_mvmt_off = 10
         self.glob_invest_cap = 1.8
+        self.bval_cutoff = 0.3
 
-        # print(' '.join(['locmax', 'locmin', 'globmax', 'globmin']),
-        #       file=open("vals.txt", "w"))
+        # print("globalmax", "localmax", file=open("values.txt", "w"))
 
     def decide_noncombat_moves(self, gm, moved):
-        # Masking like this isn't _quite_ right
+        self.moves = {}
+
         motile = ((gm.strnc >= gm.prodc * 4) * gm.owned).astype(bool)
         motile[np.nonzero(gm.gte_nbr)] = True
         motile[np.nonzero(moved)] = False
         strn_avail = gm.ostrn * motile
 
-        t2r = gm.strnc / gm.prodc    # Can relax this later
-        Vloc, Vglob = self.get_cell_value(gm)
+        Vloc, Vmid, Vglob = self.get_cell_value(gm)
+        Vtot = Vloc + Vmid + Vglob
 
-        Bs = [(x, y, s) for (x, y) in gm.ubrdr_locs
-              for s in range(1, min(gm.owned.sum(), self.maxd) + 1)]
-        Cs = gm.owned_locs
-        loc_to_Cs = {(x, y): i for i, (x, y) in enumerate(Cs)}
+        high_val_brdrs = np.transpose(np.where(Vloc > (Vtot * self.bval_cutoff)))
+        hvb_value = [Vtot[hx, hy] for hx, hy in high_val_brdrs]
 
-        m_support = np.zeros((len(Bs), len(Cs)), dtype=bool)
-        mv_loc = np.zeros(len(Bs), dtype=float)
-        mv_glob = np.zeros(len(Bs), dtype=float)
+        # High value borders grab the strongest neighbour
+        # for i in np.argsort(hvb_value[::-1]):
+        #     hx, hy = high_val_brdrs[i]
+        #     nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[hx, hy]
+        #             if gm.owned[nx, ny] and motile[nx, ny] and not moved[nx, ny]]
 
-        # moved = np.zeros_like(gm.prod, dtype=bool)
-        assigned = np.zeros_like(gm.prod, dtype=bool)
+        #     if len(nbrs) == 0:
+        #         continue
 
-        # Calculate move values and assignments
-        for i, (bx, by, s) in enumerate(Bs):
-            assign_idx = np.where(gm.dists[bx, by] <= s * gm.owned)
-            nbr_strn = strn_avail[assign_idx].sum()
-            nbr_prod = gm.oprod[assign_idx].sum()
+        #     nbr_strns = np.array([gm.strn[nx, ny] for (nx, ny) in nbrs])
+        #     best_nbr_i = nbr_strns.argmax()
+        #     nx, ny = nbrs[best_nbr_i]
 
-            bstrn = gm.strn[bx, by]
+        #     self.moves[(nx, ny)] = (hx, hy)
+        #     moved[nx, ny] = True
 
-            t2c = max(s, (bstrn - nbr_strn) / nbr_prod)
-
-            mv_loc[i] = Vloc[bx, by] / (t2c + t2r[bx, by])
-            mv_glob[i] = Vglob[bx, by]
-            if nbr_strn > bstrn:
-                mv_glob[i] *= min(self.glob_invest_cap, np.sqrt(nbr_strn / bstrn))
-
-            assign_locs = np.transpose(assign_idx)
-            assign_is = np.fromiter((loc_to_Cs[x, y] for (x, y) in assign_locs),
-                                    dtype=int)
-            m_support[i, assign_is] = True
-
-        m_values = mv_loc + mv_glob
-        m_values *= -1  # Too lazy to worry about reverse iterating
-        m_sorter = np.argsort(m_values)
-        # bcutoff = np.median(m_values)
-        bcutoff = np.percentile(m_values, 50)
-
-        moveset = []
-        # for mi in m_sorter:
-        #     # if m_values[mi] > bcutoff:
-        #         logging.debug((Bs[mi], m_values[mi], mv_loc[mi], mv_glob[mi]))
-
-        # logging.debug(((mv_loc.max(), mv_loc.min()), (mv_glob.max(), mv_glob.min())))
-        # print(mv_loc.max(), mv_loc.min(), mv_glob.max(), mv_glob.min(),
-        #       file=open("vals.txt", "a"))
-
-        for mi in m_sorter:
-            bx, by, _ = Bs[mi]
-            if assigned[bx, by] or m_values[mi] == 0 or m_values[mi] > bcutoff:
-                continue
-            else:
-                # Can do better than a max here!
-                sel_cs = m_support[mi]
-                m_values[np.nonzero(m_support[:, sel_cs].max(axis=1).flatten())] = 0
-                moveset.append((Bs[mi], m_support[mi]))
-                assigned[bx, by] = True
-
-        self.moves = {}
-        for (mx, my, s), assignment in moveset:
-            for ax, ay in Cs[assignment]:
-                if motile[ax, ay]:  # and s == gm.dists[ax, ay, mx, my]:
-                    self.moves[(ax, ay)] = (mx, my)
-                    # logging.debug(((ax, ay), 'moving on assignment'))
-                moved[ax, ay] = True
-                # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
-                # logging.debug(('brdr', (mx, my, s), (ax, ay)))
-
-        # Get bulk moves now
-        # to_move = np.maximum(0, motile - moved)
+        # Now the bulk moves happen
         to_move = motile.copy()
         to_move[np.nonzero(moved)] = False
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
-            # Whatever, revisit
-            prox_value = np.divide(Vloc + Vglob, gm.dists[ax, ay] + self.bulk_mvmt_off)
+            prox_value = np.divide(Vmid, (gm.dists[ax, ay])) + \
+                np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
-            # logging.debug(((ax, ay), 'moving from bulk'))
-            # logging.debug((motile[ax, ay], gm.strnc[ax, ay], gm.prodc[ax, ay]))
-            # logging.debug(('klub', (tx, ty, gm.dists[tx, ty, ax, ay]), (ax, ay)))
+
+        # print(Vglob.max(), Vmid.max(), file=open("values.txt", "a"))
 
     def dump_moves(self, gm):
         # Need to force corner moves, don't forget
@@ -178,11 +128,14 @@ class MoveMaker:
 
     def get_cell_value(self, gm):
         # local_value = gm.prodc * gm.ubrdr
-        local_value = gaussian_filter(gm.prodc, 2, mode='wrap') * gm.ubrdr
-        local_value = np.maximum(local_value, gm.prodc) * gm.ubrdr
+        # Should set this to ignore my strn and prod
+        mid_value = gaussian_filter(
+            (gm.prodc ** 2 / gm.original_strn), 3, mode='wrap'
+        ) * gm.ubrdr
+        local_value = np.maximum(mid_value, (gm.prodc ** 2 / gm.strnc)) * gm.ubrdr
         global_value = gm.Mbval
 
-        return local_value, global_value * self.glob_k
+        return local_value, mid_value, global_value * self.glob_k
 
 
 game_map = hlt.ImprovedGameMap()
@@ -191,8 +144,8 @@ game_map.get_frame()
 game_map.update()
 
 
-bord_eval = MoveMaker(game_map, 10, 0.1)
-combatant = Combatant(12)
+bord_eval = MoveMaker(game_map, 10, 4)
+combatant = Combatant(10)
 resolver = Resolver(game_map)
 
 
