@@ -119,6 +119,25 @@ class ImprovedGameMap(GameMap):
             (self.enemy * 2) + (self.blank * (self.strn == 0)) + \
             self.splash_prod
 
+        # Combat stuff. Pretend every enemy moves 2 spaces in NESW then
+        # calculate heuristic later based on where we stand
+        # enemy_strn = self.strn * self.enemy
+
+        # base_dmg = np.minimum(255, self.plus_filter(enemy_strn, sum))
+        # self.dmg_exposure = np.stack([
+        #     np.roll(base_dmg, -2, 0),
+        #     np.roll(base_dmg, 2, 1),
+        #     np.roll(base_dmg, 2, 0),
+        #     np.roll(base_dmg, -2, 1)
+        # ])
+
+        # self.enemy_strn = ([
+        #     np.roll(enemy_strn, -2, 0),
+        #     np.roll(enemy_strn, 2, 1),
+        #     np.roll(enemy_strn, 2, 0),
+        #     np.roll(enemy_strn, -2, 1)
+        # ])
+
         # Unowned border cells
         self.ubrdr = self.plus_filter(self.owned, max) - self.owned
 
