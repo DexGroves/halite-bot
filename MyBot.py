@@ -11,33 +11,27 @@ logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 class Combatant:
     """Handle all the moves for combat zones."""
 
-    def __init__(self, com_radius=8):
-        self.com_radius = com_radius
-        self.combat_wait = 4
+    def __init__(self, combat_wait):
+        self.combat_wait = combat_wait
 
     def decide_combat_moves(self, gm):
         self.moves = {}
         self.moved = np.zeros_like(gm.owned)
 
-        # Actually, I need a diamond filter!
-        # close_Cs = maximum_filter(gm.ubrdr_combat, size=self.com_radius) * gm.owned
-        # close_Cs -= com_Cs
-        # Lazymode
-        close_Cs = gm.com_mat.copy()
-        for i in range(self.com_radius):
-            close_Cs = np.maximum(close_Cs, gm.plus_filter(close_Cs, max))
-        close_Cs -= gm.com_mat
-        close_Cs *= gm.owned
-
-        self.decide_melee_moves(gm, np.transpose(np.nonzero(gm.com_mat)))
-        self.decide_close_moves(gm, np.transpose(np.nonzero(close_Cs)), gm.com_mat)
+        self.decide_melee_moves(gm)
+        self.decide_close_moves(gm)
 
         return self.moved
 
-    def decide_melee_moves(self, gm, locs):
+    def decide_melee_moves(self, gm):
+        locs = np.transpose(np.nonzero(gm.melee_mat))
         for cx, cy in locs:
             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
                 continue
+
+            if (cx + cy + gm.turn % 2) != gm.parity:
+                self.moves[cx, cy] = cx, cy
+                self.moved[cx, cy] = True
 
             nbrs = gm.nbrs[(cx, cy)]
             scores = [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
@@ -49,12 +43,17 @@ class Combatant:
             # logging.debug(((cx, cy), 'Melee!', scores, (nx, ny),
             # gm.strn[nx, ny], gm.prod[nx, ny], gm.enemy[nx, ny], gm.blank[nx, ny]))
 
-    def decide_close_moves(self, gm, locs, com_Cs):
+    def decide_close_moves(self, gm):
+        locs = np.transpose(np.nonzero(gm.close_to_combat))
         for cx, cy in locs:
             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
                 continue
 
-            dmat = np.divide(com_Cs, gm.dists[cx, cy])
+            if (cx + cy + gm.turn % 2) != gm.parity:
+                self.moves[cx, cy] = cx, cy
+                self.moved[cx, cy] = True
+
+            dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
             tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
 
             self.moves[(cx, cy)] = tx, ty
@@ -138,14 +137,14 @@ class MoveMaker:
         return local_value, mid_value, global_value * self.glob_k
 
 
-game_map = hlt.ImprovedGameMap()
+game_map = hlt.ImprovedGameMap(8)
 hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
 
 bord_eval = MoveMaker(game_map, 10, 4)
-combatant = Combatant(8)
+combatant = Combatant(4)
 resolver = Resolver(game_map)
 
 

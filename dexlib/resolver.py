@@ -7,8 +7,7 @@ class Resolver:
     """Handle str cap avoiding, patch mechanics, etc."""
 
     def __init__(self, gm):
-        ox, oy = gm.owned_locs[0]
-        self.parity = (ox + oy + gm.turn) % 2
+        pass
 
     def resolve(self, moves, gm):
         # I don't do anything about over-growing the cap, but can I even.
@@ -18,13 +17,15 @@ class Resolver:
         pstrn_map = np.zeros_like(gm.strn)
 
         on_moves = {(ax, ay): v for (ax, ay), v in moves.items()
-                    if (ax + ay + gm.turn) % 2 == self.parity}
+                    if (ax + ay + gm.turn) % 2 == gm.parity or
+                    (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] == 0)}
         off_moves = {(ax, ay): v for (ax, ay), v in moves.items()
-                     if (ax + ay + gm.turn) % 2 != self.parity}
+                     if (ax + ay + gm.turn) % 2 != gm.parity and
+                     (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] != 0)}
 
-        if gm.turn < 20:  # TEst hacks
-            on_moves = moves
-            off_moves = {}
+        # if gm.turn < 1000:  # TEst hacks
+        #     on_moves = moves
+        #     off_moves = {}
 
         # Handle all the black squares going where they need to be
         on_origins = list(on_moves.keys())
@@ -46,7 +47,7 @@ class Resolver:
                 output.append(Move(ax, ay, d2))
                 pstrn_map[px2, py2] += istrn
                 # logging.debug(((ax, ay), 'to', (d2), 'secpick'))
-            elif gm.com_mat[ax, ay]:
+            elif gm.melee_mat[ax, ay]:
                 nbrs = gm.nbrs[(ax, ay)]
                 scores = np.array([
                     gm.combat_heur[nx, ny] * ((pstrn_map[nx, ny] + istrn) < 255)
@@ -63,8 +64,9 @@ class Resolver:
                     pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
 
             else:
-                output.append(Move(ax, ay, 0))
-                pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
+                # output.append(Move(ax, ay, 0))
+                # pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
+                off_moves[ax, ay] = tx, ty
                 # logging.debug(((ax, ay), 'to', (0), 'dodgeroo'))
 
         # Handle all the white squares getting the heck out of the way

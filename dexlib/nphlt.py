@@ -83,7 +83,7 @@ BIGINT = 99999
 
 class ImprovedGameMap(GameMap):
     """Extend the base GameMap with extra information."""
-    def __init__(self):
+    def __init__(self, com_radius):
         super().__init__()
         self.dists = self.get_distances(self.width, self.height)
         self.nbrs = self.get_neighbours(self.width, self.height)
@@ -94,6 +94,9 @@ class ImprovedGameMap(GameMap):
         self.str_to = np.maximum(self.strn, self.str_to)
 
         self.original_strn = self.strn.copy()
+
+        self.parity = 1
+        self.com_radius = com_radius
 
     def update(self):
         """Derive everything that changes per frame."""
@@ -119,25 +122,6 @@ class ImprovedGameMap(GameMap):
             (self.enemy * 2) + (self.blank * (self.strn == 0)) + \
             self.splash_prod
 
-        # Combat stuff. Pretend every enemy moves 2 spaces in NESW then
-        # calculate heuristic later based on where we stand
-        # enemy_strn = self.strn * self.enemy
-
-        # base_dmg = np.minimum(255, self.plus_filter(enemy_strn, sum))
-        # self.dmg_exposure = np.stack([
-        #     np.roll(base_dmg, -2, 0),
-        #     np.roll(base_dmg, 2, 1),
-        #     np.roll(base_dmg, 2, 0),
-        #     np.roll(base_dmg, -2, 1)
-        # ])
-
-        # self.enemy_strn = ([
-        #     np.roll(enemy_strn, -2, 0),
-        #     np.roll(enemy_strn, 2, 1),
-        #     np.roll(enemy_strn, 2, 0),
-        #     np.roll(enemy_strn, -2, 1)
-        # ])
-
         # Unowned border cells
         self.ubrdr = self.plus_filter(self.owned, max) - self.owned
 
@@ -147,7 +131,15 @@ class ImprovedGameMap(GameMap):
         # Combat cells
         self.target_cells = self.enemy + (self.blank * (self.strn == 0))
         self.ubrdr_combat = self.ubrdr * self.target_cells
-        self.com_mat = self.plus_filter(self.ubrdr_combat, max) * self.owned
+        self.melee_mat = self.plus_filter(self.ubrdr_combat, max) * self.owned
+
+        self.close_to_combat = self.melee_mat.copy()
+        for i in range(self.com_radius):
+            self.close_to_combat = np.maximum(
+                self.close_to_combat, self.plus_filter(self.close_to_combat, max)
+            )
+        self.close_to_combat -= self.melee_mat
+        self.close_to_combat *= self.owned
 
         # Whether cells are stronger than their weakest neighbour
         targets = self.strn * self.blank
