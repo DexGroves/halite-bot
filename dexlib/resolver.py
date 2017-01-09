@@ -22,7 +22,7 @@ class Resolver:
         off_moves = {(ax, ay): v for (ax, ay), v in moves.items()
                      if (ax + ay + gm.turn) % 2 != self.parity}
 
-        if gm.turn < 20:  # TEst hacks
+        if gm.turn < 45:  # TEst hacks
             on_moves = moves
             off_moves = {}
 
