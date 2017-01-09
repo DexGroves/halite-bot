@@ -90,36 +90,27 @@ class MoveMaker:
         Vloc, Vmid, Vglob = self.get_cell_value(gm)
         Vtot = Vloc + Vmid + Vglob
 
-        high_val_brdrs = np.transpose(np.where(Vloc > (Vtot * self.bval_cutoff)))
-        hvb_value = [Vtot[hx, hy] for hx, hy in high_val_brdrs]
+        self.desired_d1_moves = {}
+        d1_conquered = np.ones_like(Vtot, dtype=bool)
 
-        # High value borders grab the strongest neighbour
-        # for i in np.argsort(hvb_value[::-1]):
-        #     hx, hy = high_val_brdrs[i]
-        #     nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[hx, hy]
-        #             if gm.owned[nx, ny] and motile[nx, ny] and not moved[nx, ny]]
-
-        #     if len(nbrs) == 0:
-        #         continue
-
-        #     nbr_strns = np.array([gm.strn[nx, ny] for (nx, ny) in nbrs])
-        #     best_nbr_i = nbr_strns.argmax()
-        #     nx, ny = nbrs[best_nbr_i]
-
-        #     self.moves[(nx, ny)] = (hx, hy)
-        #     moved[nx, ny] = True
-
-        # Now the bulk moves happen
         to_move = motile.copy()
         to_move[np.nonzero(moved)] = False
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
             prox_value = np.divide(Vmid, (gm.dists[ax, ay])) + \
                 np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
+            prox_value *= d1_conquered
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
 
-        # print(Vglob.max(), Vmid.max(), file=open("values.txt", "a"))
+            # Add to a postprocessing queue for later
+            if gm.dists[ax, ay, tx, ty] == 1:
+                self.desired_d1_moves.setdefault((tx, ty), []).append((ax, ay))
+                if gm.strn[ax, ay] > gm.strn[tx, ty]:
+                    # No one else can erroneously target this cell
+                    d1_conquered[tx, ty] = 0
+
+        self.process_d1_teamups(gm)
 
     def dump_moves(self, gm):
         # Need to force corner moves, don't forget
@@ -135,6 +126,23 @@ class MoveMaker:
         global_value = gm.Mbval
 
         return local_value, mid_value, global_value * self.glob_k
+
+    def process_d1_teamups(self, gm):
+        """This is megagrizzle hacks. If two pieces want to occupy
+        the same cell 1-distance away, that is too strong for either
+        of them, set the gm.strn variable to 0 so that the
+        pathfinder is tricked into allowing the moves.
+        """
+        for (tx, ty), locs in self.desired_d1_moves.items():
+            if len(locs) < 2:
+                continue
+            else:
+                total_strn = np.array([
+                    gm.strn[ax, ay] for ax, ay in locs
+                ])
+                if total_strn.sum() > gm.strn[tx, ty] and \
+                        total_strn.max() <= gm.strn[tx, ty]:
+                    gm.strn[tx, ty] = 0
 
 
 game_map = hlt.ImprovedGameMap(8)
