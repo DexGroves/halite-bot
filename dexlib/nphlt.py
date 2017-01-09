@@ -95,7 +95,7 @@ class ImprovedGameMap(GameMap):
 
         self.original_strn = self.strn.copy()
 
-        self.parity = 1
+        self.parity = 0
         self.com_radius = com_radius
 
     def update(self):
