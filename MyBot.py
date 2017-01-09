@@ -70,19 +70,18 @@ class MoveMaker:
     Values are taken for each x, y, s, where s is the degree to which
     to hunt for teamups.
     """
-    def __init__(self, gm, maxd, glob_k):
-        self.maxd = maxd
+    def __init__(self, gm, wait, glob_k):
         self.glob_k = glob_k
         self.bulk_mvmt_off = 10
-        self.glob_invest_cap = 1.8
         self.bval_cutoff = 0.3
+        self.wait = wait
 
         # print("globalmax", "localmax", file=open("values.txt", "w"))
 
     def decide_noncombat_moves(self, gm, moved):
         self.moves = {}
 
-        motile = ((gm.strnc >= gm.prodc * 4) * gm.owned).astype(bool)
+        motile = ((gm.strnc >= gm.prodc * self.wait) * gm.owned).astype(bool)
         motile[np.nonzero(gm.gte_nbr)] = True
         motile[np.nonzero(moved)] = False
         strn_avail = gm.ostrn * motile
@@ -151,7 +150,7 @@ game_map.get_frame()
 game_map.update()
 
 
-bord_eval = MoveMaker(game_map, 10, 4)
+bord_eval = MoveMaker(game_map, 4, 4)
 combatant = Combatant(4)
 resolver = Resolver(game_map)
 
