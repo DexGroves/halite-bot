@@ -156,7 +156,7 @@ class ImprovedGameMap(GameMap):
         Bis = self.ubrdr.flatten().nonzero()[0]
         Uis = blank_valuable.flatten().nonzero()[0]
         Uprod = self.prod.flatten()[Uis]
-        Ustrn = self.strn.flatten()[Uis]
+        Ustrn = self.strnc.flatten()[Uis]
         Ustrn[Ustrn == 0] = 20  # Quick hack
 
         Bvals = np.zeros(len(Bis), dtype=float)

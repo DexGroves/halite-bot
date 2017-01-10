@@ -39,15 +39,15 @@ class Resolver:
             istrn = on_strns[i]
 
             (px1, py1, d1), (px2, py2, d2) = find_pref_next(ax, ay, tx, ty, gm)
-            if (istrn + pstrn_map[px1, py1]) <= 255 and \
-                    (gm.strn[px1, py1] + gm.prod[px1, py1] < istrn or
-                     not gm.owned[px1, py1]):
+            if (istrn + pstrn_map[px1, py1]) <= 255: #  and \
+                    #  ((gm.strn[px1, py1] + gm.prod[px1, py1]) < istrn or
+                    #    gm.owned[px1, py1] == 0):
                 output.append(Move(ax, ay, d1))
                 pstrn_map[px1, py1] += istrn
                 # logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
-            elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255 and \
-                    (gm.strn[px2, py2] + gm.prod[px2, py2] < istrn or
-                     not gm.owned[px2, py2]):
+            elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255: #  and \
+                    #  ((gm.strn[px2, py2] + gm.prod[px2, py2]) < istrn or
+                    #    gm.owned[px2, py2] == 0):
                 output.append(Move(ax, ay, d2))
                 pstrn_map[px2, py2] += istrn
                 # logging.debug(((ax, ay), 'to', (d2), 'secpick'))
