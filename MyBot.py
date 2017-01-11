@@ -40,8 +40,6 @@ class Combatant:
             self.moved[cx, cy] = True
 
             nx, ny = nbrs[np.argmax(scores)]
-            # logging.debug(((cx, cy), 'Melee!', scores, (nx, ny),
-            # gm.strn[nx, ny], gm.prod[nx, ny], gm.enemy[nx, ny], gm.blank[nx, ny]))
 
     def decide_close_moves(self, gm):
         locs = np.transpose(np.nonzero(gm.close_to_combat))
@@ -58,10 +56,8 @@ class Combatant:
 
             self.moves[(cx, cy)] = tx, ty
             self.moved[cx, cy] = True
-            # logging.debug(((cx, cy), 'Moving to combat!', (tx, ty)))
 
     def dump_moves(self, gm):
-        # Can replace some of this with explicit directions
         return self.moves
 
 
@@ -73,7 +69,6 @@ class MoveMaker:
     def __init__(self, gm, wait, glob_k):
         self.glob_k = glob_k
         self.bulk_mvmt_off = 10
-        self.bval_cutoff = 0.3
         self.wait = wait
 
         # print("globalmax", "localmax", file=open("values.txt", "w"))
@@ -97,8 +92,10 @@ class MoveMaker:
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
             t2c = np.maximum(0, (gm.strn - gm.strn[ax, ay]) / gm.prodc)
+            # str_bonus = np.maximum(1, gm.strn[ax, ay] / gm.strn)
+            # str_bonus = np.minimum(1.2, np.sqrt(str_bonus))
 
-            prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c + 1)) * d1_conquered + \
+            prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c)) * d1_conquered + \
                 np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
             # prox_value *= d1_conquered
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
@@ -156,7 +153,7 @@ game_map.get_frame()
 game_map.update()
 
 
-bord_eval = MoveMaker(game_map, wait=4, glob_k=1.85)
+bord_eval = MoveMaker(game_map, wait=4, glob_k=1.45)
 combatant = Combatant(4)
 resolver = Resolver(game_map)
 
