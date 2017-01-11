@@ -96,7 +96,9 @@ class MoveMaker:
         to_move[np.nonzero(moved)] = False
         to_move_locs = np.transpose(np.nonzero(to_move))
         for ax, ay in to_move_locs:
-            prox_value = np.divide(Vmid, (gm.dists[ax, ay])) * d1_conquered + \
+            t2c = np.maximum(0, (gm.strn - gm.strn[ax, ay]) / gm.prodc)
+
+            prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c + 1)) * d1_conquered + \
                 np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
             # prox_value *= d1_conquered
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
@@ -154,7 +156,7 @@ game_map.get_frame()
 game_map.update()
 
 
-bord_eval = MoveMaker(game_map, wait=4, glob_k=4)
+bord_eval = MoveMaker(game_map, wait=4, glob_k=1.85)
 combatant = Combatant(4)
 resolver = Resolver(game_map)
 
