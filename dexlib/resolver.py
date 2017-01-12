@@ -17,15 +17,15 @@ class Resolver:
         pstrn_map = np.zeros_like(gm.strn)
 
         on_moves = {(ax, ay): v for (ax, ay), v in moves.items()
-                    if (ax + ay + gm.turn) % 2 == gm.parity or
-                    (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] == 0)}
+                    if (ax + ay + gm.turn) % 2 == gm.parity}  # or
+                    # (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] == 0)}
         off_moves = {(ax, ay): v for (ax, ay), v in moves.items()
-                     if (ax + ay + gm.turn) % 2 != gm.parity and
-                     (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] != 0)}
+                     if (ax + ay + gm.turn) % 2 != gm.parity} #  and
+                     #  (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] != 0)}
 
-        # if gm.turn < 1000:  # TEst hacks
-        #     on_moves = moves
-        #     off_moves = {}
+        if gm.turn < 40:  # TEst hacks
+            on_moves = moves
+            off_moves = {}
 
         # Handle all the black squares going where they need to be
         on_origins = list(on_moves.keys())
@@ -39,11 +39,15 @@ class Resolver:
             istrn = on_strns[i]
 
             (px1, py1, d1), (px2, py2, d2) = find_pref_next(ax, ay, tx, ty, gm)
-            if (istrn + pstrn_map[px1, py1]) <= 255:
+            if (istrn + pstrn_map[px1, py1]) <= 255: #  and \
+                    #  ((gm.strn[px1, py1] + gm.prod[px1, py1]) < istrn or
+                    #    gm.owned[px1, py1] == 0):
                 output.append(Move(ax, ay, d1))
                 pstrn_map[px1, py1] += istrn
                 # logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
-            elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255:
+            elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255: #  and \
+                    #  ((gm.strn[px2, py2] + gm.prod[px2, py2]) < istrn or
+                    #    gm.owned[px2, py2] == 0):
                 output.append(Move(ax, ay, d2))
                 pstrn_map[px2, py2] += istrn
                 # logging.debug(((ax, ay), 'to', (d2), 'secpick'))
