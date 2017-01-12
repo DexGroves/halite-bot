@@ -152,8 +152,8 @@ def coalesce(moves, gm, bord_eval):
     newmoves = {}
     weakmoves = {(ax, ay): (tx, ty, dir_)
                  for (ax, ay), (tx, ty, dir_) in moves.items()
-                 if gm.strn[ax, ay] < 75 and dir_ != 0 and
-                    bord_eval.to_travel[ax, ay] > 7}
+                 if gm.strn[ax, ay] < 95 and dir_ != 0 and
+                    bord_eval.to_travel[ax, ay] > 6}
     for (ax, ay), (tx, ty, dir_) in weakmoves.items():
         if dir_ == 1 or dir_ == 3:
             if (ax+2, ay) in weakmoves.keys() and weakmoves[(ax+2, ay)][2] == dir_:
@@ -186,7 +186,7 @@ game_map.get_frame()
 game_map.update()
 
 
-bord_eval = MoveMaker(game_map, wait=4, glob_k=1.75)
+bord_eval = MoveMaker(game_map, wait=5, glob_k=1.95)
 combatant = Combatant(4)
 resolver = Resolver(game_map)
 
