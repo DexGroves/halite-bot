@@ -196,7 +196,7 @@ hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
-k = 2.2 - game_map.num_enemies * 0.1
+k = 1.5 - game_map.num_enemies * 0.1
 bord_eval = MoveMaker(game_map, wait=4, glob_k=k)
 combatant = Combatant(4)
 resolver = Resolver(game_map)
