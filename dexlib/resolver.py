@@ -1,3 +1,4 @@
+import random
 import numpy as np
 from dexlib.nphlt import Move
 from dexlib.find_path import find_pref_next
@@ -102,12 +103,17 @@ class Resolver:
                     for (nx, ny) in nbrs
                 ])
 
+                # if can_fit.max() > 0:
+                #     dir_ = can_fit.argmax() + 1
+                #     output[(ax, ay)] = ax, ay, dir_
+                #     nx, ny = nbrs[can_fit.argmax()]
+                #     pstrn_map[nx, ny] += istrn
+                #     continue
                 if can_fit.max() > 0:
-                    dir_ = can_fit.argmax() + 1
+                    dir_ = random.choice(np.nonzero(can_fit)) + 1
                     output[(ax, ay)] = ax, ay, dir_
                     nx, ny = nbrs[can_fit.argmax()]
                     pstrn_map[nx, ny] += istrn
-                    continue
 
                 # Find an enemy to hit!
                 # Can technically lose to cap here since I skip checking pstrn
