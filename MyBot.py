@@ -25,19 +25,24 @@ class Combatant:
 
     def decide_melee_moves(self, gm):
         locs = np.transpose(np.nonzero(gm.melee_mat))
-        for cx, cy in locs:
+        strns = [gm.strn[x, y] for (x, y) in locs]
+
+        for ci in np.argsort(strns)[::-1]:
+            cx, cy = locs[ci]
             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
                 continue
 
-            if (cx + cy + gm.turn % 2) != gm.parity:
-                self.moves[cx, cy] = cx, cy
-                self.moved[cx, cy] = True
+            # if (cx + cy + gm.turn % 2) != gm.parity:
+            #     self.moves[cx, cy] = cx, cy
+            #     self.moved[cx, cy] = True
 
             nbrs = gm.nbrs[(cx, cy)]
             scores = [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
 
-            self.moves[(cx, cy)] = nbrs[np.argmax(scores)]
+            nx, ny = nbrs[np.argmax(scores)]
+            self.moves[(cx, cy)] = nx, ny
             self.moved[cx, cy] = True
+            gm.combat_heur[nx, ny] /= 10000
 
             nx, ny = nbrs[np.argmax(scores)]
 
@@ -47,9 +52,9 @@ class Combatant:
             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
                 continue
 
-            if (cx + cy + gm.turn % 2) != gm.parity:
-                self.moves[cx, cy] = cx, cy
-                self.moved[cx, cy] = True
+            # if (cx + cy + gm.turn % 2) != gm.parity:
+            #     self.moves[cx, cy] = cx, cy
+            #     self.moved[cx, cy] = True
 
             dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
             tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
@@ -71,9 +76,9 @@ class MoveMaker:
         self.bulk_mvmt_off = 10
         self.wait = wait
 
-        # print("globalmax", "localmax", file=open("values.txt", "w"))
-
     def decide_noncombat_moves(self, gm, moved):
+        working_strn = gm.strn.copy()
+        self.to_travel = np.zeros_like(gm.prod)
         self.moves = {}
 
         motile = ((gm.strnc >= gm.prodc * self.wait) * gm.owned).astype(bool)
@@ -82,24 +87,34 @@ class MoveMaker:
         strn_avail = gm.ostrn * motile
 
         Vloc, Vmid, Vglob = self.get_cell_value(gm)
+        Vmid *= gm.safe_to_take
+        Vglob *= gm.safe_to_take
+
         Vtot = Vloc + Vmid + Vglob
 
         self.desired_d1_moves = {}
         d1_conquered = np.ones_like(Vtot, dtype=bool)
+        fully_alloc = np.zeros_like(Vtot, dtype=bool)
 
         to_move = motile.copy()
         to_move[np.nonzero(moved)] = False
         to_move_locs = np.transpose(np.nonzero(to_move))
-        for ax, ay in to_move_locs:
-            t2c = np.maximum(0, (gm.strn - gm.strn[ax, ay]) / gm.prodc)
-            # str_bonus = np.maximum(1, gm.strn[ax, ay] / gm.strn)
-            # str_bonus = np.minimum(1.2, np.sqrt(str_bonus))
+        to_move_strn = [gm.strn[x, y] for (x, y) in to_move_locs]
+        for ai in np.argsort(to_move_strn)[::-1]:
+            ax, ay = to_move_locs[ai]
+            t2c = np.maximum(0, (working_strn - gm.strn[ax, ay]) / gm.prodc)
 
             prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c)) * d1_conquered + \
                 np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
-            # prox_value *= d1_conquered
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
             self.moves[(ax, ay)] = tx, ty
+            self.to_travel[ax, ay] = gm.dists[ax, ay, tx, ty]
+
+            # if not fully_alloc[tx, ty] and gm.dists[ax, ay, tx, ty] <= 2:
+            #     working_strn[tx, ty] -= gm.strn[ax, ay]
+            #     if working_strn[tx, ty] < 0:
+            #         working_strn[tx, ty] = gm.strn[tx, ty]
+            #         fully_alloc[tx, ty] = True
 
             # Add to a postprocessing queue for later
             if gm.dists[ax, ay, tx, ty] == 1:
@@ -143,8 +158,37 @@ class MoveMaker:
                     gm.strn[tx, ty] = 0
 
 
-def postprocess(moves, gm):
-    pass
+def coalesce(moves, gm, bord_eval):
+    return moves
+    # newmoves = {}
+    # weakmoves = {(ax, ay): (tx, ty, dir_)
+    #              for (ax, ay), (tx, ty, dir_) in moves.items()
+    #              if gm.strn[ax, ay] < 95 and dir_ != 0 and
+    #                 bord_eval.to_travel[ax, ay] > 6}
+    # for (ax, ay), (tx, ty, dir_) in weakmoves.items():
+    #     if dir_ == 1 or dir_ == 3:
+    #         if (ax+2, ay) in weakmoves.keys() and weakmoves[(ax+2, ay)][2] == dir_:
+    #             newmoves[(ax, ay)] = ax+1, ay, 2
+    #             newmoves[(ax+2, ay)] = ax+1, ay, 4
+    #         elif (ax-2, ay) in weakmoves.keys() and weakmoves[(ax-2, ay)][2] == dir_:
+    #             newmoves[(ax, ay)] = ax-1, ay, 4
+    #             newmoves[(ax-2, ay)] = ax-1, ay, 2
+    #     if dir_ == 2 or dir_ == 4:
+    #         if (ax, ay+2) in weakmoves.keys() and weakmoves[(ax, ay+2)][2] == dir_:
+    #             newmoves[(ax, ay)] = ax, ay+1, 3
+    #             newmoves[(ax, ay+2)] = ax, ay+1, 1
+    #         elif (ax, ay-2) in weakmoves.keys() and weakmoves[(ax, ay-2)][2] == dir_:
+    #             newmoves[(ax, ay)] = ax, ay-1, 1
+    #             newmoves[(ax, ay-2)] = ax, ay-1, 3
+
+    # for k, v in newmoves.items():
+    #     moves[k] = v
+
+    # return moves
+
+
+def process_moves(moves):
+    return [hlt.Move(ax, ay, dir_) for (ax, ay), (_, _, dir_) in moves.items()]
 
 
 game_map = hlt.ImprovedGameMap(8)
@@ -152,8 +196,8 @@ hlt.send_init("DexBotNeuer")
 game_map.get_frame()
 game_map.update()
 
-
-bord_eval = MoveMaker(game_map, wait=4, glob_k=1.45)
+k = 1.5 - game_map.num_enemies * 0.1
+bord_eval = MoveMaker(game_map, wait=4, glob_k=k)
 combatant = Combatant(4)
 resolver = Resolver(game_map)
 
@@ -168,6 +212,54 @@ while True:
     comb_moves = combatant.dump_moves(game_map)
     bord_moves = bord_eval.dump_moves(game_map)
     resolved_moves = resolver.resolve({**comb_moves, **bord_moves}, game_map)
+    coalesce_moves = coalesce(resolved_moves, game_map, bord_eval)
 
-    hlt.send_frame(resolved_moves)
+    hlt.send_frame(process_moves(coalesce_moves))
     game_map.get_frame()
+
+
+
+    # def decide_noncombat_moves(self, gm, moved):
+    #     working_strn = gm.strn.copy()
+    #     self.moves = {}
+
+    #     motile = ((gm.strnc >= gm.prodc * self.wait) * gm.owned).astype(bool)
+    #     motile[np.nonzero(gm.gte_nbr)] = True
+    #     motile[np.nonzero(moved)] = False
+    #     strn_avail = gm.ostrn * motile
+
+    #     Vloc, Vmid, Vglob = self.get_cell_value(gm)
+    #     Vtot = Vloc + Vmid + Vglob
+
+    #     self.desired_d1_moves = {}
+    #     d1_conquered = np.ones_like(Vtot, dtype=bool)
+    #     fully_alloc = np.zeors_like(Vtot, dtype=bool)
+
+    #     to_move = motile.copy()
+    #     to_move[np.nonzero(moved)] = False
+    #     to_move_locs = np.transpose(np.nonzero(to_move))
+    #     for ax, ay in to_move_locs:
+    #         t2c = np.maximum(0, (working_strn - gm.strn[ax, ay]) / gm.prodc)
+    #         # str_bonus = np.maximum(1, gm.strn[ax, ay] / gm.strn)
+    #         # str_bonus = np.minimum(1.2, np.sqrt(str_bonus))
+
+    #         prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c)) * d1_conquered + \
+    #             np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
+    #         # prox_value *= d1_conquered
+    #         tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
+    #         self.moves[(ax, ay)] = tx, ty
+
+    #         if not fully_alloc[tx, ty]:
+    #             working_strn[tx, ty] -= gm.strn[ax, ay]
+    #             if working_strn[tx, ty] < 0:
+    #                 working_strn[tx, ty] = gm.strn[tx, ty]
+    #                 fully_alloc[tx, ty] = True
+
+    #         # Add to a postprocessing queue for later
+    #         if gm.dists[ax, ay, tx, ty] == 1:
+    #             self.desired_d1_moves.setdefault((tx, ty), []).append((ax, ay))
+    #             if gm.strn[ax, ay] > gm.strn[tx, ty]:
+    #                 # No one else can erroneously target this cell
+    #                 d1_conquered[tx, ty] = 0
+
+    #     self.process_d1_teamups(gm)

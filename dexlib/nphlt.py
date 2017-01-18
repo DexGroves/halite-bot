@@ -12,7 +12,7 @@ GameMap.owner contains each cell's owner.
 import sys
 import numpy as np
 from collections import namedtuple
-from scipy.ndimage.filters import generic_filter
+from scipy.ndimage.filters import generic_filter, maximum_filter
 from dexlib.dijkstra import ShortestPather
 
 # import logging
@@ -148,6 +148,21 @@ class ImprovedGameMap(GameMap):
         self.gte_nbr = self.ostrn > self.weakest_nbr
 
         self.calc_bval()
+        self.calc_aggs()
+
+    def calc_aggs(self):
+        self.total_strn = self.ostrn.sum()
+        self.num_enemies = max(1, len(np.unique(self.owners)) - 2)
+        self.total_enemy_strn = (self.strn * self.enemy).sum()
+        self.ave_enemy_strn = self.total_enemy_strn / self.num_enemies
+
+        self.enemy_walls = (self.blank * (self.strn > 0)) * \
+            maximum_filter(self.enemy, size=3, mode='wrap')
+
+        if self.total_strn < self.ave_enemy_strn:
+            self.safe_to_take = 1 - self.enemy_walls
+        else:
+            self.safe_to_take = np.ones_like(self.enemy_walls)
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
@@ -155,7 +170,7 @@ class ImprovedGameMap(GameMap):
             (self.strn > 0)
         Bis = self.ubrdr.flatten().nonzero()[0]
         Uis = blank_valuable.flatten().nonzero()[0]
-        Uprod = self.prod.flatten()[Uis]
+        Uprod = self.prodc.flatten()[Uis]
         Ustrn = self.strnc.flatten()[Uis]
         Ustrn[Ustrn == 0] = 20  # Quick hack
 

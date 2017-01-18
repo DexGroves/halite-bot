@@ -11,7 +11,7 @@ class Resolver:
 
     def resolve(self, moves, gm):
         # I don't do anything about over-growing the cap, but can I even.
-        output = []
+        output = {}
 
         self.set_implicit_stays(moves, gm)
         pstrn_map = np.zeros_like(gm.strn)
@@ -42,13 +42,13 @@ class Resolver:
             if (istrn + pstrn_map[px1, py1]) <= 255: #  and \
                     #  ((gm.strn[px1, py1] + gm.prod[px1, py1]) < istrn or
                     #    gm.owned[px1, py1] == 0):
-                output.append(Move(ax, ay, d1))
+                output[(ax, ay)] = ax, ay, d1
                 pstrn_map[px1, py1] += istrn
                 # logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
             elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255: #  and \
                     #  ((gm.strn[px2, py2] + gm.prod[px2, py2]) < istrn or
                     #    gm.owned[px2, py2] == 0):
-                output.append(Move(ax, ay, d2))
+                output[(ax, ay)] = ax, ay, d2
                 pstrn_map[px2, py2] += istrn
                 # logging.debug(((ax, ay), 'to', (d2), 'secpick'))
             elif gm.melee_mat[ax, ay]:
@@ -61,14 +61,14 @@ class Resolver:
                 if scores.max() > 0:
                     nx, ny = nbrs[scores.argmax()]
                     dir_ = self.nxny_to_cardinal(gm, ax, ay, nx, ny)
-                    output.append(Move(ax, ay, dir_))
+                    output[(ax, ay)] = ax, ay, dir_
                     pstrn_map[nx, ny] += istrn + gm.prod[ax, ay]
                 else:
-                    output.append(Move(ax, ay, 0))
+                    output[(ax, ay)] = ax, ay, 0
                     pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
 
             else:
-                # output.append(Move(ax, ay, 0))
+                # output[(ax, ay)] = ax, ay, 0
                 # pstrn_map[ax, ay] += istrn + gm.prod[ax, ay]
                 off_moves[ax, ay] = tx, ty
                 # logging.debug(((ax, ay), 'to', (0), 'dodgeroo'))
@@ -79,18 +79,18 @@ class Resolver:
             istrn = gm.strn[ax, ay]
             iprod = gm.prod[ax, ay]
             if pstrn_map[ax, ay] == 0:
-                output.append(Move(ax, ay, 0))
+                output[(ax, ay)] = ax, ay, 0
                 pstrn_map[ax, ay] += istrn + iprod
 
             elif (pstrn_map[ax, ay] + istrn + iprod) <= 255:
-                output.append(Move(ax, ay, 0))
+                output[(ax, ay)] = ax, ay, 0
                 pstrn_map[ax, ay] += istrn + iprod
 
             else:  # Dodge this!
                 # Check if it's better to just hang out
                 addable = 255 - pstrn_map[ax, ay] - istrn
                 if addable > istrn:
-                    output.append(Move(ax, ay, 0))
+                    output[(ax, ay)] = ax, ay, 0
                     pstrn_map[ax, ay] += istrn + iprod
                     continue
 
@@ -104,7 +104,7 @@ class Resolver:
 
                 if can_fit.max() > 0:
                     dir_ = can_fit.argmax() + 1
-                    output.append(Move(ax, ay, dir_))
+                    output[(ax, ay)] = ax, ay, dir_
                     nx, ny = nbrs[can_fit.argmax()]
                     pstrn_map[nx, ny] += istrn
                     continue
@@ -117,7 +117,7 @@ class Resolver:
                 ])
                 if enemy_strn.max() > 1:
                     dir_ = enemy_strn.argmax() + 1
-                    output.append(Move(ax, ay, dir_))
+                    output[(ax, ay)] = ax, ay, dir_
                     nx, ny = nbrs[enemy_strn.argmax()]
                     pstrn_map[nx, ny] += istrn
                     continue
@@ -130,7 +130,7 @@ class Resolver:
 
                 if blank_strn.max() > 0.5:
                     dir_ = blank_strn.argmax() + 1
-                    output.append(Move(ax, ay, dir_))
+                    output[(ax, ay)] = ax, ay, dir_
                     nx, ny = nbrs[blank_strn.argmax()]
                     pstrn_map[nx, ny] += istrn
                     continue
@@ -142,7 +142,7 @@ class Resolver:
                 ])
 
                 dir_ = owned_strn.argmin() + 1
-                output.append(Move(ax, ay, dir_))
+                output[(ax, ay)] = ax, ay, dir_
                 nx, ny = nbrs[owned_strn.argmax()]
                 pstrn_map[nx, ny] += istrn
                 continue
