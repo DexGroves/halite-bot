@@ -59,7 +59,7 @@ class Combatant:
             dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
             tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
 
-            if gm.dists[cx, cy, tx, ty] < 6 and \
+            if gm.dists[cx, cy, tx, ty] < 4 and \
                     gm.strnc[cx, cy] < (gm.prodc[cx, cy] * (self.combat_wait + 1.5)):
                 self.moves[(cx, cy)] = cx, cy
                 self.moved[cx, cy] = True
