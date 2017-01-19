@@ -139,7 +139,7 @@ class MoveMaker:
         # local_value = gm.prodc * gm.ubrdr
         # Should set this to ignore my strn and prod
         mid_value = gaussian_filter(
-            (gm.prodc ** 2 / gm.original_strn), 1, mode='wrap'
+            (gm.prodc ** 2 / gm.original_strn), 1.2, mode='wrap'
         ) * gm.ubrdr
         local_value = np.maximum(mid_value, (gm.prodc ** 2 / gm.strnc)) * gm.ubrdr
         global_value = gm.Mbval
