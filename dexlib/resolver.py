@@ -109,12 +109,11 @@ class Resolver:
                 #     nx, ny = nbrs[can_fit.argmax()]
                 #     pstrn_map[nx, ny] += istrn
                 #     continue
-                if can_fit.max() > 0:
-                    dir_ = random.choice(np.nonzero(can_fit)[0]) + 1
-                    output[(ax, ay)] = ax, ay, dir_
-                    nx, ny = nbrs[can_fit.argmax()]
-                    pstrn_map[nx, ny] += istrn
-                    continue
+                # if can_fit.max() > 0:
+                #     dir_ = random.choice(np.nonzero(can_fit)) + 1
+                #     output[(ax, ay)] = ax, ay, dir_
+                #     nx, ny = nbrs[can_fit.argmax()]
+                #     pstrn_map[nx, ny] += istrn
 
                 # Find an enemy to hit!
                 # Can technically lose to cap here since I skip checking pstrn
@@ -144,13 +143,15 @@ class Resolver:
 
                 # Go to the weakest remaining square
                 owned_strn = np.array([
-                    gm.owned[nx, ny] * gm.strn[nx, ny]
+                    # gm.owned[nx, ny] * gm.strn[nx, ny]
+                    gm.owned[nx, ny] * (pstrn_map[nx, ny]+gm.strn[nx, ny])
                     for (nx, ny) in nbrs
                 ])
+                owned_strn[owned_strn == 0] = 999
 
                 dir_ = owned_strn.argmin() + 1
                 output[(ax, ay)] = ax, ay, dir_
-                nx, ny = nbrs[owned_strn.argmax()]
+                nx, ny = nbrs[owned_strn.argmin()]
                 pstrn_map[nx, ny] += istrn
                 continue
 
