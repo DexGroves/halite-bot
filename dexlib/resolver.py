@@ -18,10 +18,10 @@ class Resolver:
         pstrn_map = np.zeros_like(gm.strn)
 
         on_moves = {(ax, ay): v for (ax, ay), v in moves.items()
-                    if (ax + ay + gm.turn) % 2 == gm.parity}  # or
+                    if (ax + ay) % 2 == gm.parity}  # or
                     # (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] == 0)}
         off_moves = {(ax, ay): v for (ax, ay), v in moves.items()
-                     if (ax + ay + gm.turn) % 2 != gm.parity} #  and
+                     if (ax + ay) % 2 != gm.parity} #  and
                      #  (gm.melee_mat[ax, ay] + gm.close_to_combat[ax, ay] != 0)}
 
         if gm.turn < 40:  # TEst hacks

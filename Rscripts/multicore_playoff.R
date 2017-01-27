@@ -30,9 +30,11 @@ run_playoff <- function(nrun, ncore, start_seed,
   system("rm *.hlt")
   table(results)
 }
-run_playoff(1000, 50, 99999, 30, 1, "")
+run_playoff(1000, 70, 99999, 30, 1, "")
 run_playoff(400, 50, 99999, 30, 3, "")
 
 # Master
 #   1   2
 # 358 142
+#   1   2
+# 820 180

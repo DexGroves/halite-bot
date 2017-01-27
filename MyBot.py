@@ -32,19 +32,39 @@ class Combatant:
             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
                 continue
 
+            if not (cx + cy) % 2 == gm.parity:
+                self.moves[(cx, cy)] = cx, cy
+                self.moved[cx, cy] = True
+                gm.combat_heur[cx, cy] /= 10000
+                continue
+
             # if (cx + cy + gm.turn % 2) != gm.parity:
             #     self.moves[cx, cy] = cx, cy
             #     self.moved[cx, cy] = True
 
             nbrs = gm.nbrs[(cx, cy)]
-            scores = [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
+            # scores = [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
+
+            cstrn = gm.strn[cx, cy]
+            dmg_recved = np.array(
+                [min(cstrn, gm.dmg_proj[nx, ny]) for (nx, ny) in nbrs]
+            )
+            dmg_output = np.array(
+                [min(cstrn, gm.dmg_left[nx, ny]) for (nx, ny) in nbrs]
+            )
+            classic_heur = np.array(
+                [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
+            )
+            scores = dmg_output - dmg_recved + classic_heur * 0.00001
 
             nx, ny = nbrs[np.argmax(scores)]
+
+            for nnx, nny in gm.nbrs[(nx, ny)]:
+                gm.dmg_left[nnx, nny] = max(0, gm.dmg_left[nnx, nny] - cstrn)
+
             self.moves[(cx, cy)] = nx, ny
             self.moved[cx, cy] = True
             gm.combat_heur[nx, ny] /= 10000
-
-            nx, ny = nbrs[np.argmax(scores)]
 
     def decide_close_moves(self, gm):
         locs = np.transpose(np.nonzero(gm.close_to_combat))

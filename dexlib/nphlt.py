@@ -109,6 +109,9 @@ class ImprovedGameMap(GameMap):
         self.ostrn = self.strn * self.owned
         self.oprod = self.prod * self.owned
 
+        # Enemy strn
+        self.estrn = self.strn * self.enemy
+
         # Lower capped prod and strn
         self.strnc = np.maximum(1, self.strn)
         self.prodc = np.maximum(1, self.prod)
@@ -132,6 +135,7 @@ class ImprovedGameMap(GameMap):
         self.target_cells = self.enemy + (self.blank * (self.strn == 0))
         self.ubrdr_combat = self.ubrdr * self.target_cells
         self.melee_mat = self.plus_filter(self.ubrdr_combat, max) * self.owned
+        # self.melee_mat = self.plus_filter(self.melee_mat_true, max) * self.owned
 
         self.close_to_combat = self.melee_mat.copy()
         for i in range(self.com_radius):
@@ -149,6 +153,10 @@ class ImprovedGameMap(GameMap):
 
         self.calc_bval()
         self.calc_aggs()
+
+        self.set_parity()
+
+        self.set_combat()
 
     def calc_aggs(self):
         self.total_strn = self.ostrn.sum()
@@ -191,16 +199,27 @@ class ImprovedGameMap(GameMap):
             dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i] / Uprod[i] + 1
 
             Bvals[np.where(D_BU[:, i] == min_)] += ((Uprod[i] ** 2) / Ustrn[i]) / dist_bu
-
         # Bvals /= np.sqrt(NatB)
-
         for i, Bi in enumerate(Bis):
             bx, by = self.sp.vertices[Bi]
             self.Mbval[bx, by] += Bvals[i]
 
-        # np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
+    def set_parity(self):
+        # whites = self.ostrn.flatten()[0::2]
+        # blacks = self.ostrn.flatten()[1::2]
+        # whites = [self.ostrn[x, y] for (x, y) in self.owned_locs
+        #           if ((x + y) % 2) == 0]
+        # blacks = [self.ostrn[x, y] for (x, y) in self.owned_locs
+        #           if ((x + y) % 2) == 1]
+        # self.parity = int(np.sum(blacks) > np.sum(whites))
+        self.parity = self.turn % 2
 
-        # np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
+    def set_combat(self):
+        # self.enemy_proj = np.minimum(255, self.plus_filter(self.estrn, sum))
+        # self.dmg_proj = self.plus_filter(self.enemy_proj, sum)
+        self.dmg_proj = np.minimum(255, self.ridge_filter(self.estrn, sum))
+        self.dmg_proj *= self.target_cells
+        self.dmg_left = self.dmg_proj.copy()
 
     @staticmethod
     def get_distances(w, h):
@@ -264,5 +283,15 @@ class ImprovedGameMap(GameMap):
         footprint = np.array([[1, 1, 1],
                               [1, 1, 1],
                               [1, 1, 1]])
+        proc = generic_filter(X, f, footprint=footprint, mode='wrap')
+        return proc
+
+    @staticmethod
+    def ridge_filter(X, f):
+        footprint = np.array([[0, 0, 1, 0, 0],
+                              [0, 1, 1, 1, 0],
+                              [1, 1, 0, 1, 1],
+                              [0, 1, 1, 1, 0],
+                              [0, 0, 1, 0, 0]])
         proc = generic_filter(X, f, footprint=footprint, mode='wrap')
         return proc
