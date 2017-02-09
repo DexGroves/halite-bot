@@ -19,7 +19,7 @@ resolver = Resolver(game_map)
 
 
 while True:
-    # logging.debug('TURN ------------' + str(game_map.turn))
+    logging.debug('TURN ------------' + str(game_map.turn))
     game_map.update()
 
     moveset = Moveset(game_map)

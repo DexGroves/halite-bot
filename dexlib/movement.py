@@ -1,7 +1,11 @@
 import random
+import logging
 import numpy as np
 import dexlib.nphlt as hlt
 from scipy.ndimage.filters import gaussian_filter
+
+
+logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 
 
 class Moveset:
@@ -30,53 +34,6 @@ class Moveset:
                 for (ax, ay), (_, _, dir_) in self.move_dict.items()]
 
 
-# class Combatant:
-#     """Handle all the moves for combat zones."""
-
-#     def __init__(self, combat_wait):
-#         self.combat_wait = combat_wait
-
-#     def decide_combat_moves(self, gm, moveset):
-#         self.decide_melee_moves(gm, moveset)
-#         self.decide_close_moves(gm, moveset)
-#         return moveset
-
-#     def decide_melee_moves(self, gm, moveset):
-#         locs = np.transpose(np.nonzero(gm.melee_mat))
-#         strns = [gm.strn[x, y] for (x, y) in locs]
-
-#         for ci in np.argsort(strns)[::-1]:
-#             cx, cy = locs[ci]
-#             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
-#                 continue
-
-#             nbrs = gm.nbrs[(cx, cy)]
-#             scores = [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
-
-#             nx, ny = nbrs[np.argmax(scores)]
-#             gm.combat_heur[nx, ny] /= 10000
-
-#             moveset.add_move(cx, cy, nx, ny)
-
-#     def decide_close_moves(self, gm, moveset):
-#         locs = np.transpose(np.nonzero(gm.close_to_combat))
-#         for cx, cy in locs:
-#             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
-#                 continue
-
-#             dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
-#             tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
-
-#             if gm.dists[cx, cy, tx, ty] < 4 and \
-#                     gm.strnc[cx, cy] < (gm.prodc[cx, cy] * (self.combat_wait + 1.5)):
-#                 moveset.add_move(cx, cy, cx, cy)
-
-#             else:
-#                 moveset.add_move(cx, cy, tx, ty)
-
-#     def dump_moves(self, gm):
-#         return self.moves
-
 class Combatant:
 
     def __init__(self, combat_wait):
@@ -99,7 +56,8 @@ class Combatant:
         for ex, ey in enemy_locs:
             nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[(ex, ey)]
                     if gm.blank[nx, ny]]
-            nbrs.append((ex, ey))
+            if not len(nbrs):
+                nbrs.append((ex, ey))
             nx, ny = random.choice(nbrs)
             self.enemy_proj[nx, ny] += enemy_strn[ex, ey]
 
@@ -118,12 +76,14 @@ class Combatant:
             dmg_recvd = np.zeros(5)
             dmg_recvd[0] = self.damage[ax, ay]
             for i, (nx, ny) in enumerate(nbrs):
-                dmg_recvd[i] = max(strn, self.damage[nx, ny])
-                # dmg_output[0] += max(strn, self.enemy_proj[nx, ny])
-                dmg_output[i] = np.sum([
-                    max(strn, self.enemy_proj[nnx, nny])
+                dmg_recvd[i + 1] = min(strn, self.damage[nx, ny])
+                dmg_output[0] += min(strn, self.enemy_proj[nx, ny])
+                dmg_output[i + 1] = np.sum([
+                    min(strn, self.enemy_proj[nnx, nny])
                     for nnx, nny in gm.nbrs[nx, ny]
                 ]) + gm.deny_prod[nx, ny]
+                if gm.blank[nx, ny] and gm.strn[nx, ny] > 0:
+                    dmg_recvd[i + 1] += 9999  # Lol hacks. FF7 in this.
 
             combat_scores = (dmg_output * 2) - dmg_recvd
             target = np.argmax(combat_scores)
@@ -132,6 +92,7 @@ class Combatant:
             else:
                 tx, ty = nbrs[target - 1]
 
+            logging.debug(((ax, ay), dmg_output, dmg_recvd))
             # NB: I should only update representation if patchworked
             for nnx, nny in gm.nbrs[tx, ty]:
                 self.enemy_proj[nnx, nny] = \
