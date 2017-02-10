@@ -118,10 +118,16 @@ class Resolver:
                 nbrs = gm.nbrs[ax, ay]
 
                 # Find somewhere to fit!
-                # can_fit = np.array([
-                #     gm.owned[nx, ny] and (pstrn_map[nx, ny] + istrn) <= 255
-                #     for (nx, ny) in nbrs
-                # ])
+                can_fit = np.array([
+                    gm.owned[nnx, nny] and (pstrn_map[nnx, nny] + istrn) <= 255
+                    for (nnx, nny) in nbrs
+                ])
+                if can_fit.max() > 1:
+                    dir_ = can_fit.argmax() + 1
+                    nx, ny = nbrs[can_fit.argmax()]
+                    moveset.add_move(ax, ay, nx, ny, dir_)
+                    pstrn_map[nx, ny] += istrn
+                    continue
 
                 # Find an enemy to hit!
                 # Can technically lose to cap here since I skip checking pstrn
@@ -131,8 +137,8 @@ class Resolver:
                 ])
                 if enemy_strn.max() > 1:
                     dir_ = enemy_strn.argmax() + 1
-                    moveset.add_move(ax, ay, ax, ay, dir_)
                     nx, ny = nbrs[enemy_strn.argmax()]
+                    moveset.add_move(ax, ay, nx, ny, dir_)
                     pstrn_map[nx, ny] += istrn
                     continue
 
@@ -144,8 +150,8 @@ class Resolver:
 
                 if blank_strn.max() > 0.5:
                     dir_ = blank_strn.argmax() + 1
-                    moveset.add_move(ax, ay, ax, ay, dir_)
                     nx, ny = nbrs[blank_strn.argmax()]
+                    moveset.add_move(ax, ay, nx, ny, dir_)
                     pstrn_map[nx, ny] += istrn
                     continue
 
