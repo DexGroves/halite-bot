@@ -40,12 +40,17 @@ class Resolver:
             if gm.close_to_combat[ax, ay] and not (ax == tx and ay == ty):
                 d2c = gm.dist_from_combat[ax, ay]
                 choices = []
+                cdists = []
                 for i, (nx, ny) in enumerate(gm.nbrs[ax, ay]):
                     if gm.dist_from_combat[nx, ny] < d2c and not gm.wall[nx, ny]:
                         choices.append((nx, ny, i + 1))
+                        cdists.append(gm.dists[tx, ty, nx, ny])
 
                 if len(choices) == 2:
-                    (px1, py1, d1), (px2, py2, d2) = choices[0], choices[1]
+                    argsort = np.argsort(cdists)
+                    best = argsort[0]
+                    secnd = argsort[1]
+                    (px1, py1, d1), (px2, py2, d2) = choices[best], choices[secnd]
                 elif len(choices):
                     (px1, py1, d1), (px2, py2, d2) = choices[0], (None, None, None)
                 else:
