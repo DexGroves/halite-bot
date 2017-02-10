@@ -154,6 +154,7 @@ class ImprovedGameMap(GameMap):
             self.dist_from_combat = np.zeros_like(self.target_cells)
 
         self.close_to_combat[self.dist_from_combat > self.com_radius] = False
+        self.noncombat = self.owned - self.close_to_combat - self.melee_mat
 
         # Whether cells are stronger than their weakest neighbour
         targets = self.strn * self.blank
