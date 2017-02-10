@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import dexlib.nphlt as hlt
 from scipy.ndimage.filters import gaussian_filter
@@ -60,11 +61,15 @@ class Combatant:
     def decide_close_moves(self, gm, moveset):
         locs = np.transpose(np.nonzero(gm.close_to_combat))
         for cx, cy in locs:
-            if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
-                continue
+            d2c = gm.dist_from_combat[cx, cy]
+            nbrs = [n for n in gm.nbrs[cx, cy] if
+                    gm.dist_from_combat[n[0], n[1]] < d2c]
+            tx, ty = random.choice(nbrs)
+            # if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
+            #     continue
 
-            dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
-            tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
+            # dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
+            # tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
 
             if gm.dists[cx, cy, tx, ty] < 4 and \
                     gm.strnc[cx, cy] < (gm.prodc[cx, cy] * (self.combat_wait + 1.5)):

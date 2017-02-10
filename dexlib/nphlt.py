@@ -14,6 +14,8 @@ import numpy as np
 from collections import namedtuple
 from scipy.ndimage.filters import generic_filter, maximum_filter
 from dexlib.dijkstra import ShortestPather
+from dexlib.floodfill import dist_to
+
 
 # import logging
 
@@ -140,6 +142,14 @@ class ImprovedGameMap(GameMap):
             )
         self.close_to_combat -= self.melee_mat
         self.close_to_combat *= self.owned
+
+        if self.target_cells.max() > 0:
+            self.dist_from_combat = dist_to(
+                self,
+                np.transpose(np.nonzero(self.ubrdr_combat))
+            )
+        else:
+            self.dist_from_combat = np.zeros_like(self.target_cells)
 
         # Whether cells are stronger than their weakest neighbour
         targets = self.strn * self.blank
