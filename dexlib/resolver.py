@@ -2,6 +2,10 @@ import numpy as np
 from dexlib.find_path import find_pref_next
 
 
+import logging
+logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
+
+
 class Resolver:
     """Handle str cap avoiding, patch mechanics, etc."""
 
@@ -33,7 +37,24 @@ class Resolver:
             tx, ty, _ = on_targets[i]
             istrn = on_strns[i]
 
-            (px1, py1, d1), (px2, py2, d2) = find_pref_next(ax, ay, tx, ty, gm)
+            if gm.close_to_combat[ax, ay] and not (ax == tx and ay == ty):
+                d2c = gm.dist_from_combat[ax, ay]
+                choices = []
+                for i, (nx, ny) in enumerate(gm.nbrs[ax, ay]):
+                    if gm.dist_from_combat[nx, ny] < d2c and not gm.wall[nx, ny]:
+                        choices.append((nx, ny, i + 1))
+
+                if len(choices) == 2:
+                    (px1, py1, d1), (px2, py2, d2) = choices[0], choices[1]
+                elif len(choices):
+                    (px1, py1, d1), (px2, py2, d2) = choices[0], (None, None, None)
+                else:
+                    (px1, py1, d1), (px2, py2, d2) = (ax, ay, 0), (None, None, None)
+
+                # logging.debug(((ax, ay), choices))
+            else:
+                (px1, py1, d1), (px2, py2, d2) = find_pref_next(ax, ay, tx, ty, gm)
+
             if (istrn + pstrn_map[px1, py1]) <= 255:  # and \
                     #  ((gm.strn[px1, py1] + gm.prod[px1, py1]) < istrn or
                     #    gm.owned[px1, py1] == 0):

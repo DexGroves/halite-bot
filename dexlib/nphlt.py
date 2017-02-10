@@ -14,7 +14,7 @@ import numpy as np
 from collections import namedtuple
 from scipy.ndimage.filters import generic_filter, maximum_filter
 from dexlib.dijkstra import ShortestPather
-from dexlib.floodfill import dist_to
+from dexlib.floodfill import friendly_to
 
 
 # import logging
@@ -115,6 +115,8 @@ class ImprovedGameMap(GameMap):
         self.strnc = np.maximum(1, self.strn)
         self.prodc = np.maximum(1, self.prod)
 
+        self.wall = self.blank * (self.strn > 0)
+
         self.splash_dmg = self.plus_filter(self.strn * self.enemy, sum)
         self.splash_prod = self.plus_filter(self.prod * self.enemy * (self.strn == 0),
                                             sum)
@@ -144,7 +146,7 @@ class ImprovedGameMap(GameMap):
         self.close_to_combat *= self.owned
 
         if self.target_cells.max() > 0:
-            self.dist_from_combat = dist_to(
+            self.dist_from_combat = friendly_to(
                 self,
                 np.transpose(np.nonzero(self.ubrdr_combat))
             )
