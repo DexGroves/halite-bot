@@ -76,6 +76,8 @@ class Combatant:
             ax, ay = locs[ci]
             nbrs = gm.nbrs[ax, ay]
 
+            d2c = gm.dist_from_combat[ax, ay]
+
             dmg_output = np.zeros(5)
             dmg_recvd = np.zeros(5)
             dmg_recvd[0] = min(strn, self.damage[ax, ay])
@@ -88,6 +90,8 @@ class Combatant:
                 ]) + gm.deny_prod[nx, ny] + self.enemy_proj[nx, ny]
                 if gm.blank[nx, ny] and gm.strn[nx, ny] > 0:
                     dmg_recvd[i + 1] += 9999  # Lol hacks. FF7 in this.
+                elif gm.dist_from_combat[nx, ny] > d2c:
+                    dmg_recvd[i + 1] += 9999
 
             combat_scores = (dmg_output * 1.2) - dmg_recvd
             target = np.argmax(combat_scores)
@@ -96,7 +100,7 @@ class Combatant:
             else:
                 tx, ty = nbrs[target - 1]
 
-            # logging.debug(((ax, ay), list(dmg_output), list(dmg_recvd), [gm.deny_prod[nx, ny] for (nx, ny) in nbrs]))
+            logging.debug(((ax, ay), list(dmg_output), list(dmg_recvd), [gm.deny_prod[nx, ny] for (nx, ny) in nbrs]))
             # NB: I should only update representation if patchworked
             for nnx, nny in gm.nbrs[tx, ty]:
                 self.enemy_proj[nnx, nny] = \
