@@ -54,7 +54,8 @@ class Combatant:
                 continue
 
             nbrs = gm.nbrs[(cx, cy)]
-            scores = [gm.combat_heur[nx, ny] for (nx, ny) in nbrs]
+            scores = [gm.combat_heur[nx, ny] - (gm.wall[nx, ny] * 100000)
+                      for (nx, ny) in nbrs]
 
             nx, ny = nbrs[np.argmax(scores)]
             gm.combat_heur[nx, ny] /= 10000
@@ -70,6 +71,9 @@ class Combatant:
             #         gm.dist_from_combat[n[0], n[1]] < d2c]
             # tx, ty = random.choice(nbrs)
             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
+                continue
+
+            if gm.dist_from_combat[cx, cy] > 6:
                 continue
 
             dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])

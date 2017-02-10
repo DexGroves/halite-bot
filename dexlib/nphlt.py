@@ -153,6 +153,8 @@ class ImprovedGameMap(GameMap):
         else:
             self.dist_from_combat = np.zeros_like(self.target_cells)
 
+        self.close_to_combat[self.dist_from_combat > self.com_radius] = False
+
         # Whether cells are stronger than their weakest neighbour
         targets = self.strn * self.blank
         targets[targets == 0] = 256
