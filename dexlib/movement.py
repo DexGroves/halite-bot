@@ -57,7 +57,8 @@ class Combatant:
 
             nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[(ex, ey)]
                     if gm.target_cells[nx, ny] or
-                    gm.dist_from_combat[nx, ny] == target_dist]
+                    (gm.dist_from_combat[nx, ny] == target_dist and not
+                     gm.wall[nx, ny])]
 
             if not len(nbrs):
                 nbrs.append((ex, ey))
@@ -100,7 +101,11 @@ class Combatant:
             else:
                 tx, ty = nbrs[target - 1]
 
-            logging.debug(((ax, ay), list(dmg_output), list(dmg_recvd), [gm.deny_prod[nx, ny] for (nx, ny) in nbrs]))
+            # logging.debug(((ax, ay),
+            #                list(dmg_output),
+            #                list(dmg_recvd),
+            #                [gm.deny_prod[nx, ny] for (nx, ny) in nbrs],
+            #                [gm.dist_from_combat[nx, ny] for (nx, ny) in nbrs]))
             # NB: I should only update representation if patchworked
             for nnx, nny in gm.nbrs[tx, ty]:
                 self.enemy_proj[nnx, nny] = \

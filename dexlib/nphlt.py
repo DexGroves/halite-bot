@@ -112,6 +112,7 @@ class ImprovedGameMap(GameMap):
 
         # Deniable production
         self.deny_prod = (self.prod * self.enemy * 2) + (self.prod * self.blank * (self.strn == 0))
+        self.wall = self.blank * (self.strn > 0)
 
         # Lower capped prod and strn
         self.strnc = np.maximum(1, self.strn)
@@ -148,7 +149,7 @@ class ImprovedGameMap(GameMap):
         if self.target_cells.max() > 0:
             self.dist_from_combat = dist_to(
                 self,
-                np.transpose(np.nonzero(self.target_cells))
+                np.transpose(np.nonzero(self.ubrdr_combat))
             )
         else:
             self.dist_from_combat = np.zeros_like(self.target_cells)
