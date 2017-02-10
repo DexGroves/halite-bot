@@ -110,7 +110,7 @@ class ImprovedGameMap(GameMap):
         self.oprod = self.prod * self.owned
 
         # Deniable production
-        self.deny_prod = self.prod * self.enemy * 2 + self.prod * self.blank
+        self.deny_prod = (self.prod * self.enemy * 2) + (self.prod * self.blank * (self.strn == 0))
 
         # Lower capped prod and strn
         self.strnc = np.maximum(1, self.strn)

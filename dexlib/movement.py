@@ -23,11 +23,6 @@ class Moveset:
         if (ax, ay) in self.to_move:
             self.to_move.remove((ax, ay))
 
-    def iter_remaining(self):
-        """Iterate over all remaining moves."""
-        for ax, ay in self.to_move:
-            yield ax, ay
-
     def process_moves(self):
         """Convert everything to what the hlt.py expects."""
         return [hlt.Move(ax, ay, dir_)
@@ -74,7 +69,7 @@ class Combatant:
 
             dmg_output = np.zeros(5)
             dmg_recvd = np.zeros(5)
-            dmg_recvd[0] = self.damage[ax, ay]
+            dmg_recvd[0] = min(strn, self.damage[ax, ay])
             for i, (nx, ny) in enumerate(nbrs):
                 dmg_recvd[i + 1] = min(strn, self.damage[nx, ny])
                 dmg_output[0] += min(strn, self.enemy_proj[nx, ny])
@@ -85,14 +80,14 @@ class Combatant:
                 if gm.blank[nx, ny] and gm.strn[nx, ny] > 0:
                     dmg_recvd[i + 1] += 9999  # Lol hacks. FF7 in this.
 
-            combat_scores = (dmg_output * 2) - dmg_recvd
+            combat_scores = (dmg_output * 1.2) - dmg_recvd
             target = np.argmax(combat_scores)
             if target == 0:
                 tx, ty = ax, ay
             else:
                 tx, ty = nbrs[target - 1]
 
-            logging.debug(((ax, ay), dmg_output, dmg_recvd))
+            # logging.debug(((ax, ay), list(dmg_output), list(dmg_recvd), [gm.deny_prod[nx, ny] for (nx, ny) in nbrs]))
             # NB: I should only update representation if patchworked
             for nnx, nny in gm.nbrs[tx, ty]:
                 self.enemy_proj[nnx, nny] = \
