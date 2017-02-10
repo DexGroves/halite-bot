@@ -50,7 +50,7 @@ class Combatant:
 
         for ex, ey in enemy_locs:
             nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[(ex, ey)]
-                    if gm.blank[nx, ny]]
+                    if gm.target_cells[nx, ny]]
             if not len(nbrs):
                 nbrs.append((ex, ey))
             nx, ny = random.choice(nbrs)
@@ -76,7 +76,7 @@ class Combatant:
                 dmg_output[i + 1] = np.sum([
                     min(strn, self.enemy_proj[nnx, nny])
                     for nnx, nny in gm.nbrs[nx, ny]
-                ]) + gm.deny_prod[nx, ny]
+                ]) + gm.deny_prod[nx, ny] + self.enemy_proj[nx, ny]
                 if gm.blank[nx, ny] and gm.strn[nx, ny] > 0:
                     dmg_recvd[i + 1] += 9999  # Lol hacks. FF7 in this.
 
