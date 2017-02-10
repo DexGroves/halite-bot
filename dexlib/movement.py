@@ -49,10 +49,19 @@ class Combatant:
         random.shuffle(enemy_locs)
 
         for ex, ey in enemy_locs:
+            d2c = gm.dist_from_combat[ex, ey]
+            if d2c == -1:
+                target_dist = -1
+            else:
+                target_dist = d2c - 1
+
             nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[(ex, ey)]
-                    if gm.target_cells[nx, ny]]
+                    if gm.target_cells[nx, ny] or
+                    gm.dist_from_combat[nx, ny] == target_dist]
+
             if not len(nbrs):
                 nbrs.append((ex, ey))
+
             nx, ny = random.choice(nbrs)
             self.enemy_proj[nx, ny] += enemy_strn[ex, ey]
 
