@@ -3,8 +3,8 @@ import numpy as np
 import dexlib.nphlt as hlt
 from scipy.ndimage.filters import gaussian_filter
 
-# import logging
-# logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
+import logging
+logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 
 
 class Moveset:
@@ -37,6 +37,106 @@ class Moveset:
         """Convert everything to what the hlt.py expects."""
         return [hlt.Move(ax, ay, dir_)
                 for (ax, ay), (_, _, dir_) in self.move_dict.items()]
+
+    def set_stays(self):
+        for x, y in self.to_move:
+            self.move_dict[(x, y)] = x, y, 0
+
+# class Combatant:
+
+#     def __init__(self, combat_wait):
+#         self.combat_wait = combat_wait
+
+#     def decide_combat_moves(self, gm, moveset):
+#         self.update_projection(gm)
+#         self.decide_melee_moves(gm, moveset)
+#         self.decide_close_moves(gm, moveset)
+#         return moveset
+
+#     def update_projection(self, gm):
+#         """Move enemy pieces TOTALLY AT RANDOM."""
+#         enemy_strn = gm.enemy * gm.strn
+#         self.enemy_proj = np.zeros_like(enemy_strn)
+
+#         enemy_locs = [(x, y) for (x, y) in np.transpose(np.nonzero(enemy_strn))]
+#         random.shuffle(enemy_locs)
+
+#         for ex, ey in enemy_locs:
+#             d2c = gm.dist_from_combat[ex, ey]
+#             if d2c == -1:
+#                 target_dist = -1
+#             else:
+#                 target_dist = d2c - 1
+
+#             nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[(ex, ey)]
+#                     if gm.target_cells[nx, ny] or
+#                     (gm.dist_from_combat[nx, ny] == target_dist and not
+#                      gm.wall[nx, ny])]
+
+#             if not len(nbrs):
+#                 nbrs.append((ex, ey))
+
+#             nx, ny = random.choice(nbrs)
+#             self.enemy_proj[nx, ny] += enemy_strn[ex, ey]
+
+#         self.damage = gm.plus_filter(self.enemy_proj, sum)
+
+#     def decide_melee_moves(self, gm, moveset):
+#         locs = np.transpose(np.nonzero(gm.melee_mat))
+#         strns = [gm.strn[x, y] for (x, y) in locs]
+#         deny_prod = gm.prod * (gm.blank * (gm.strn == 0) + 2 * gm.enemy)
+
+#         for ci in np.argsort(strns)[::-1]:
+#             strn = strns[ci]
+#             ax, ay = locs[ci]
+#             nbrs = gm.nbrs[ax, ay]
+
+#             d2c = gm.dist_from_combat[ax, ay]
+
+#             dmg_output = np.zeros(5)
+#             dmg_recvd = np.zeros(5)
+#             dmg_recvd[0] = min(strn, self.damage[ax, ay])
+#             for i, (nx, ny) in enumerate(nbrs):
+#                 dmg_recvd[i + 1] = min(strn, self.damage[nx, ny])
+#                 dmg_output[0] += min(strn, self.enemy_proj[nx, ny])
+#                 dmg_output[i + 1] = np.sum([
+#                     min(strn, self.enemy_proj[nnx, nny])
+#                     for nnx, nny in gm.nbrs[nx, ny]
+#                 ]) + deny_prod[nx, ny] + self.enemy_proj[nx, ny]
+#                 if gm.blank[nx, ny] and gm.strn[nx, ny] > 0:
+#                     dmg_recvd[i + 1] += 9999  # Lol hacks. FF7 in this.
+#                 elif gm.dist_from_combat[nx, ny] > d2c:
+#                     dmg_recvd[i + 1] += 9999
+
+#             combat_scores = (dmg_output * 1.2) - dmg_recvd
+#             target = np.argmax(combat_scores)
+#             if target == 0:
+#                 tx, ty = ax, ay
+#             else:
+#                 tx, ty = nbrs[target - 1]
+
+#             # NB: I should only update representation if patchworked
+#             for nnx, nny in gm.nbrs[tx, ty]:
+#                 self.enemy_proj[nnx, nny] = \
+#                     max(0, self.enemy_proj[nnx, nny] - strn)
+
+#             moveset.add_move(ax, ay, tx, ty)
+
+#     def decide_close_moves(self, gm, moveset):
+#         locs = np.transpose(np.nonzero(gm.close_to_combat))
+#         for cx, cy in locs:
+#             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
+#                 continue
+
+#             dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
+#             tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
+
+#             if gm.dists[cx, cy, tx, ty] < 4 and \
+#                     gm.strnc[cx, cy] < (gm.prodc[cx, cy] * (self.combat_wait + 1.5)):
+#                 moveset.add_move(cx, cy, cx, cy)
+
+#             else:
+#                 moveset.add_move(cx, cy, tx, ty)
 
 
 class Combatant:
@@ -124,6 +224,8 @@ class MoveMaker:
         Vglob *= gm.safe_to_take
 
         Vtot = Vloc + Vmid + Vglob
+        if Vtot.max() == 0:
+            Vglob = gm.obrdr
 
         self.desired_d1_moves = {}
         d1_conquered = np.ones_like(Vtot, dtype=bool)
@@ -136,6 +238,7 @@ class MoveMaker:
 
             prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c)) * d1_conquered + \
                 np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
+            prox_value[ax, ay] *= 2
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
 
             if gm.total_strn < gm.strn[tx, ty] or not gm.safe_to_take[tx, ty]:
@@ -230,7 +333,38 @@ class Nonaggressor:
         pass
 
     def process_moves(self, gm, moveset):
+        stays = []
         for (ax, ay), (tx, ty, _) in moveset.move_dict.items():
             if not gm.safe_to_take[tx, ty]:
-                moveset.add_move(ax, ay, ax, ay, 0)
+                stays.append((ax, ay))
+
+        for ax, ay in stays:
+            moveset.add_move(ax, ay, ax, ay, 0)
+
+        return moveset
+
+
+class Noswapper:
+    """Make sure no pieces swap unnecessarily."""
+    def __init__(self, swaplim=225):
+        self.swaplim = swaplim
+
+    def process_moves(self, gm, moveset):
+        stays = []
+        for (ax, ay), (tx, ty, dir_) in moveset.move_dict.items():
+            # logging.info(f'see {ax}, {ay}: {tx}, {ty}, {dir_}')
+            if ax == tx and ay == ty:
+                continue
+            if (tx, ty) in moveset.move_dict.keys():
+                ttx, tty, _ = moveset.move_dict[tx, ty]
+                if ttx == ax and tty == ay:#  and \
+                        # gm.strn[ax, ay] > self.swaplim and \
+                        # gm.strn[ttx, tty] > self.swaplim:
+                    stays.append((ax, ay))
+                    stays.append((tx, ty))
+
+        for ax, ay in stays:
+            # logging.info(f'staying {ax}, {ay}')
+            moveset.add_move(ax, ay, ax, ay, 0)
+
         return moveset

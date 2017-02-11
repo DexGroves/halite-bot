@@ -1,7 +1,14 @@
 import dexlib.nphlt as hlt
 import logging
 from dexlib.resolver import Resolver
-from dexlib.movement import Combatant, MoveMaker, Moveset, Amalgamator, Nonaggressor
+from dexlib.movement import (
+    Combatant,
+    MoveMaker,
+    Moveset,
+    Amalgamator,
+    Nonaggressor,
+    Noswapper
+)
 
 
 logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
@@ -18,6 +25,7 @@ combatant = Combatant(4)
 resolver = Resolver(game_map)
 amalgamator = Amalgamator(strlim=20)
 nonaggr = Nonaggressor()
+noswapper = Noswapper()
 
 
 while True:
@@ -31,6 +39,7 @@ while True:
     moveset = resolver.resolve(game_map, moveset)
     # moveset = amalgamator.process_moved_into(game_map, moveset)
     moveset = nonaggr.process_moves(game_map, moveset)
+    # moveset = noswapper.process_moves(game_map, moveset)
 
     hlt.send_frame(moveset.process_moves())
     game_map.get_frame()

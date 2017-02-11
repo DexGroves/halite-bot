@@ -101,6 +101,8 @@ class ImprovedGameMap(GameMap):
         self.parity = 0
         self.com_radius = com_radius
 
+        self.last_turn = np.ceil(np.sqrt(self.width * self.height) * 10)
+
     def update(self):
         """Derive everything that changes per frame."""
         self.turn += 1
@@ -129,6 +131,7 @@ class ImprovedGameMap(GameMap):
 
         # Unowned border cells
         self.ubrdr = self.plus_filter(self.owned, max) - self.owned
+        self.obrdr = self.plus_filter(self.ubrdr, max) - self.ubrdr
 
         self.owned_locs = np.transpose(np.nonzero(self.owned))
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
@@ -176,6 +179,8 @@ class ImprovedGameMap(GameMap):
             maximum_filter(self.enemy, size=3, mode='wrap')
 
         self.safe_to_take = 1 - self.enemy_walls
+        if self.turn == self.last_turn:
+            self.safe_to_take.fill(True)
         # if self.total_strn < (200 * self.ave_enemy_strn):
         #     self.safe_to_take = 1 - self.enemy_walls
         # else:

@@ -14,7 +14,8 @@ class Resolver:
 
     def resolve(self, gm, moveset):
         # I don't do anything about over-growing the cap, but can I even.
-        self.set_implicit_stays(gm, moveset)
+        moveset.set_stays()
+
         pstrn_map = np.zeros_like(gm.strn)
 
         on_moves = {(ax, ay): v for (ax, ay), v in moveset.move_dict.items()
@@ -22,7 +23,7 @@ class Resolver:
         off_moves = {(ax, ay): v for (ax, ay), v in moveset.move_dict.items()
                      if ((ax + ay + gm.turn) % 2 != gm.parity)}  # and not gm.noncombat[ax, ay]}
 
-        if gm.turn < 40:  # TEst hacks
+        if gm.turn < 40 or gm.turn == gm.last_turn:  # TEst hacks
             on_moves = moveset.move_dict
             off_moves = {}
 
@@ -63,14 +64,18 @@ class Resolver:
             if (istrn + pstrn_map[px1, py1]) <= 255:  # and \
                     #  ((gm.strn[px1, py1] + gm.prod[px1, py1]) < istrn or
                     #    gm.owned[px1, py1] == 0):
-                moveset.add_move(ax, ay, ax, ay, d1)
+                moveset.add_move(ax, ay, px1, py1, d1)
                 pstrn_map[px1, py1] += istrn
+
+                # logging.info(('Priority:', ax, ay, px1, py1, istrn, pstrn_map[px1, py1]))
                 # logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
             elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255:  # and \
                     #  ((gm.strn[px2, py2] + gm.prod[px2, py2]) < istrn or
                     #    gm.owned[px2, py2] == 0):
-                moveset.add_move(ax, ay, ax, ay, d2)
+                moveset.add_move(ax, ay, px2, py2, d2)
                 pstrn_map[px2, py2] += istrn
+
+                # logging.info(('Priority:', ax, ay, px2, py2, istrn, pstrn_map[px2, py2]))
                 # logging.debug(((ax, ay), 'to', (d2), 'secpick'))
             elif gm.melee_mat[ax, ay]:
                 nbrs = gm.nbrs[(ax, ay)]
@@ -97,15 +102,17 @@ class Resolver:
         # Handle all the white squares getting the heck out of the way
         # Not iterating in any particular order!
         for (ax, ay) in off_moves.keys():
-            istrn = gm.strn[ax, ay]
+            istrn = gm.strnc[ax, ay]
             iprod = gm.prod[ax, ay]
             if pstrn_map[ax, ay] == 0:
                 moveset.add_move(ax, ay, ax, ay, 0)
                 pstrn_map[ax, ay] += istrn + iprod
+                # logging.info(('dodge', ax, ay, 'safe to stay1', istrn, pstrn_map[ax, ay]))
 
             elif (pstrn_map[ax, ay] + istrn + iprod) <= 255:
                 moveset.add_move(ax, ay, ax, ay, 0)
                 pstrn_map[ax, ay] += istrn + iprod
+                # logging.info(('dodge', ax, ay, 'safe to stay2', istrn, pstrn_map[ax, ay]))
 
             else:  # Dodge this!
                 # Check if it's better to just hang out
@@ -113,6 +120,7 @@ class Resolver:
                 if addable > istrn:
                     moveset.add_move(ax, ay, ax, ay, 0)
                     pstrn_map[ax, ay] += istrn + iprod
+                    # logging.info('dodge', ax, ay, 'safe to stay3')
                     continue
 
                 nbrs = gm.nbrs[ax, ay]
@@ -127,6 +135,7 @@ class Resolver:
                     nx, ny = nbrs[can_fit.argmax()]
                     moveset.add_move(ax, ay, nx, ny, dir_)
                     pstrn_map[nx, ny] += istrn
+                    # logging.info(('dodge', ax, ay, 'can fit in', nx, ny))
                     continue
 
                 # Find an enemy to hit!
@@ -140,6 +149,7 @@ class Resolver:
                     nx, ny = nbrs[enemy_strn.argmax()]
                     moveset.add_move(ax, ay, nx, ny, dir_)
                     pstrn_map[nx, ny] += istrn
+                    # logging.info(('dodge', ax, ay, 'hitting enemy at', nx, ny))
                     continue
 
                 # Find a blank square to damage!
@@ -154,29 +164,24 @@ class Resolver:
                     nx, ny = nbrs[blank_strn.argmax()]
                     moveset.add_move(ax, ay, nx, ny, dir_)
                     pstrn_map[nx, ny] += istrn
+                    # logging.info(('dodge', ax, ay, 'hitting blank', nx, ny))
                     continue
 
                 # Go to the weakest remaining square
                 owned_strn = np.array([
-                    # gm.owned[nx, ny] * gm.strn[nx, ny]
                     gm.owned[nnx, nny] * (pstrn_map[nnx, nny] + gm.strn[nnx, nny])
                     for (nnx, nny) in nbrs
                 ])
                 owned_strn[owned_strn == 0] = 999
 
                 dir_ = owned_strn.argmin() + 1
-                moveset.add_move(ax, ay, ax, ay, dir_)
                 nx, ny = nbrs[owned_strn.argmin()]
+                moveset.add_move(ax, ay, nx, ny, dir_)
                 pstrn_map[nx, ny] += istrn
+                # logging.info(('dodge', ax, ay, 'owned strn', nx, ny))
                 continue
 
         return moveset
-
-    def set_implicit_stays(self, gm, moveset):
-        implicit_stays = set((x, y) for x, y in gm.owned_locs) - \
-            moveset.move_dict.keys()
-        for ix, iy in implicit_stays:
-            moveset.add_move(ix, iy, ix, iy)
 
     @staticmethod
     def nxny_to_cardinal(gm, x, y, nx, ny):
