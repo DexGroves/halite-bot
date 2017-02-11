@@ -64,6 +64,10 @@ class Combatant:
                       for (nx, ny) in nbrs]
 
             nx, ny = nbrs[np.argmax(scores)]
+
+            if gm.total_strn < gm.strn[nx, ny] or not gm.safe_to_take[nx, ny]:
+                nx, ny = cx, cy
+
             gm.combat_heur[nx, ny] /= 10000
 
             # logging.debug(('combat', (cx, cy), 'to', (nx, ny)))
@@ -84,6 +88,9 @@ class Combatant:
 
             dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
             tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
+
+            if gm.total_strn < gm.strn[tx, ty] or not gm.safe_to_take[tx, ty]:
+                tx, ty = cx, cy
 
             if gm.dists[cx, cy, tx, ty] < 4 and \
                     gm.strnc[cx, cy] < (gm.prodc[cx, cy] * (self.combat_wait + 1.5)):
@@ -112,6 +119,7 @@ class MoveMaker:
         motile[np.nonzero(moveset.move_matrix)] = False
 
         Vloc, Vmid, Vglob = self.get_cell_value(gm)
+        Vloc *= gm.safe_to_take
         Vmid *= gm.safe_to_take
         Vglob *= gm.safe_to_take
 
@@ -130,10 +138,10 @@ class MoveMaker:
                 np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
 
-            if gm.total_strn < gm.strn[tx, ty]:
-                moveset.add_move(ax, ay, ax, ay)
-            else:
-                moveset.add_move(ax, ay, tx, ty)
+            if gm.total_strn < gm.strn[tx, ty] or not gm.safe_to_take[tx, ty]:
+                tx, ty = ax, ay
+
+            moveset.add_move(ax, ay, tx, ty)
 
             # Add to a postprocessing queue for later
             if gm.dists[ax, ay, tx, ty] == 1:
@@ -201,17 +209,28 @@ class Amalgamator:
 
         return moveset
 
-    def process_moved_into(self, gm, moveset):
-        iter_pieces = set()
-        moved_into = np.zeros_like(gm.owned)
+    # def process_moved_into(self, gm, moveset):
+    #     iter_pieces = set()
+    #     moved_into = np.zeros_like(gm.owned)
+    #     for (ax, ay), (tx, ty, _) in moveset.move_dict.items():
+    #         if gm.strn[ax, ay] <= self.mvinto_strlim:
+    #             moved_into[tx, ty] = True
+    #             iter_pieces.add((ax, ay))
+
+    #     for ax, ay in iter_pieces:
+    #         if moved_into[ax, ay]:
+    #             moveset.add_move(ax, ay, ax, ay, 0)
+
+    #     return moveset
+
+
+class Nonaggressor:
+    """Make absolutely sure nothing bad will happen!"""
+    def __init__(self):
+        pass
+
+    def process_moves(self, gm, moveset):
         for (ax, ay), (tx, ty, _) in moveset.move_dict.items():
-            if gm.strn[ax, ay] <= self.mvinto_strlim:
-                moved_into[tx, ty] = True
-                iter_pieces.add((ax, ay))
-
-        for ax, ay in iter_pieces:
-            if moved_into[ax, ay]:
+            if not gm.safe_to_take[tx, ty]:
                 moveset.add_move(ax, ay, ax, ay, 0)
-
         return moveset
-

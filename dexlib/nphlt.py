@@ -167,7 +167,7 @@ class ImprovedGameMap(GameMap):
         self.calc_aggs()
 
     def calc_aggs(self):
-        self.total_strn = self.ostrn.sum()
+        self.total_strn = self.ostrn.sum() + (self.oprod.sum() / 2)
         self.num_enemies = max(1, len(np.unique(self.owners)) - 2)
         self.total_enemy_strn = (self.strn * self.enemy).sum()
         self.ave_enemy_strn = self.total_enemy_strn / self.num_enemies
@@ -175,10 +175,11 @@ class ImprovedGameMap(GameMap):
         self.enemy_walls = (self.blank * (self.strn > 0)) * \
             maximum_filter(self.enemy, size=3, mode='wrap')
 
-        if self.total_strn < (2 * self.ave_enemy_strn):
-            self.safe_to_take = 1 - self.enemy_walls
-        else:
-            self.safe_to_take = np.ones_like(self.enemy_walls)
+        self.safe_to_take = 1 - self.enemy_walls
+        # if self.total_strn < (200 * self.ave_enemy_strn):
+        #     self.safe_to_take = 1 - self.enemy_walls
+        # else:
+        #     self.safe_to_take = np.ones_like(self.enemy_walls)
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
