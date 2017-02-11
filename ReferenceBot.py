@@ -1,30 +1,31 @@
-import json
-import timeit
-import argparse
-from halitesrc.hlt import *
-from halitesrc.networking import *
-from refbot.dexbot import DexBot
-from refbot.get_config import get_config
+import reflib.nphlt as hlt
+import logging
+from reflib.resolver import Resolver
+from reflib.movement import Combatant, MoveMaker, Moveset
 
-parser = argparse.ArgumentParser(description='Dexbot!')
-parser.add_argument('config', type=str, default="choose",
-                    help='Config file location', nargs='?')
-args = parser.parse_args()
 
-my_id, game_map = getInit()
+# logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 
-if args.config == "choose":
-    config_filename = get_config(game_map)
-else:
-    config_filename = args.config
 
-config = json.load(open(config_filename, "r"))
-db = DexBot(my_id, game_map, config)
+game_map = hlt.ImprovedGameMap(8)
+hlt.send_init("ReferenceBot")
+game_map.get_frame()
+game_map.update()
 
-sendInit(config['name'])
+k = 1.5 - game_map.num_enemies * 0.1
+bord_eval = MoveMaker(game_map, wait=4, glob_k=k)
+combatant = Combatant(4)
+resolver = Resolver(game_map)
+
+
 while True:
-    start_time = timeit.default_timer()
-    game_map = getFrame()
-    db.update(game_map)
-    moves = db.move(start_time)
-    sendFrame(moves)
+    # logging.debug('TURN ------------' + str(game_map.turn))
+    game_map.update()
+
+    moveset = Moveset(game_map)
+    moveset = combatant.decide_combat_moves(game_map, moveset)
+    moveset = bord_eval.decide_noncombat_moves(game_map, moveset)
+    moveset = resolver.resolve(game_map, moveset)
+
+    hlt.send_frame(moveset.process_moves())
+    game_map.get_frame()
