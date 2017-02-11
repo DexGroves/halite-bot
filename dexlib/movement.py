@@ -110,7 +110,6 @@ class MoveMaker:
         motile = ((gm.strnc >= gm.prodc * self.wait) * gm.owned).astype(bool)
         motile[np.nonzero(gm.gte_nbr)] = True
         motile[np.nonzero(moveset.move_matrix)] = False
-        strn_avail = gm.ostrn * motile
 
         Vloc, Vmid, Vglob = self.get_cell_value(gm)
         Vmid *= gm.safe_to_take
@@ -120,7 +119,6 @@ class MoveMaker:
 
         self.desired_d1_moves = {}
         d1_conquered = np.ones_like(Vtot, dtype=bool)
-        fully_alloc = np.zeros_like(Vtot, dtype=bool)
 
         to_move_locs = np.transpose(np.nonzero(motile))
         to_move_strn = [gm.strn[x, y] for (x, y) in to_move_locs]
@@ -132,7 +130,10 @@ class MoveMaker:
                 np.divide(Vglob, (gm.dists[ax, ay] + self.bulk_mvmt_off))
             tx, ty = np.unravel_index(prox_value.argmax(), prox_value.shape)
 
-            moveset.add_move(ax, ay, tx, ty)
+            if gm.total_strn < gm.strn[tx, ty]:
+                moveset.add_move(ax, ay, ax, ay)
+            else:
+                moveset.add_move(ax, ay, tx, ty)
 
             # Add to a postprocessing queue for later
             if gm.dists[ax, ay, tx, ty] == 1:
@@ -213,3 +214,4 @@ class Amalgamator:
                 moveset.add_move(ax, ay, ax, ay, 0)
 
         return moveset
+

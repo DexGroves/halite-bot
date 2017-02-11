@@ -18,9 +18,9 @@ class Resolver:
         pstrn_map = np.zeros_like(gm.strn)
 
         on_moves = {(ax, ay): v for (ax, ay), v in moveset.move_dict.items()
-                    if ((ax + ay + gm.turn) % 2 == gm.parity) or gm.noncombat[ax, ay]}
+                    if ((ax + ay + gm.turn) % 2 == gm.parity)}  # or gm.noncombat[ax, ay]}
         off_moves = {(ax, ay): v for (ax, ay), v in moveset.move_dict.items()
-                     if ((ax + ay + gm.turn) % 2 != gm.parity) and not gm.noncombat[ax, ay]}
+                     if ((ax + ay + gm.turn) % 2 != gm.parity)}  # and not gm.noncombat[ax, ay]}
 
         if gm.turn < 40:  # TEst hacks
             on_moves = moveset.move_dict
