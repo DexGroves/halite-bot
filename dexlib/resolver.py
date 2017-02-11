@@ -144,7 +144,8 @@ class Resolver:
 
                 # Find a blank square to damage!
                 blank_strn = np.array([
-                    gm.blank[nnx, nny] * gm.strnc[nnx, nny] * (gm.strnc[nnx, nny] < istrn)
+                    gm.blank[nnx, nny] * gm.strnc[nnx, nny] * (gm.strnc[nnx, nny] < istrn) *
+                    gm.safe_to_take[nnx, nny]
                     for (nnx, nny) in nbrs
                 ])
 

@@ -89,6 +89,7 @@ class ImprovedGameMap(GameMap):
         super().__init__()
         self.dists = self.get_distances(self.width, self.height)
         self.nbrs = self.get_neighbours(self.width, self.height)
+        self.oneaways = self.get_oneaways(self.width, self.height)
         self.turn = -1
 
         self.sp = ShortestPather(self.strn, self.prod)
@@ -174,7 +175,7 @@ class ImprovedGameMap(GameMap):
         self.enemy_walls = (self.blank * (self.strn > 0)) * \
             maximum_filter(self.enemy, size=3, mode='wrap')
 
-        if self.total_strn < self.ave_enemy_strn:
+        if self.total_strn < (2 * self.ave_enemy_strn):
             self.safe_to_take = 1 - self.enemy_walls
         else:
             self.safe_to_take = np.ones_like(self.enemy_walls)
@@ -252,6 +253,22 @@ class ImprovedGameMap(GameMap):
                     ((x + 1) % w, y),
                     (x, (y + 1) % h),
                     ((x - 1) % w, y)]
+
+        nbrs = {(x, y): get_local_nbrs(x, y)
+                for x in range(w) for y in range(h)}
+
+        return nbrs
+
+    @staticmethod
+    def get_oneaways(w, h):
+        """Populate a dictionary keyed by all (x, y) where the
+        elements are the neighbours of that cell ordered N, E, S, W.
+        """
+        def get_local_nbrs(x, y):
+            return [(x, (y - 2) % h),
+                    ((x + 2) % w, y),
+                    (x, (y + 2) % h),
+                    ((x - 2) % w, y)]
 
         nbrs = {(x, y): get_local_nbrs(x, y)
                 for x in range(w) for y in range(h)}

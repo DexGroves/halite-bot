@@ -14,6 +14,7 @@ class Moveset:
         self.to_move = set(((x, y) for (x, y) in gm.owned_locs))
         self.move_dict = {}
         self.move_matrix = np.zeros_like(gm.owned, dtype=bool)
+        self.moved_into = np.zeros_like(gm.owned, dtype=bool)
 
     def add_move(self, ax, ay, tx, ty, dir_=None):
         """Register a move."""
@@ -25,6 +26,11 @@ class Moveset:
     def iter_remaining(self):
         """Iterate over all remaining moves."""
         for ax, ay in self.to_move:
+            yield ax, ay
+
+    def iter_all(self):
+        """Iterate over all remaining moves."""
+        for ax, ay in self.move_dict.keys():
             yield ax, ay
 
     def process_moves(self):
@@ -165,3 +171,45 @@ class MoveMaker:
                 if total_strn.sum() > gm.strn[tx, ty] and \
                         total_strn.max() <= gm.strn[tx, ty]:
                     gm.strn[tx, ty] = 0
+
+
+class Amalgamator:
+    """Union pieces together if it makes sense to do so."""
+    def __init__(self, strlim=80, mvlim=2):
+        self.strlim = strlim
+        self.mvinto_strlim = 80
+        self.mvlim = mvlim
+
+    def process_moves(self, gm, moveset):
+        for (ax, ay), (tx, ty, _) in moveset.move_dict.items():
+            if ax == tx and ay == tx:
+                continue
+            if gm.strn[ax, ay] >= self.strlim:
+                continue
+            d2t = gm.dists[ax, ay, tx, ty]
+            for nx, ny in gm.oneaways[ax, ay]:
+                if gm.owned[nx, ny] and gm.strn[nx, ny] < self.strlim:
+                    try:
+                        ntx, nty, _ = moveset.move_dict[nx, ny]
+                    except:
+                        continue
+                    dist_targs = gm.dists[ntx, nty, tx, ty]
+                    if dist_targs * self.mvlim < d2t:
+                        moveset.add_move(ax, ay, nx, ny)
+                        moveset.add_move(nx, ny, ax, ay)
+
+        return moveset
+
+    def process_moved_into(self, gm, moveset):
+        iter_pieces = set()
+        moved_into = np.zeros_like(gm.owned)
+        for (ax, ay), (tx, ty, _) in moveset.move_dict.items():
+            if gm.strn[ax, ay] <= self.mvinto_strlim:
+                moved_into[tx, ty] = True
+                iter_pieces.add((ax, ay))
+
+        for ax, ay in iter_pieces:
+            if moved_into[ax, ay]:
+                moveset.add_move(ax, ay, ax, ay, 0)
+
+        return moveset
