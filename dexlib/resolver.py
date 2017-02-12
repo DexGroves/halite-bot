@@ -181,6 +181,7 @@ class Resolver:
                 # Find somewhere to fit!
                 can_fit = np.array([
                     gm.owned[nnx, nny] * ((pstrn_map[nnx, nny] + istrn) <= strlim_cell)
+                    * gm.safe_to_take[nnx, nny]
                     * (gm.dist_from_combat[nnx, nny] >= 1)
                     * (1 / gm.prod[nnx, nny])
                     for (nnx, nny) in nbrs

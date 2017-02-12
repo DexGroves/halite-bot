@@ -312,6 +312,8 @@ class MoveMaker:
 
     def process_wallup(self, gm, moveset):
         """Get as much strn as possible to the border!"""
+        if gm.turn == gm.last_turn:
+            return self.process_final_turn(gm, moveset)
         d2w = friendly_to(gm, np.transpose(np.nonzero(gm.obrdr)))
         for x, y in gm.owned_locs:
             if gm.strnc[x, y] < gm.prodc[x, y] * self.wait:
@@ -325,6 +327,17 @@ class MoveMaker:
             else:
                 nx, ny = random.choice(nbrs)
                 moveset.add_move(x, y, nx, ny)
+        return moveset
+
+    def process_final_turn(self, gm, moveset):
+        gm.safe_to_take.fill(True)
+        for x, y in np.transpose(np.nonzero(gm.obrdr)):
+            nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[x, y] if gm.owned[nx, ny] == 0 and
+                    gm.strn[x, y] > gm.strn[nx, ny]]
+            if not len(nbrs):
+                continue
+            nx, ny = random.choice(nbrs)
+            moveset.add_move(x, y, nx, ny)
         return moveset
 
 

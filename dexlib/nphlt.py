@@ -101,7 +101,7 @@ class ImprovedGameMap(GameMap):
         self.parity = 0
         self.com_radius = com_radius
 
-        self.last_turn = np.ceil(np.sqrt(self.width * self.height) * 10)
+        self.last_turn = np.floor(np.sqrt(self.width * self.height) * 10)
 
     def update(self):
         """Derive everything that changes per frame."""
@@ -195,8 +195,8 @@ class ImprovedGameMap(GameMap):
         self.enemy_walls = (self.blank * (self.strn > 0)) * \
             self.plus_filter(self.enemy, max)
 
-        if not self.in_combat and self.total_strn < (1.2 * self.ave_enemy_strn) and \
-                (self.turn + 1) < self.last_turn:
+        if not self.in_combat and self.total_strn < (2.0 * self.ave_enemy_strn) and \
+                (self.turn - 5) < self.last_turn:
             self.enemy_walls += \
                 self.plus_filter(self.e_can_capture, max) - \
                 self.owned
@@ -210,8 +210,8 @@ class ImprovedGameMap(GameMap):
             self.enemy_walls[self.strn == min_str] = False
             self.safe_to_take[self.strn == min_str] = True
 
-        if self.turn == self.last_turn:
-            self.safe_to_take.fill(True)
+        # if self.turn == self.last_turn:
+        #     self.safe_to_take.fill(True)
 
         if self.in_combat and self.num_enemies == 1:
             brdr_str = [
