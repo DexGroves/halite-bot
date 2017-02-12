@@ -4,7 +4,7 @@ clean:
 
 archive:
 	today=$$(date +%Y-%m-%d.%H:%M:%S); \
-		zip archives/dexbot_1.2c_$$today.zip dexlib/*.py halitesrc/*.py MyBot.py
+		zip archives/dexbot_1.2e_$$today.zip dexlib/*.py halitesrc/*.py MyBot.py
 
 
 playoff:
