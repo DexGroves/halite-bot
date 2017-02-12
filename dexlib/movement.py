@@ -2,6 +2,7 @@ import random
 import numpy as np
 import dexlib.nphlt as hlt
 from scipy.ndimage.filters import gaussian_filter
+from dexlib.floodfill import friendly_to
 
 import logging
 logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
@@ -242,7 +243,6 @@ class MoveMaker:
             #         gm.strn[ax, ay] < (gm.prod[ax, ay] * 6):
             #     moveset.add_move(ax, ay, ax, ay)
             #     continue
-
             t2c = np.maximum(0, (working_strn - gm.strn[ax, ay]) / gm.prodc)
 
             prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c)) * d1_conquered + \
@@ -293,21 +293,38 @@ class MoveMaker:
                         total_strn.max() <= gm.strn[tx, ty]:
                     gm.strn[tx, ty] = 0
 
+    # def process_wallup(self, gm, moveset):
+    #     """Get as much strn as possible to the border!"""
+    #     V = gm.obrdr
+    #     for x, y in gm.owned_locs:
+    #         if gm.obrdr[x, y] or ((gm.strnc[x, y] < 255)):  # gm.prodc[x, y] * self.wait)):
+    #             moveset.add_move(x, y, x, y)
+    #         else:
+    #             istrn = gm.strn[x, y]
+    #             Vcell = V * (gm.strn < 255) * (gm.strn < istrn)
+    #             if Vcell.max() == 0:
+    #                 moveset.add_move(x, y, x, y)
+    #             else:
+    #                 Vprox = np.divide(Vcell, gm.dists[x, y])
+    #                 tx, ty = np.unravel_index(Vprox.argmax(), Vprox.shape)
+    #                 moveset.add_move(x, y, tx, ty)
+    #     return moveset
+
     def process_wallup(self, gm, moveset):
         """Get as much strn as possible to the border!"""
-        V = gm.obrdr
+        d2w = friendly_to(gm, np.transpose(np.nonzero(gm.obrdr)))
         for x, y in gm.owned_locs:
-            if gm.obrdr[x, y] or ((gm.strnc[x, y] < gm.prodc[x, y] * self.wait)):
+            if gm.strnc[x, y] < gm.prodc[x, y] * self.wait:
+                continue
+
+            nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[x, y] if
+                    d2w[nx, ny] < d2w[x, y] and
+                    gm.strn[nx, ny] < gm.strn[x, y]]
+            if not len(nbrs):
                 moveset.add_move(x, y, x, y)
             else:
-                istrn = gm.strn[x, y]
-                Vcell = V * (gm.strn < 255) * (gm.strn < istrn)
-                if Vcell.max() == 0:
-                    moveset.add_move(x, y, x, y)
-                else:
-                    Vprox = np.divide(Vcell, gm.dists[x, y])
-                    tx, ty = np.unravel_index(Vprox.argmax(), Vprox.shape)
-                    moveset.add_move(x, y, tx, ty)
+                nx, ny = random.choice(nbrs)
+                moveset.add_move(x, y, nx, ny)
         return moveset
 
 

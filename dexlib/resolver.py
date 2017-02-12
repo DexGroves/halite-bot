@@ -178,21 +178,21 @@ class Resolver:
                     # logging.info(('dodge', ax, ay, 'hitting blank', nx, ny))
                     continue
 
-                # # Find somewhere to fit!
-                # can_fit = np.array([
-                #     gm.owned[nnx, nny] * ((pstrn_map[nnx, nny] + istrn) <= strlim_cell)
-                #     * (gm.dist_from_combat[nnx, nny] >= 1)
-                #     * (1 / gm.prod[nnx, nny])
-                #     for (nnx, nny) in nbrs
-                # ])
-                # if can_fit.max() > 0:
-                #     # Need to make this favour the lower production option
-                #     dir_ = can_fit.argmax() + 1
-                #     nx, ny = nbrs[can_fit.argmax()]
-                #     moveset.add_move(ax, ay, nx, ny, dir_)
-                #     pstrn_map[nx, ny] += istrn
-                #     # logging.info(('dodge', ax, ay, 'can fit in', nx, ny))
-                #     continue
+                # Find somewhere to fit!
+                can_fit = np.array([
+                    gm.owned[nnx, nny] * ((pstrn_map[nnx, nny] + istrn) <= strlim_cell)
+                    * (gm.dist_from_combat[nnx, nny] >= 1)
+                    * (1 / gm.prod[nnx, nny])
+                    for (nnx, nny) in nbrs
+                ])
+                if can_fit.max() > 0:
+                    # Need to make this favour the lower production option
+                    dir_ = can_fit.argmax() + 1
+                    nx, ny = nbrs[can_fit.argmax()]
+                    moveset.add_move(ax, ay, nx, ny, dir_)
+                    pstrn_map[nx, ny] += istrn
+                    # logging.info(('dodge', ax, ay, 'can fit in', nx, ny))
+                    continue
 
                 # Go to the weakest remaining square
                 owned_strn = np.array([

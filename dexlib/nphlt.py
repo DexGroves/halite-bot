@@ -195,7 +195,8 @@ class ImprovedGameMap(GameMap):
         self.enemy_walls = (self.blank * (self.strn > 0)) * \
             self.plus_filter(self.enemy, max)
 
-        if not self.in_combat and self.total_strn < (1.2 * self.ave_enemy_strn):
+        if not self.in_combat and self.total_strn < (1.2 * self.ave_enemy_strn) and \
+                (self.turn + 1) < self.last_turn:
             self.enemy_walls += \
                 self.plus_filter(self.e_can_capture, max) - \
                 self.owned
