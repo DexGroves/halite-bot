@@ -144,6 +144,11 @@ def find_pref_next(x, y, nx, ny, gm):
 
 
 def can_occupy_safely(x, y, nx, ny, gm):
+    if gm.owned[nx, ny] and \
+            gm.strn[nx, ny] > gm.strn[x, y] and \
+            (gm.strn[nx, ny] + gm.strn[x, y]) > 255:
+        return False
+
     if gm.owned[nx, ny]:
         return True
 
@@ -169,4 +174,3 @@ def cardinal_to_nxny(x, y, cardinal, gm):
     elif cardinal == 4:
         return (x - 1) % gm.width, y
     return x, y
-

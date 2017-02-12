@@ -235,6 +235,14 @@ class MoveMaker:
         to_move_strn = [gm.strn[x, y] for (x, y) in to_move_locs]
         for ai in np.argsort(to_move_strn)[::-1]:
             ax, ay = to_move_locs[ai]
+
+            # if gm.settlements[ax, ay] and \
+            #         gm.settle_density < 6 and \
+            #         False and \
+            #         gm.strn[ax, ay] < (gm.prod[ax, ay] * 6):
+            #     moveset.add_move(ax, ay, ax, ay)
+            #     continue
+
             t2c = np.maximum(0, (working_strn - gm.strn[ax, ay]) / gm.prodc)
 
             prox_value = np.divide(Vmid, (gm.dists[ax, ay] + t2c)) * d1_conquered + \

@@ -147,8 +147,24 @@ class Resolver:
                     continue
 
                 # Find a blank square to damage!
+                # blank_strn = np.array([
+                #     gm.blank[nnx, nny] * gm.strnc[nnx, nny] * (gm.strnc[nnx, nny] < istrn) *
+                #     gm.safe_to_take[nnx, nny]
+                #     # * (gm.dist_from_combat[nnx, nny] >= d2c)
+                #     for (nnx, nny) in nbrs
+                # ])
+
+                # if blank_strn.max() > 0.5:
+                #     dir_ = blank_strn.argmax() + 1
+                #     nx, ny = nbrs[blank_strn.argmax()]
+                #     moveset.add_move(ax, ay, nx, ny, dir_)
+                #     pstrn_map[nx, ny] += istrn
+                #     # logging.info(('dodge', ax, ay, 'hitting blank', nx, ny))
+                #     continue
+
+                # Find a blank square to damage!
                 blank_strn = np.array([
-                    gm.blank[nnx, nny] * gm.strnc[nnx, nny] * (gm.strnc[nnx, nny] < istrn) *
+                    gm.blank[nnx, nny] * gm.prod[nnx, nny] * (gm.strnc[nnx, nny] < istrn) *
                     gm.safe_to_take[nnx, nny]
                     # * (gm.dist_from_combat[nnx, nny] >= d2c)
                     for (nnx, nny) in nbrs

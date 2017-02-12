@@ -135,7 +135,18 @@ class ImprovedGameMap(GameMap):
         self.str_brdr = self.plus_filter(
             (self.strn > 200) * self.owned, max
         ) * self.owned
-        self.havens = np.maximum(self.str_brdr, self.obrdr)
+        # self.havens = np.maximum(self.str_brdr, self.obrdr)
+
+        # Enemy borders
+        self.ebrdr = self.plus_filter(self.enemy, max) - self.enemy
+        self.ebrdr_locs = np.transpose(np.nonzero(self.ebrdr))
+        self.e_can_capture = np.zeros_like(self.ebrdr)
+        for ex, ey in self.ebrdr_locs:
+            nbrs = [True for nx, ny in self.nbrs[ex, ey]
+                    if self.enemy[nx, ny] and
+                    self.strn[nx, ny] > self.strn[ex, ey]]
+            if len(nbrs):
+                self.e_can_capture[ex, ey] = True
 
         self.owned_locs = np.transpose(np.nonzero(self.owned))
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
@@ -179,12 +190,18 @@ class ImprovedGameMap(GameMap):
         self.total_enemy_strn = (self.strn * self.enemy).sum()
         self.ave_enemy_strn = self.total_enemy_strn / self.num_enemies
 
+        self.in_combat = self.melee_mat.max()
+
         self.enemy_walls = (self.blank * (self.strn > 0)) * \
             self.plus_filter(self.enemy, max)
 
-        self.safe_to_take = 1 - self.enemy_walls
+        if not self.in_combat and self.total_strn < (1.2 * self.ave_enemy_strn):
+            self.enemy_walls += \
+                self.plus_filter(self.e_can_capture, max) - \
+                self.owned
+            self.enemy_walls = np.minimum(1, self.enemy_walls)
 
-        self.in_combat = self.melee_mat.max()
+        self.safe_to_take = 1 - self.enemy_walls
 
         if not self.in_combat and self.total_strn > (1.2 * self.ave_enemy_strn):
             min_str = np.min([self.strn[x, y]
@@ -194,6 +211,31 @@ class ImprovedGameMap(GameMap):
 
         if self.turn == self.last_turn:
             self.safe_to_take.fill(True)
+
+        if self.in_combat and self.num_enemies == 1:
+            brdr_str = [
+                self.strn[x, y] for (x, y) in self.ebrdr_locs
+                if self.obrdr[x, y]
+            ]
+            if len(brdr_str):
+                min_brdr_str = np.min(brdr_str)
+                self.enemy_walls[self.strn == min_brdr_str] = False
+                self.safe_to_take[self.strn == min_brdr_str] = True
+
+        # if self.in_combat and self.num_enemies == 1:
+        #     self.safe_to_take.fill(True)
+
+        # Areas to keep a little beefed up
+        # self.settlements = maximum_filter(self.enemy_walls, size=2) * \
+        #     self.owned - self.close_to_combat
+        # settle_locs = np.transpose(np.nonzero(self.settlements))
+        # settle_strn = np.sum([
+        #     self.strn[x, y] for (x, y) in settle_locs
+        # ])
+        # settle_prod = max(np.sum([
+        #     self.prod[x, y] for (x, y) in settle_locs
+        # ]), 1)
+        # self.settle_density = settle_strn / settle_prod
         # if self.total_strn < (200 * self.ave_enemy_strn):
         #     self.safe_to_take = 1 - self.enemy_walls
         # else:
