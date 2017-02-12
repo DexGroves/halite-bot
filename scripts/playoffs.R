@@ -30,15 +30,14 @@ run_playoff <- function(nrun, ncore, start_seed,
   system("rm *.hlt")
   table(results)
 }
-run_playoff(50, 2, 22222, 30, 1, "")
-# 28 22
-run_playoff(50, 2, 22222, 30, 3, "")
-# 23 7 9 11
-run_playoff(50, 2, 22222, 30, 3, "")
-# 25 8 9 8
-# 27 7 9 7
-# 29 6 8 7
-# 28 8 7 7
+run_playoff(50, 2, 33333, 30, 1, "")
+# 25 25
+# 29 21  (f288 commit)
+# 27 23
+run_playoff(50, 2, 33333, 25, 3, "")
+# 22 12 4 12
+# 20 11 9 10 (f288 commit)
+# 22 11 6 11
 # run_playoff(400, 50, 99999, 30, 3, "")
 
 # Master
