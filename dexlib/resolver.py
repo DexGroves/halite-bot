@@ -46,7 +46,7 @@ class Resolver:
                 for i, (nx, ny) in enumerate(gm.nbrs[ax, ay]):
                     if gm.dist_from_combat[nx, ny] < d2c and not gm.wall[nx, ny]:
                         choices.append((nx, ny, i + 1))
-                        cdists.append(gm.dists[tx, ty, nx, ny])
+                        cdists.append(gm.dists[tx, ty, nx, ny] + gm.prod[nx, ny] * 0.01)
 
                 if len(choices) == 2:
                     argsort = np.argsort(cdists)
@@ -137,6 +137,7 @@ class Resolver:
                     for (nnx, nny) in nbrs
                 ])
                 if can_fit.max() > 1:
+                    # Need to make this favour the lower production option
                     dir_ = can_fit.argmax() + 1
                     nx, ny = nbrs[can_fit.argmax()]
                     moveset.add_move(ax, ay, nx, ny, dir_)

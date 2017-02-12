@@ -357,7 +357,7 @@ class Noswapper:
                 continue
             if (tx, ty) in moveset.move_dict.keys():
                 ttx, tty, _ = moveset.move_dict[tx, ty]
-                if ttx == ax and tty == ay:#  and \
+                if ttx == ax and tty == ay:  # and \
                         # gm.strn[ax, ay] > self.swaplim and \
                         # gm.strn[ttx, tty] > self.swaplim:
                     stays.append((ax, ay))
