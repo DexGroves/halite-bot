@@ -6,6 +6,7 @@ archive:
 	today=$$(date +%Y-%m-%d.%H:%M:%S); \
 		zip archives/dexbot_1.1b_$$today.zip dexlib/*.py halitesrc/*.py MyBot.py
 
+
 playoff:
 	./scripts/50run.sh > playoff.out
 	cat playoff.out | grep "rank #1" | grep "DexBot" | wc -l
