@@ -1,3 +1,6 @@
+"""Everything to do with macro movement. Combat, expansion, addons."""
+
+
 import random
 import numpy as np
 import dexlib.nphlt as hlt
@@ -42,102 +45,6 @@ class Moveset:
     def set_stays(self):
         for x, y in self.to_move:
             self.move_dict[(x, y)] = x, y, 0
-
-# class Combatant:
-
-#     def __init__(self, combat_wait):
-#         self.combat_wait = combat_wait
-
-#     def decide_combat_moves(self, gm, moveset):
-#         self.update_projection(gm)
-#         self.decide_melee_moves(gm, moveset)
-#         self.decide_close_moves(gm, moveset)
-#         return moveset
-
-#     def update_projection(self, gm):
-#         """Move enemy pieces TOTALLY AT RANDOM."""
-#         enemy_strn = gm.enemy * gm.strn
-#         self.enemy_proj = np.zeros_like(enemy_strn)
-
-#         enemy_locs = [(x, y) for (x, y) in np.transpose(np.nonzero(enemy_strn))]
-#         random.shuffle(enemy_locs)
-
-#         for ex, ey in enemy_locs:
-#             d2c = gm.dist_from_combat[ex, ey]
-#             if d2c == -1:
-#                 target_dist = -1
-#             else:
-#                 target_dist = d2c - 1
-
-#             nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[(ex, ey)]
-#                     if gm.target_cells[nx, ny] or
-#                     (gm.dist_from_combat[nx, ny] == target_dist and not
-#                      gm.wall[nx, ny])]
-
-#             if not len(nbrs):
-#                 nbrs.append((ex, ey))
-
-#             nx, ny = random.choice(nbrs)
-#             self.enemy_proj[nx, ny] += enemy_strn[ex, ey]
-
-#         self.damage = gm.plus_filter(self.enemy_proj, sum)
-
-#     def decide_melee_moves(self, gm, moveset):
-#         locs = np.transpose(np.nonzero(gm.melee_mat))
-#         strns = [gm.strn[x, y] for (x, y) in locs]
-#         deny_prod = gm.prod * (gm.blank * (gm.strn == 0) + 2 * gm.enemy)
-
-#         for ci in np.argsort(strns)[::-1]:
-#             strn = strns[ci]
-#             ax, ay = locs[ci]
-#             nbrs = gm.nbrs[ax, ay]
-
-#             d2c = gm.dist_from_combat[ax, ay]
-
-#             dmg_output = np.zeros(5)
-#             dmg_recvd = np.zeros(5)
-#             dmg_recvd[0] = min(strn, self.damage[ax, ay])
-#             for i, (nx, ny) in enumerate(nbrs):
-#                 dmg_recvd[i + 1] = min(strn, self.damage[nx, ny])
-#                 dmg_output[0] += min(strn, self.enemy_proj[nx, ny])
-#                 dmg_output[i + 1] = np.sum([
-#                     min(strn, self.enemy_proj[nnx, nny])
-#                     for nnx, nny in gm.nbrs[nx, ny]
-#                 ]) + deny_prod[nx, ny] + self.enemy_proj[nx, ny]
-#                 if gm.blank[nx, ny] and gm.strn[nx, ny] > 0:
-#                     dmg_recvd[i + 1] += 9999  # Lol hacks. FF7 in this.
-#                 elif gm.dist_from_combat[nx, ny] > d2c:
-#                     dmg_recvd[i + 1] += 9999
-
-#             combat_scores = (dmg_output * 1.2) - dmg_recvd
-#             target = np.argmax(combat_scores)
-#             if target == 0:
-#                 tx, ty = ax, ay
-#             else:
-#                 tx, ty = nbrs[target - 1]
-
-#             # NB: I should only update representation if patchworked
-#             for nnx, nny in gm.nbrs[tx, ty]:
-#                 self.enemy_proj[nnx, nny] = \
-#                     max(0, self.enemy_proj[nnx, nny] - strn)
-
-#             moveset.add_move(ax, ay, tx, ty)
-
-#     def decide_close_moves(self, gm, moveset):
-#         locs = np.transpose(np.nonzero(gm.close_to_combat))
-#         for cx, cy in locs:
-#             if gm.strnc[cx, cy] < (gm.prodc[cx, cy] * self.combat_wait):
-#                 continue
-
-#             dmat = np.divide(gm.melee_mat, gm.dists[cx, cy])
-#             tx, ty = np.unravel_index(dmat.argmax(), dmat.shape)
-
-#             if gm.dists[cx, cy, tx, ty] < 4 and \
-#                     gm.strnc[cx, cy] < (gm.prodc[cx, cy] * (self.combat_wait + 1.5)):
-#                 moveset.add_move(cx, cy, cx, cy)
-
-#             else:
-#                 moveset.add_move(cx, cy, tx, ty)
 
 
 class Combatant:
@@ -330,6 +237,7 @@ class MoveMaker:
         return moveset
 
     def process_final_turn(self, gm, moveset):
+        """Go crazy."""
         gm.safe_to_take.fill(True)
         for x, y in np.transpose(np.nonzero(gm.obrdr)):
             nbrs = [(nx, ny) for (nx, ny) in gm.nbrs[x, y] if gm.owned[nx, ny] == 0 and
@@ -343,6 +251,7 @@ class MoveMaker:
 
 class Amalgamator:
     """Union pieces together if it makes sense to do so."""
+
     def __init__(self, strlim=80, mvlim=2):
         self.strlim = strlim
         self.mvinto_strlim = 80

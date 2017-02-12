@@ -1,3 +1,6 @@
+"""Highly mechanical class that takes care of avoiding the cap."""
+
+
 import numpy as np
 from dexlib.find_path import find_pref_next
 
@@ -194,7 +197,6 @@ class Resolver:
                 #     pstrn_map[nx, ny] += istrn
                 #     # logging.info(('dodge', ax, ay, 'can fit in', nx, ny))
                 #     continue
-
 
                 # Go to the weakest remaining square
                 owned_strn = np.array([

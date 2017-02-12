@@ -1,13 +1,4 @@
-"""
-A Python-based Halite starter-bot framework.
-A barebones, numpy-inspired fork of erdman's hlt.py that focuses on
-assembling prod, strn and owner numpy matrices as quickly as possible.
-Moves are tuples of x, y and dir, where dir behaves as in the
-base starter.
-
-GameMap.prod and GameMap.strn are the production and strength respectively.
-GameMap.owner contains each cell's owner.
-"""
+"""Everything that changes per turn in a do-it-all map class."""
 
 import sys
 import numpy as np
@@ -18,7 +9,6 @@ from dexlib.floodfill import friendly_to
 
 
 # import logging
-
 # logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 
 Move = namedtuple('Move', 'x y dir')
@@ -243,7 +233,7 @@ class ImprovedGameMap(GameMap):
         #     self.safe_to_take = np.ones_like(self.enemy_walls)
 
     def calc_bval(self):
-        """Docstring this because it's complicated."""
+        """The border expansion heuristic, leveraging dijkstra's algorithm."""
         blank_valuable = self.blank * (((self.prodc ** 2) / self.strnc) > 0.0) * \
             (self.strn > 0)
         Bis = self.ubrdr.flatten().nonzero()[0]
@@ -256,29 +246,15 @@ class ImprovedGameMap(GameMap):
         self.Mbval = np.zeros_like(self.prod, dtype=float)
 
         D_BU = self.sp.path[Bis][:, Uis]
-        # D_BU_argmin = D_BU.argmin(axis=0)  # Index of closest Bi per Ui
-
-        # Wish I had a clever matrix way to do this. Will come back.
-        # for i, amin in enumerate(D_BU_argmin):
-        #     dist_bu = D_BU[amin, i] + Ustrn[i]
-        #     Bvals[amin] += Uprod[i] / dist_bu
-        #     NatB[amin] += 1
-
         D_BU_min = D_BU.min(axis=0)
         for i, min_ in enumerate(D_BU_min):
             dist_bu = D_BU[:, i][np.where(D_BU[:, i] == min_)] + Ustrn[i] / Uprod[i] + 1
 
             Bvals[np.where(D_BU[:, i] == min_)] += ((Uprod[i] ** 2) / Ustrn[i]) / dist_bu
 
-        # Bvals /= np.sqrt(NatB)
-
         for i, Bi in enumerate(Bis):
             bx, by = self.sp.vertices[Bi]
             self.Mbval[bx, by] += Bvals[i]
-
-        # np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
-
-        # np.savetxt("mats/mbval%i" % self.turn, self.Mbval)
 
     @staticmethod
     def get_distances(w, h):
