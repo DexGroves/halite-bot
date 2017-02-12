@@ -184,9 +184,9 @@ class ImprovedGameMap(GameMap):
 
         self.safe_to_take = 1 - self.enemy_walls
 
-        in_combat = self.melee_mat.max()
+        self.in_combat = self.melee_mat.max()
 
-        if not in_combat and self.total_strn > (1.2 * self.ave_enemy_strn):
+        if not self.in_combat and self.total_strn > (1.2 * self.ave_enemy_strn):
             min_str = np.min([self.strn[x, y]
                              for (x, y) in np.transpose(np.nonzero(self.enemy_walls))])
             self.enemy_walls[self.strn == min_str] = False

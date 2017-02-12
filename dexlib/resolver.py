@@ -23,7 +23,7 @@ class Resolver:
         off_moves = {(ax, ay): v for (ax, ay), v in moveset.move_dict.items()
                      if ((ax + ay + gm.turn) % 2 != gm.parity)}  # and not gm.noncombat[ax, ay]}
 
-        if gm.turn < 40 or gm.turn == gm.last_turn:  # TEst hacks
+        if (gm.turn < 40 and not gm.in_combat) or gm.turn == gm.last_turn:
             on_moves = moveset.move_dict
             off_moves = {}
 
@@ -31,6 +31,8 @@ class Resolver:
         on_origins = list(on_moves.keys())
         on_targets = list(on_moves.values())
         on_strns = [gm.strn[x, y] for (x, y) in on_origins]
+        # on_dists = [gm.dists[x, y, a, b] - (gm.strn[x, y] / 1000)
+        #             for ((x, y), (a, b, _)) in zip(on_origins, on_targets)]
         str_sort = np.argsort(on_strns)
 
         for i in str_sort[::-1]:
@@ -130,21 +132,6 @@ class Resolver:
 
                 nbrs = gm.nbrs[ax, ay]
 
-                # Find somewhere to fit!
-                can_fit = np.array([
-                    gm.owned[nnx, nny] and (pstrn_map[nnx, nny] + istrn) <= strlim_cell
-                    and gm.dist_from_combat[nnx, nny] >= d2c
-                    for (nnx, nny) in nbrs
-                ])
-                if can_fit.max() > 1:
-                    # Need to make this favour the lower production option
-                    dir_ = can_fit.argmax() + 1
-                    nx, ny = nbrs[can_fit.argmax()]
-                    moveset.add_move(ax, ay, nx, ny, dir_)
-                    pstrn_map[nx, ny] += istrn
-                    # logging.info(('dodge', ax, ay, 'can fit in', nx, ny))
-                    continue
-
                 # Find an enemy to hit!
                 # Can technically lose to cap here since I skip checking pstrn
                 enemy_strn = np.array([
@@ -173,6 +160,22 @@ class Resolver:
                     moveset.add_move(ax, ay, nx, ny, dir_)
                     pstrn_map[nx, ny] += istrn
                     # logging.info(('dodge', ax, ay, 'hitting blank', nx, ny))
+                    continue
+
+                # Find somewhere to fit!
+                can_fit = np.array([
+                    gm.owned[nnx, nny] * ((pstrn_map[nnx, nny] + istrn) <= strlim_cell)
+                    * (gm.dist_from_combat[nnx, nny] >= 1)
+                    * (1 / gm.prod[nnx, nny])
+                    for (nnx, nny) in nbrs
+                ])
+                if can_fit.max() > 0:
+                    # Need to make this favour the lower production option
+                    dir_ = can_fit.argmax() + 1
+                    nx, ny = nbrs[can_fit.argmax()]
+                    moveset.add_move(ax, ay, nx, ny, dir_)
+                    pstrn_map[nx, ny] += istrn
+                    # logging.info(('dodge', ax, ay, 'can fit in', nx, ny))
                     continue
 
                 # Go to the weakest remaining square
