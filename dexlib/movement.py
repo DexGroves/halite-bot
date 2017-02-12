@@ -225,7 +225,8 @@ class MoveMaker:
 
         Vtot = Vloc + Vmid + Vglob
         if Vtot.max() == 0:
-            Vglob = gm.havens
+            # Vglob = gm.havens
+            return self.process_wallup(gm, moveset)
 
         self.desired_d1_moves = {}
         d1_conquered = np.ones_like(Vtot, dtype=bool)
@@ -283,6 +284,23 @@ class MoveMaker:
                 if total_strn.sum() > gm.strn[tx, ty] and \
                         total_strn.max() <= gm.strn[tx, ty]:
                     gm.strn[tx, ty] = 0
+
+    def process_wallup(self, gm, moveset):
+        """Get as much strn as possible to the border!"""
+        V = gm.obrdr
+        for x, y in gm.owned_locs:
+            if gm.obrdr[x, y] or ((gm.strnc[x, y] < gm.prodc[x, y] * self.wait)):
+                moveset.add_move(x, y, x, y)
+            else:
+                istrn = gm.strn[x, y]
+                Vcell = V * (gm.strn < 255) * (gm.strn < istrn)
+                if Vcell.max() == 0:
+                    moveset.add_move(x, y, x, y)
+                else:
+                    Vprox = np.divide(Vcell, gm.dists[x, y])
+                    tx, ty = np.unravel_index(Vprox.argmax(), Vprox.shape)
+                    moveset.add_move(x, y, tx, ty)
+        return moveset
 
 
 class Amalgamator:
