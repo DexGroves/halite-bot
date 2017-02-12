@@ -225,7 +225,7 @@ class MoveMaker:
 
         Vtot = Vloc + Vmid + Vglob
         if Vtot.max() == 0:
-            Vglob = gm.obrdr
+            Vglob = gm.havens
 
         self.desired_d1_moves = {}
         d1_conquered = np.ones_like(Vtot, dtype=bool)

@@ -132,6 +132,10 @@ class ImprovedGameMap(GameMap):
         # Unowned border cells
         self.ubrdr = self.plus_filter(self.owned, max) - self.owned
         self.obrdr = self.plus_filter(self.ubrdr, max) - self.ubrdr
+        self.str_brdr = self.plus_filter(
+            (self.strn > 200) * self.owned, max
+        ) * self.owned
+        self.havens = np.maximum(self.str_brdr, self.obrdr)
 
         self.owned_locs = np.transpose(np.nonzero(self.owned))
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
@@ -176,9 +180,11 @@ class ImprovedGameMap(GameMap):
         self.ave_enemy_strn = self.total_enemy_strn / self.num_enemies
 
         self.enemy_walls = (self.blank * (self.strn > 0)) * \
-            maximum_filter(self.enemy, size=3, mode='wrap')
+            self.plus_filter(self.enemy, max)
+            # maximum_filter(self.enemy, size=3, mode='wrap')
 
         self.safe_to_take = 1 - self.enemy_walls
+
         if self.turn == self.last_turn:
             self.safe_to_take.fill(True)
         # if self.total_strn < (200 * self.ave_enemy_strn):

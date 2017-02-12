@@ -9,8 +9,8 @@ logging.basicConfig(filename='wtf.info', level=logging.DEBUG, filemode="w")
 class Resolver:
     """Handle str cap avoiding, patch mechanics, etc."""
 
-    def __init__(self, gm):
-        pass
+    def __init__(self, gm, strlim=255):
+        self.strlim = strlim
 
     def resolve(self, gm, moveset):
         # I don't do anything about over-growing the cap, but can I even.
@@ -37,6 +37,7 @@ class Resolver:
             ax, ay = on_origins[i]
             tx, ty, _ = on_targets[i]
             istrn = on_strns[i]
+            strlim_cell = max(istrn, self.strlim)
 
             if gm.close_to_combat[ax, ay] and not (ax == tx and ay == ty):
                 d2c = gm.dist_from_combat[ax, ay]
@@ -61,7 +62,7 @@ class Resolver:
             else:
                 (px1, py1, d1), (px2, py2, d2) = find_pref_next(ax, ay, tx, ty, gm)
 
-            if (istrn + pstrn_map[px1, py1]) <= 255:  # and \
+            if (istrn + pstrn_map[px1, py1]) <= strlim_cell:  # and \
                     #  ((gm.strn[px1, py1] + gm.prod[px1, py1]) < istrn or
                     #    gm.owned[px1, py1] == 0):
                 moveset.add_move(ax, ay, px1, py1, d1)
@@ -69,7 +70,7 @@ class Resolver:
 
                 # logging.info(('Priority:', ax, ay, px1, py1, istrn, pstrn_map[px1, py1]))
                 # logging.debug(((ax, ay), 'to', (d1), 'firstpick'))
-            elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= 255:  # and \
+            elif px2 is not None and (istrn + pstrn_map[px2, py2]) <= strlim_cell:  # and \
                     #  ((gm.strn[px2, py2] + gm.prod[px2, py2]) < istrn or
                     #    gm.owned[px2, py2] == 0):
                 moveset.add_move(ax, ay, px2, py2, d2)
@@ -80,7 +81,8 @@ class Resolver:
             elif gm.melee_mat[ax, ay]:
                 nbrs = gm.nbrs[(ax, ay)]
                 scores = np.array([
-                    gm.combat_heur[nx, ny] * ((pstrn_map[nx, ny] + istrn) < 255)
+                    gm.combat_heur[nx, ny] * ((pstrn_map[nx, ny] + istrn) < strlim_cell)
+                    #  + (gm.wall[nx, ny] * -1000)
                     for (nx, ny) in nbrs
                 ])
 
@@ -102,14 +104,17 @@ class Resolver:
         # Handle all the white squares getting the heck out of the way
         # Not iterating in any particular order!
         for (ax, ay) in off_moves.keys():
+            d2c = gm.dist_from_combat[ax, ay]
             istrn = gm.strnc[ax, ay]
             iprod = gm.prod[ax, ay]
+            strlim_cell = max(istrn, self.strlim)
+
             if pstrn_map[ax, ay] == 0:
                 moveset.add_move(ax, ay, ax, ay, 0)
                 pstrn_map[ax, ay] += istrn + iprod
                 # logging.info(('dodge', ax, ay, 'safe to stay1', istrn, pstrn_map[ax, ay]))
 
-            elif (pstrn_map[ax, ay] + istrn + iprod) <= 255:
+            elif (pstrn_map[ax, ay] + istrn + iprod) <= strlim_cell:
                 moveset.add_move(ax, ay, ax, ay, 0)
                 pstrn_map[ax, ay] += istrn + iprod
                 # logging.info(('dodge', ax, ay, 'safe to stay2', istrn, pstrn_map[ax, ay]))
@@ -127,7 +132,8 @@ class Resolver:
 
                 # Find somewhere to fit!
                 can_fit = np.array([
-                    gm.owned[nnx, nny] and (pstrn_map[nnx, nny] + istrn) <= 255
+                    gm.owned[nnx, nny] and (pstrn_map[nnx, nny] + istrn) <= strlim_cell
+                    and gm.dist_from_combat[nnx, nny] >= d2c
                     for (nnx, nny) in nbrs
                 ])
                 if can_fit.max() > 1:
@@ -156,6 +162,7 @@ class Resolver:
                 blank_strn = np.array([
                     gm.blank[nnx, nny] * gm.strnc[nnx, nny] * (gm.strnc[nnx, nny] < istrn) *
                     gm.safe_to_take[nnx, nny]
+                    # * (gm.dist_from_combat[nnx, nny] >= d2c)
                     for (nnx, nny) in nbrs
                 ])
 
@@ -170,6 +177,7 @@ class Resolver:
                 # Go to the weakest remaining square
                 owned_strn = np.array([
                     gm.owned[nnx, nny] * (pstrn_map[nnx, nny] + gm.strn[nnx, nny])
+                    # + (gm.dist_from_combat[nnx, nny] < d2c) * 1000
                     for (nnx, nny) in nbrs
                 ])
                 owned_strn[owned_strn == 0] = 999
