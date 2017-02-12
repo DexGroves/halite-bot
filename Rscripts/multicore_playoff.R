@@ -7,7 +7,7 @@ library("doMC")
 
 build_call <- function(confname, dim, nopp, seed) {
   call <- paste0(
-    "/nas/isg_prodops_work/dgrov/projects/halsrc/halite -s ",
+    "halite -s ",
     seed, " -t -d ",
     "\"", dim, " ", dim, "\" ",
     "\"python3 MyBot.py ", confname, "\" ",
@@ -30,7 +30,7 @@ run_playoff <- function(nrun, ncore, start_seed,
   system("rm *.hlt")
   table(results)
 }
-run_playoff(1000, 50, 99999, 30, 1, "")
+run_playoff(100, 2, 99999, 30, 1, "")
 run_playoff(400, 50, 99999, 30, 3, "")
 
 # Master

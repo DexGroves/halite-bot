@@ -14,6 +14,8 @@ import numpy as np
 from collections import namedtuple
 from scipy.ndimage.filters import generic_filter, maximum_filter
 from dexlib.dijkstra import ShortestPather
+from dexlib.floodfill import friendly_to
+
 
 # import logging
 
@@ -87,6 +89,7 @@ class ImprovedGameMap(GameMap):
         super().__init__()
         self.dists = self.get_distances(self.width, self.height)
         self.nbrs = self.get_neighbours(self.width, self.height)
+        self.oneaways = self.get_oneaways(self.width, self.height)
         self.turn = -1
 
         self.sp = ShortestPather(self.strn, self.prod)
@@ -97,6 +100,8 @@ class ImprovedGameMap(GameMap):
 
         self.parity = 0
         self.com_radius = com_radius
+
+        self.last_turn = np.ceil(np.sqrt(self.width * self.height) * 10)
 
     def update(self):
         """Derive everything that changes per frame."""
@@ -113,6 +118,8 @@ class ImprovedGameMap(GameMap):
         self.strnc = np.maximum(1, self.strn)
         self.prodc = np.maximum(1, self.prod)
 
+        self.wall = self.blank * (self.strn > 0)
+
         self.splash_dmg = self.plus_filter(self.strn * self.enemy, sum)
         self.splash_prod = self.plus_filter(self.prod * self.enemy * (self.strn == 0),
                                             sum)
@@ -124,6 +131,7 @@ class ImprovedGameMap(GameMap):
 
         # Unowned border cells
         self.ubrdr = self.plus_filter(self.owned, max) - self.owned
+        self.obrdr = self.plus_filter(self.ubrdr, max) - self.ubrdr
 
         self.owned_locs = np.transpose(np.nonzero(self.owned))
         self.ubrdr_locs = np.transpose(np.nonzero(self.ubrdr))
@@ -141,6 +149,17 @@ class ImprovedGameMap(GameMap):
         self.close_to_combat -= self.melee_mat
         self.close_to_combat *= self.owned
 
+        if self.target_cells.max() > 0:
+            self.dist_from_combat = friendly_to(
+                self,
+                np.transpose(np.nonzero(self.ubrdr_combat))
+            )
+        else:
+            self.dist_from_combat = np.zeros_like(self.target_cells)
+
+        self.close_to_combat[self.dist_from_combat > self.com_radius] = False
+        self.noncombat = self.owned - self.close_to_combat - self.melee_mat
+
         # Whether cells are stronger than their weakest neighbour
         targets = self.strn * self.blank
         targets[targets == 0] = 256
@@ -151,7 +170,7 @@ class ImprovedGameMap(GameMap):
         self.calc_aggs()
 
     def calc_aggs(self):
-        self.total_strn = self.ostrn.sum()
+        self.total_strn = self.ostrn.sum() + (self.oprod.sum() / 2)
         self.num_enemies = max(1, len(np.unique(self.owners)) - 2)
         self.total_enemy_strn = (self.strn * self.enemy).sum()
         self.ave_enemy_strn = self.total_enemy_strn / self.num_enemies
@@ -159,10 +178,13 @@ class ImprovedGameMap(GameMap):
         self.enemy_walls = (self.blank * (self.strn > 0)) * \
             maximum_filter(self.enemy, size=3, mode='wrap')
 
-        if self.total_strn < self.ave_enemy_strn:
-            self.safe_to_take = 1 - self.enemy_walls
-        else:
-            self.safe_to_take = np.ones_like(self.enemy_walls)
+        self.safe_to_take = 1 - self.enemy_walls
+        if self.turn == self.last_turn:
+            self.safe_to_take.fill(True)
+        # if self.total_strn < (200 * self.ave_enemy_strn):
+        #     self.safe_to_take = 1 - self.enemy_walls
+        # else:
+        #     self.safe_to_take = np.ones_like(self.enemy_walls)
 
     def calc_bval(self):
         """Docstring this because it's complicated."""
@@ -237,6 +259,22 @@ class ImprovedGameMap(GameMap):
                     ((x + 1) % w, y),
                     (x, (y + 1) % h),
                     ((x - 1) % w, y)]
+
+        nbrs = {(x, y): get_local_nbrs(x, y)
+                for x in range(w) for y in range(h)}
+
+        return nbrs
+
+    @staticmethod
+    def get_oneaways(w, h):
+        """Populate a dictionary keyed by all (x, y) where the
+        elements are the neighbours of that cell ordered N, E, S, W.
+        """
+        def get_local_nbrs(x, y):
+            return [(x, (y - 2) % h),
+                    ((x + 2) % w, y),
+                    (x, (y + 2) % h),
+                    ((x - 2) % w, y)]
 
         nbrs = {(x, y): get_local_nbrs(x, y)
                 for x in range(w) for y in range(h)}

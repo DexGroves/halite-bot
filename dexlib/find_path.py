@@ -147,6 +147,9 @@ def can_occupy_safely(x, y, nx, ny, gm):
     if gm.owned[nx, ny]:
         return True
 
+    if not gm.safe_to_take[nx, ny]:
+        return False
+
     if gm.strn[x, y] >= 255:
         return True
 
@@ -166,5 +169,4 @@ def cardinal_to_nxny(x, y, cardinal, gm):
     elif cardinal == 4:
         return (x - 1) % gm.width, y
     return x, y
-
 
