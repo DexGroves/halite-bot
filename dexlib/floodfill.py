@@ -1,8 +1,12 @@
+"""Floodfill algo tools."""
+
+
 import numpy as np
 from collections import deque
 
 
 def dist_to(game_map, sources):
+    """Get the distance to any of coordinates in sources."""
     dist = np.empty_like(game_map.owners)
     dist.fill(-1)
 
@@ -22,6 +26,9 @@ def dist_to(game_map, sources):
 
 
 def friendly_to(game_map, sources):
+    """Get the distance to any of coordinates in sources if only
+    movement along friendly cells is allowed.
+    """
     dist = np.empty_like(game_map.owners)
     dist.fill(-1)
 

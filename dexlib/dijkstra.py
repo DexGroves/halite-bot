@@ -5,8 +5,6 @@ import itertools
 import numpy as np
 from scipy.sparse import dok_matrix
 from scipy.sparse.csgraph import dijkstra
-# import logging
-# logging.basicConfig(filename='wtf.info', filemode="w", level=logging.DEBUG)
 
 
 class ShortestPather:
@@ -23,7 +21,9 @@ class ShortestPather:
                                          return_predecessors=True)
 
     def _get_dist_graph(self, strn, prod):
-        """Get the v*v distance graph."""
+        """Get the v*v distance graph.
+        Costs are pulled from thin air.
+        """
         dist = dok_matrix((self.w * self.h, self.w * self.h), dtype=int)
 
         for x, y in self.vertices:
@@ -32,7 +32,7 @@ class ShortestPather:
 
             for nx, ny in nbrs:
                 targ_i = self.get_vertex(nx, ny)
-                dist[orig_i, targ_i] = strn[nx, ny] / (prod[x, y] + 0.1)  # Thin air 2
+                dist[orig_i, targ_i] = strn[nx, ny] / (prod[x, y] + 0.1)
 
         return dist
 
