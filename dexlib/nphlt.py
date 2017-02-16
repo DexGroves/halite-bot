@@ -256,6 +256,8 @@ class ImprovedGameMap(GameMap):
             bx, by = self.sp.vertices[Bi]
             self.Mbval[bx, by] += Bvals[i]
 
+        np.savetxt(f"mbval{i}.txt", self.Mbval)
+
     @staticmethod
     def get_distances(w, h):
         """Populate a 4-dimensional np.ndarray where:

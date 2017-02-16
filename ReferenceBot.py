@@ -22,6 +22,11 @@ while True:
     # logging.debug('TURN ------------' + str(game_map.turn))
     game_map.update()
 
+    if game_map.turn < 5000:
+        hlt.send_frame([])
+        game_map.get_frame()
+        continue
+
     moveset = Moveset(game_map)
     moveset = combatant.decide_combat_moves(game_map, moveset)
     moveset = bord_eval.decide_noncombat_moves(game_map, moveset)
